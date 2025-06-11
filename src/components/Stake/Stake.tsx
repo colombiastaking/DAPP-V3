@@ -112,8 +112,7 @@ function simulateAprAndRank({
   simulatedColsStaked,
   colsPrice,
   egldPrice,
-  baseApr,
-  agencyServiceFee
+  baseApr
 }: {
   stakers: any[];
   address: string;
@@ -121,12 +120,10 @@ function simulateAprAndRank({
   colsPrice: number;
   egldPrice: number;
   baseApr: number;
-  agencyServiceFee: number;
 }) {
   // Constants (should match useColsApr)
   const APRmin = 1.11;
   const APRmax = 3;
-  const RAW_APR = 7.09;
   const AGENCY_BUYBACK = 0.3;
   const DAO_DISTRIBUTION_RATIO = 0.333;
 
@@ -169,16 +166,19 @@ function simulateAprAndRank({
   const sumColsStaked = newStakers.reduce((sum, r) => sum + (r.colsStaked || 0), 0);
   for (const row of newStakers) {
     if (row.egldStaked > 0 && row.colsStaked > 0 && sumColsStaked > 0) {
+      // NEW FORMULA:
+      // DAO(i) = (((Total-eGLD * baseApr/100 * Agency-Buy-back * DAO_DISTRIBUTION_RATIO * COLS-staked(i)) / (SUM(COLS-staked(i)) )/eGLD-staked(i)))*100
       const dao = (
-        totalEgldStaked *
-        RAW_APR *
-        agencyServiceFee *
-        AGENCY_BUYBACK *
-        DAO_DISTRIBUTION_RATIO *
-        row.colsStaked /
-        sumColsStaked /
-        row.egldStaked
-      );
+        (
+          (
+            totalEgldStaked *
+            (baseApr / 100) *
+            AGENCY_BUYBACK *
+            DAO_DISTRIBUTION_RATIO *
+            row.colsStaked
+          ) / sumColsStaked
+        ) / row.egldStaked
+      ) * 100;
       row.dao = dao;
     } else {
       row.dao = null;
@@ -251,32 +251,6 @@ export const Stake = () => {
   const [simResult, setSimResult] = useState<{ newApr: number | null; newRank: number | null } | null>(null);
   const [simError, setSimError] = useState<string | null>(null);
 
-  // Agency service fee for simulation
-  let agencyServiceFee = 0.1;
-  if (
-    stakers &&
-    stakers.length > 0 &&
-    typeof stakers[0].dao === 'number'
-  ) {
-    // Use the same logic as in useColsApr
-    // But for simulation, we can use the value from contractDetails if available
-  }
-  // Try to get from contractDetails if available
-  // (This is the same as in useColsApr)
-  // We get it from the context
-  const { contractDetails } = useGlobalContext();
-  if (
-    contractDetails &&
-    contractDetails.data &&
-    typeof contractDetails.data.serviceFee === 'string'
-  ) {
-    const feeStr = contractDetails.data.serviceFee.replace('%', '').trim();
-    const feeNum = parseFloat(feeStr);
-    if (!isNaN(feeNum)) {
-      agencyServiceFee = feeNum / 100;
-    }
-  }
-
   // Find user's current eGLD staked
   let userEgldStaked = 0;
   if (Array.isArray(stakers) && address) {
@@ -313,8 +287,7 @@ export const Stake = () => {
       simulatedColsStaked: val,
       colsPrice,
       egldPrice,
-      baseApr,
-      agencyServiceFee
+      baseApr
     });
     setSimResult(result);
   };
