@@ -67,12 +67,30 @@ async function fetchBaseAprFromApi() {
   }
 }
 
+// Fetch agency pool locked value (Total_eGLD) from MultiversX API
+async function fetchAgencyLockedEgld() {
+  try {
+    const { data } = await axios.get(
+      `https://api.multiversx.com/providers/${network.delegationContract}`
+    );
+    if (data && typeof data.locked === 'string') {
+      // locked is in wei (1e18), convert to eGLD with 4 decimals
+      const lockedEgld = Number(data.locked) / 1e18;
+      return Math.round(lockedEgld * 10000) / 10000;
+    }
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function useColsApr({ trigger }: { trigger: any }) {
   const [loading, setLoading] = useState(true);
   const [stakers, setStakers] = useState<ColsStakerRow[]>([]);
   const [egldPrice, setEgldPrice] = useState<number>(0);
   const [colsPrice, setColsPrice] = useState<number>(0);
   const [baseApr, setBaseApr] = useState<number>(0);
+  const [agencyLockedEgld, setAgencyLockedEgld] = useState<number>(0);
 
   // Get agency service fee from global context
   const { contractDetails } = useGlobalContext();
@@ -148,7 +166,11 @@ export function useColsApr({ trigger }: { trigger: any }) {
     const fetchedBaseApr = await fetchBaseAprFromApi();
     setBaseApr(fetchedBaseApr);
 
-    // 6. Parse agency service fee (e.g. "10%" -> 0.1)
+    // 6. Fetch agency pool locked value (Total_eGLD)
+    const lockedEgld = await fetchAgencyLockedEgld();
+    setAgencyLockedEgld(lockedEgld);
+
+    // 7. Parse agency service fee (e.g. "10%" -> 0.1)
     let serviceFee = 0.1; // fallback
     if (
       contractDetails &&
@@ -162,7 +184,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
       }
     }
 
-    // 7. Build table
+    // 8. Build table
     const table: ColsStakerRow[] = colsStakers.map(s => ({
       address: s.address,
       colsStaked: s.colsStaked,
@@ -175,7 +197,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
       rank: null
     }));
 
-    // 8. Calculate ratios
+    // 9. Calculate ratios
     for (const row of table) {
       if (row.egldStaked > 0 && fetchedColsPrice > 0 && egldPrice > 0) {
         row.ratio = (row.colsStaked * fetchedColsPrice) / (row.egldStaked * egldPrice);
@@ -183,7 +205,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         row.ratio = null;
       }
     }
-    // 9. Normalize
+    // 10. Normalize
     const validRatios = table.filter(r => r.ratio !== null).map(r => r.ratio!);
     const minRatio = validRatios.length > 0 ? Math.min(...validRatios) : 0;
     const maxRatio = validRatios.length > 0 ? Math.max(...validRatios) : 0;
@@ -194,7 +216,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         row.normalized = null;
       }
     }
-    // 10. APR(i)
+    // 11. APR(i)
     for (const row of table) {
       if (row.normalized !== null) {
         row.aprBonus = APRmin + (APRmax - APRmin) * Math.sqrt(row.normalized);
@@ -202,8 +224,9 @@ export function useColsApr({ trigger }: { trigger: any }) {
         row.aprBonus = null;
       }
     }
-    // 11. DAO(i) - Only for users with active eGLD staked
-    const totalEgldStaked = table.reduce((sum, r) => sum + (r.egldStaked || 0), 0);
+    // 12. DAO(i) - Only for users with active eGLD staked
+    // Use agencyLockedEgld (from API) instead of sum of egldStaked
+    const totalEgldStaked = lockedEgld;
     const sumColsStaked = table.reduce((sum, r) => sum + (r.colsStaked || 0), 0);
     for (const row of table) {
       if (row.egldStaked > 0 && row.colsStaked > 0 && sumColsStaked > 0) {
@@ -227,7 +250,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         row.dao = null;
       }
     }
-    // 12. APR_TOTAL: Only for users with active eGLD staked, otherwise just base APR
+    // 13. APR_TOTAL: Only for users with active eGLD staked, otherwise just base APR
     for (const row of table) {
       if (row.egldStaked > 0) {
         row.aprTotal = fetchedBaseApr + (row.aprBonus || 0) + (row.dao || 0);
@@ -235,7 +258,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         row.aprTotal = fetchedBaseApr;
       }
     }
-    // 13. Ranking
+    // 14. Ranking
     const sorted = [...table].sort((a, b) => (b.aprTotal || 0) - (a.aprTotal || 0));
     for (let i = 0; i < sorted.length; ++i) {
       sorted[i].rank = i + 1;
@@ -255,5 +278,5 @@ export function useColsApr({ trigger }: { trigger: any }) {
     // eslint-disable-next-line
   }, [trigger, contractDetails]);
 
-  return { loading, stakers, egldPrice, colsPrice, baseApr, recalc };
+  return { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, recalc };
 }

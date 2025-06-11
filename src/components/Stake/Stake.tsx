@@ -5,6 +5,7 @@ import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/trans
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import classNames from 'classnames';
 import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sendTransactions';
+import axios from 'axios';
 
 import { MultiversX } from 'assets/MultiversX';
 import { network } from 'config';
@@ -106,6 +107,22 @@ const ClaimCols = ({
 };
 
 // --- Simulation logic ---
+async function fetchAgencyLockedEgld() {
+  try {
+    const { data } = await axios.get(
+      `https://api.multiversx.com/providers/${network.delegationContract}`
+    );
+    if (data && typeof data.locked === 'string') {
+      // locked is in wei (1e18), convert to eGLD with 4 decimals
+      const lockedEgld = Number(data.locked) / 1e18;
+      return Math.round(lockedEgld * 10000) / 10000;
+    }
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
 function simulateAprAndRank({
   stakers,
   address,
@@ -113,7 +130,8 @@ function simulateAprAndRank({
   colsPrice,
   egldPrice,
   baseApr,
-  serviceFee
+  serviceFee,
+  agencyLockedEgld
 }: {
   stakers: any[];
   address: string;
@@ -122,6 +140,7 @@ function simulateAprAndRank({
   egldPrice: number;
   baseApr: number;
   serviceFee: number;
+  agencyLockedEgld: number;
 }) {
   const APRmin = 0.01;
   const APRmax = 15;
@@ -163,7 +182,8 @@ function simulateAprAndRank({
     }
   }
   // DAO
-  const totalEgldStaked = newStakers.reduce((sum, r) => sum + (r.egldStaked || 0), 0);
+  // Use agencyLockedEgld (from API) instead of sum of egldStaked
+  const totalEgldStaked = agencyLockedEgld;
   const sumColsStaked = newStakers.reduce((sum, r) => sum + (r.colsStaked || 0), 0);
   for (const row of newStakers) {
     if (row.egldStaked > 0 && row.colsStaked > 0 && sumColsStaked > 0) {
@@ -227,7 +247,7 @@ export const Stake = () => {
     userActiveStake.data === '0' && userClaimableRewards.data === '0';
 
   // --- Use live COLS APR data for user APR/ranking ---
-  const { loading: aprLoading, stakers, baseApr, egldPrice, colsPrice } = useColsAprContext();
+  const { loading: aprLoading, stakers, baseApr, egldPrice, colsPrice, agencyLockedEgld } = useColsAprContext();
   const [userApr, setUserApr] = useState<number | null>(null);
   const [userRank, setUserRank] = useState<number | null>(null);
 
@@ -251,6 +271,7 @@ export const Stake = () => {
   const [simulatedCols, setSimulatedCols] = useState<string>('');
   const [simResult, setSimResult] = useState<{ newApr: number | null; newRank: number | null } | null>(null);
   const [simError, setSimError] = useState<string | null>(null);
+  const [simLoading, setSimLoading] = useState(false);
 
   // Find user's current eGLD staked
   let userEgldStaked = 0;
@@ -277,15 +298,18 @@ export const Stake = () => {
   }
 
   // Handle simulation apply
-  const handleSimulate = () => {
+  const handleSimulate = async () => {
     setSimError(null);
     setSimResult(null);
+    setSimLoading(true);
     if (!address) {
       setSimError('Not logged in');
+      setSimLoading(false);
       return;
     }
     if (!userEgldStaked || userEgldStaked <= 0) {
       setSimError('You must have eGLD staked to simulate');
+      setSimLoading(false);
       return;
     }
     let val = 0;
@@ -294,8 +318,14 @@ export const Stake = () => {
       if (isNaN(val) || val < 0) throw new Error();
     } catch {
       setSimError('Invalid COLS value');
+      setSimLoading(false);
       return;
     }
+    // Fetch latest agency locked value for simulation
+    let lockedEgld = agencyLockedEgld;
+    try {
+      lockedEgld = await fetchAgencyLockedEgld();
+    } catch {}
     // Use already loaded stakers, prices, etc.
     const result = simulateAprAndRank({
       stakers,
@@ -304,9 +334,11 @@ export const Stake = () => {
       colsPrice,
       egldPrice,
       baseApr,
-      serviceFee
+      serviceFee,
+      agencyLockedEgld: lockedEgld
     });
     setSimResult(result);
+    setSimLoading(false);
   };
 
   // Panels and UI
@@ -470,8 +502,9 @@ export const Stake = () => {
                     fontSize: 15,
                     cursor: 'pointer'
                   }}
+                  disabled={simLoading}
                 >
-                  Apply
+                  {simLoading ? 'Calculating...' : 'Apply'}
                 </button>
               </div>
               {simError && (
