@@ -112,7 +112,8 @@ function simulateAprAndRank({
   simulatedColsStaked,
   colsPrice,
   egldPrice,
-  baseApr
+  baseApr,
+  serviceFee
 }: {
   stakers: any[];
   address: string;
@@ -120,10 +121,10 @@ function simulateAprAndRank({
   colsPrice: number;
   egldPrice: number;
   baseApr: number;
+  serviceFee: number;
 }) {
-  // Constants (should match useColsApr)
-  const APRmin = 1.11;
-  const APRmax = 3;
+  const APRmin = 0.01;
+  const APRmax = 15;
   const AGENCY_BUYBACK = 0.3;
   const DAO_DISTRIBUTION_RATIO = 0.333;
 
@@ -166,14 +167,14 @@ function simulateAprAndRank({
   const sumColsStaked = newStakers.reduce((sum, r) => sum + (r.colsStaked || 0), 0);
   for (const row of newStakers) {
     if (row.egldStaked > 0 && row.colsStaked > 0 && sumColsStaked > 0) {
-      // NEW FORMULA:
-      // DAO(i) = (((Total-eGLD * baseApr/100 * Agency-Buy-back * DAO_DISTRIBUTION_RATIO * COLS-staked(i)) / (SUM(COLS-staked(i)) )/eGLD-staked(i)))*100
+      const baseAprCorrected = baseApr / (1 - serviceFee) / 100;
       const dao = (
         (
           (
             totalEgldStaked *
-            (baseApr / 100) *
+            baseAprCorrected *
             AGENCY_BUYBACK *
+            serviceFee *
             DAO_DISTRIBUTION_RATIO *
             row.colsStaked
           ) / sumColsStaked
@@ -260,6 +261,21 @@ export const Stake = () => {
     }
   }
 
+  // Get serviceFee for simulation
+  let serviceFee = 0.1;
+  const { contractDetails } = useGlobalContext();
+  if (
+    contractDetails &&
+    contractDetails.data &&
+    typeof contractDetails.data.serviceFee === 'string'
+  ) {
+    const feeStr = contractDetails.data.serviceFee.replace('%', '').trim();
+    const feeNum = parseFloat(feeStr);
+    if (!isNaN(feeNum)) {
+      serviceFee = feeNum / 100;
+    }
+  }
+
   // Handle simulation apply
   const handleSimulate = () => {
     setSimError(null);
@@ -287,7 +303,8 @@ export const Stake = () => {
       simulatedColsStaked: val,
       colsPrice,
       egldPrice,
-      baseApr
+      baseApr,
+      serviceFee
     });
     setSimResult(result);
   };

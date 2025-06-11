@@ -14,8 +14,8 @@ import { useGlobalContext } from 'context';
 const PEERME_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const PEERME_ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
 
-const APRmin = 1.11;
-const APRmax = 3;
+const APRmin = 0.01;
+const APRmax = 15;
 
 // --- CONSTANTS ---
 const AGENCY_BUYBACK = 0.3; // Agency buyback percentage
@@ -74,7 +74,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
   const [colsPrice, setColsPrice] = useState<number>(0);
   const [baseApr, setBaseApr] = useState<number>(0);
 
-  // Get agency service fee from global context (no longer used in DAO formula)
+  // Get agency service fee from global context
   const { contractDetails } = useGlobalContext();
 
   // 1. Fetch COLS stakers and balances
@@ -148,6 +148,20 @@ export function useColsApr({ trigger }: { trigger: any }) {
     const fetchedBaseApr = await fetchBaseAprFromApi();
     setBaseApr(fetchedBaseApr);
 
+    // 6. Parse agency service fee (e.g. "10%" -> 0.1)
+    let serviceFee = 0.1; // fallback
+    if (
+      contractDetails &&
+      contractDetails.data &&
+      typeof contractDetails.data.serviceFee === 'string'
+    ) {
+      const feeStr = contractDetails.data.serviceFee.replace('%', '').trim();
+      const feeNum = parseFloat(feeStr);
+      if (!isNaN(feeNum)) {
+        serviceFee = feeNum / 100;
+      }
+    }
+
     // 7. Build table
     const table: ColsStakerRow[] = colsStakers.map(s => ({
       address: s.address,
@@ -193,14 +207,16 @@ export function useColsApr({ trigger }: { trigger: any }) {
     const sumColsStaked = table.reduce((sum, r) => sum + (r.colsStaked || 0), 0);
     for (const row of table) {
       if (row.egldStaked > 0 && row.colsStaked > 0 && sumColsStaked > 0) {
-        // NEW FORMULA:
-        // DAO(i) = (((Total-eGLD * baseApr/100 * Agency-Buy-back * DAO_DISTRIBUTION_RATIO * COLS-staked(i)) / (SUM(COLS-staked(i)) )/eGLD-staked(i)))*100
+        // FINAL FORMULA:
+        // DAO(i) = (((Total-eGLD * (baseApr/(1-serviceFee)/100) * Agency-Buy-back * serviceFee * DAO_DISTRIBUTION_RATIO * COLS-staked(i)) / (SUM(COLS-staked(i)) )/eGLD-staked(i)))*100
+        const baseAprCorrected = fetchedBaseApr / (1 - serviceFee) / 100;
         const dao = (
           (
             (
               totalEgldStaked *
-              (fetchedBaseApr / 100) *
+              baseAprCorrected *
               AGENCY_BUYBACK *
+              serviceFee *
               DAO_DISTRIBUTION_RATIO *
               row.colsStaked
             ) / sumColsStaked
