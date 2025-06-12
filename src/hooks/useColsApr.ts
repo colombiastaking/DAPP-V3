@@ -261,7 +261,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
       ) / 365;
 
     // Iteratively adjust APRmax to match the sum of COLS-DIST
-    const aprMin = 0.02;
+    const aprMin = 0.3; // CHANGED FROM 0.02 TO 0.3
     let aprMax = 15;
     let step = 0.1;
     let bestAprMax = aprMax;

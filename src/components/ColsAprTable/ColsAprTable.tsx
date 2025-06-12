@@ -1,12 +1,14 @@
 import { useColsAprContext } from '../../context/ColsAprContext';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import type { ColsStakerRow } from '../../hooks/useColsApr';
+import { useState } from 'react';
 
 const TARGET_USER = 'erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm';
 
 export function ColsAprTable() {
   const { address } = useGetAccountInfo();
   const { loading, stakers, egldPrice, colsPrice } = useColsAprContext();
+  const [copied, setCopied] = useState(false);
 
   // Only show table if the logged-in user is the target user
   if (address !== TARGET_USER) return null;
@@ -34,10 +36,43 @@ export function ColsAprTable() {
     return <div>No eligible data for COLS-DIST table.</div>;
   }
 
+  // Prepare the text to copy (no header, just address;COLS distributed)
+  const tableText = rows
+    .map((r: { address: string; colsDist: number }) =>
+      `${r.address};${r.colsDist.toLocaleString(undefined, { maximumFractionDigits: 8 })}`
+    )
+    .join('\n');
+
+  // Copy handler
+  const handleCopy = () => {
+    navigator.clipboard.writeText(tableText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
   // Render as a copy-paste ready table (plain text, semicolon-separated, no header)
   return (
     <div style={{ margin: 16 }}>
-      <h3>COLS-DIST Table</h3>
+      <h3 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        COLS-DIST Table
+        <button
+          onClick={handleCopy}
+          style={{
+            marginLeft: 8,
+            padding: '6px 16px',
+            borderRadius: 6,
+            border: 'none',
+            background: copied ? '#4caf50' : '#1976d2',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 15,
+            cursor: 'pointer',
+            transition: 'background 0.2s'
+          }}
+        >
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </h3>
       <pre style={{
         background: '#222',
         color: '#fff',
@@ -46,9 +81,7 @@ export function ColsAprTable() {
         fontSize: 16,
         userSelect: 'all'
       }}>
-{rows.map((r: { address: string; colsDist: number }) =>
-  `${r.address};${r.colsDist.toLocaleString(undefined, { maximumFractionDigits: 8 })}`
-).join('\n')}
+{tableText}
       </pre>
       <div style={{ marginTop: 12, fontSize: 13 }}>
         <b>eGLD Price:</b> ${egldPrice} &nbsp; <b>COLS Price:</b> ${colsPrice}
