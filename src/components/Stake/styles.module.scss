@@ -24,8 +24,8 @@
   }
 
   .assetsBox {
-    background: rgba(36, 37, 38, 0.5);
-    border: 2px solid #49494d;
+    background: #181a1b;
+    border: 2px solid #4fd1c5;
     border-radius: 12px;
     padding: 24px 32px;
     min-width: 220px;
@@ -36,12 +36,42 @@
     margin-bottom: 0;
     flex: 1 1 220px;
     max-width: 350px;
+    color: #6ee7c7;
+    transition: box-shadow 0.2s;
+  }
+
+  /* --- APR Panel Special Styling --- */
+  .assetsBox:nth-child(2) {
+    background: linear-gradient(90deg, #6ee7c7 0%, #4f8cff 100%) !important;
+    border: 2px solid #6ee7c7;
+    color: #181a1b !important;
+    box-shadow: 0 2px 24px #6ee7c7cc;
+    position: relative;
+    overflow: hidden;
+  }
+  .assetsBox:nth-child(2) .icon {
+    background: #fff;
+    border: 1px solid #6ee7c7;
+    box-shadow: 0 2px 12px #6ee7c755;
+  }
+  .assetsBox:nth-child(2) .title,
+  .assetsBox:nth-child(2) .aprValue,
+  .assetsBox:nth-child(2) b {
+    color: #181a1b !important;
+    text-shadow: 0 1px 8px #fff8;
+  }
+  .assetsBox:nth-child(2) .aprValue {
+    font-size: 22px;
+    font-weight: 800;
+    background: none;
+    color: #181a1b !important;
+    text-shadow: 0 1px 8px #fff8;
   }
 
   .icon {
     background: black;
-    border: 1px solid #49494d;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.12);
+    border: 1px solid #4fd1c5;
+    box-shadow: 0px 4px 12px #6ee7c7cc;
     border-radius: 50%;
     justify-content: center;
     display: flex;
@@ -69,12 +99,12 @@
     right: 0;
 
     svg path {
-      fill: white;
+      fill: #6ee7c7;
     }
   }
 
   .title {
-    color: #808ea3;
+    color: #6ee7c7;
     font-size: 18px;
     margin-bottom: 10px;
     line-height: 1;
@@ -92,7 +122,7 @@
   }
 
   .activeAmount {
-    color: white;
+    color: #6ee7c7;
     font-size: 22px;
     line-height: 1;
     font-weight: bold;
@@ -104,7 +134,7 @@
   }
 
   .activeLabel {
-    color: #ff9800;
+    color: #4fd1c5;
     font-size: 13px;
     font-weight: 600;
     margin-top: 2px;
@@ -136,12 +166,12 @@
     .heading {
       font-size: 32px;
       line-height: 1;
-      color: white;
+      color: #6ee7c7;
       margin-bottom: 45px;
     }
 
     .message {
-      color: #808ea3;
+      color: #a0aec0;
       line-height: 1;
       font-size: 18px;
       margin: 30px 0;
@@ -149,7 +179,7 @@
   }
 
   .value {
-    color: white;
+    color: #6ee7c7;
     font-size: 24px;
     line-height: 1;
     margin-bottom: 30px;
@@ -177,9 +207,13 @@
       align-items: center;
       padding: 15px 30px;
       border-radius: 7px;
-      color: white;
+      color: #181a1b;
+      background: #6ee7c7;
       border: none;
       font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 2px 8px #6ee7c7aa;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 
       @media (min-width: 576px) {
         width: 150px;
@@ -187,8 +221,8 @@
 
       &.disabled {
         pointer-events: none;
-        color: rgba(white, 0.5);
-        background-color: #303234 !important;
+        color: rgba(24,26,27,0.5);
+        background-color: #23272a !important;
       }
 
       &:not(:last-child) {
@@ -207,7 +241,7 @@
     margin-top: 10px;
     font-size: 15px;
     font-weight: 500;
-    color: #222;
+    color: #181a1b;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -218,13 +252,15 @@
     margin-left: 8px;
     font-weight: 700;
     font-size: 16px;
+    color: #181a1b;
+    text-shadow: 0 1px 8px #fff8;
   }
 
   /* --- Responsive Claimable Rewards Panel --- */
   .panel {
     margin-top: 32px;
-    background: rgba(36, 37, 38, 0.5);
-    border: 2px solid #49494d;
+    background: #181a1b;
+    border: 2px solid #4fd1c5;
     border-radius: 12px;
     padding: 32px 24px 24px 24px;
     max-width: 500px;
@@ -248,13 +284,13 @@
     .title {
       text-align: center;
       margin-bottom: 18px;
-      color: #808ea3;
+      color: #6ee7c7;
       font-size: 18px;
       font-weight: 500;
     }
 
     .value {
-      color: white;
+      color: #6ee7c7;
       font-size: 24px;
       line-height: 1;
       margin-bottom: 10px;

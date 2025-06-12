@@ -15,7 +15,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
     <div className='layout d-flex flex-column flex-fill wrapper'>
       {Boolean(address) && <Navbar />}
 
-      <main className='d-flex flex-column flex-grow-1'>
+      <main className='d-flex flex-column flex-grow-1 align-items-center justify-content-center'>
         <AuthenticatedRoutesWrapper
           routes={routes}
           unlockRoute={`${routeNames.unlock}${search}`}

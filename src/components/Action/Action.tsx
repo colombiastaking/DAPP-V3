@@ -16,6 +16,7 @@ export const Action = withAction(
           className={classNames(styles.trigger, {
             [styles.disabled]: disabled
           })}
+          type="button"
         >
           {trigger}
         </button>

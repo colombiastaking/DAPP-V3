@@ -1,6 +1,12 @@
 .wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+
   @media (min-width: 576px) {
     margin-left: 10px;
+    align-items: flex-start;
   }
 
   .trigger {
@@ -27,8 +33,10 @@
   }
 
   @media (max-width: 575px) {
-    button {
+    button, .trigger {
       width: 100%;
+      display: flex;
+      justify-content: center;
     }
   }
 }

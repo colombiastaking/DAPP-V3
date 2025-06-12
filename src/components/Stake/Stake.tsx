@@ -76,8 +76,8 @@ const ClaimCols = ({
     <button
       type="button"
       style={{
-        background: '#27C180',
-        color: '#fff',
+        background: '#6ee7c7',
+        color: '#181a1b',
         fontWeight: 700,
         borderRadius: 7,
         padding: '15px 30px',
@@ -87,7 +87,8 @@ const ClaimCols = ({
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        fontSize: 16
+        fontSize: 16,
+        boxShadow: '0 2px 8px #6ee7c7aa'
       }}
       onClick={handleClaimCols}
       className={classNames(styles.action)}
@@ -359,7 +360,7 @@ export const Stake = () => {
           <div className={styles.logo}>
             <MultiversX />
 
-            <div style={{ background: '#2044F5' }} className={styles.subicon}>
+            <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
               <FontAwesomeIcon icon={faLock} />
             </div>
           </div>
@@ -381,7 +382,7 @@ export const Stake = () => {
           <div className={styles.assetsBox}>
             <div className={styles.icon}>
               <MultiversX />
-              <div style={{ background: '#2044F5' }} className={styles.subicon}>
+              <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
                 <FontAwesomeIcon icon={faLock} />
               </div>
             </div>
@@ -413,20 +414,20 @@ export const Stake = () => {
           <div
             className={styles.assetsBox}
             style={{
-              borderColor: '#ffb74d',
-              background: 'linear-gradient(180deg, #ffb74d 0%, #ffe0b2 100%)',
-              color: '#000',
+              borderColor: '#6ee7c7',
+              background: 'linear-gradient(90deg, #6ee7c7 0%, #4f8cff 100%)',
+              color: '#181a1b',
               minWidth: 220
             }}
           >
-            <div className={styles.icon} style={{ background: '#fff3e0' }}>
-              <FontAwesomeIcon icon={faPercent} style={{ color: '#ff9800', fontSize: 32 }} />
+            <div className={styles.icon} style={{ background: '#fff' }}>
+              <FontAwesomeIcon icon={faPercent} style={{ color: '#6ee7c7', fontSize: 32 }} />
             </div>
-            <div className={styles.title} style={{ color: '#000' }}>APR for your eGLD</div>
+            <div className={styles.title} style={{ color: '#181a1b' }}>APR for your eGLD</div>
             <div className={styles.aprInfo}>
               <div>
                 <b>Base APR:</b>
-                <span className={styles.aprValue} style={{ color: '#000', background: 'none' }}>
+                <span className={styles.aprValue} style={{ color: '#181a1b', background: 'none' }}>
                   {aprLoading ? '...' : Number(baseApr).toFixed(2)}%
                 </span>
               </div>
@@ -435,13 +436,14 @@ export const Stake = () => {
                 <span
                   className={styles.aprValue}
                   style={{
-                    color: '#b71c1c',
+                    color: '#181a1b',
                     fontWeight: 700,
-                    background: 'none'
+                    background: 'none',
+                    textShadow: '0 1px 8px #fff8'
                   }}
                 >
                   <span style={{
-                    color: '#b71c1c',
+                    color: '#181a1b',
                     background: 'none',
                     padding: '2px 8px',
                     borderRadius: 4,
@@ -461,7 +463,7 @@ export const Stake = () => {
               </div>
               <div>
                 <b>Your Ranking:</b>
-                <span className={styles.aprValue} style={{ color: '#000', background: 'none' }}>
+                <span className={styles.aprValue} style={{ color: '#181a1b', background: 'none' }}>
                   {aprLoading
                     ? '...'
                     : userRank !== null
@@ -493,14 +495,15 @@ export const Stake = () => {
                   type="button"
                   onClick={handleSimulate}
                   style={{
-                    background: '#ff9800',
-                    color: '#fff',
+                    background: '#6ee7c7',
+                    color: '#181a1b',
                     border: 'none',
                     borderRadius: 4,
                     padding: '6px 16px',
                     fontWeight: 600,
                     fontSize: 15,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px #6ee7c7aa'
                   }}
                   disabled={simLoading}
                 >
@@ -514,13 +517,13 @@ export const Stake = () => {
                 <div style={{ marginTop: 10, fontSize: 15 }}>
                   <div>
                     <b>Simulated Total APR:</b>{' '}
-                    <span style={{ color: '#b71c1c', fontWeight: 700 }}>
+                    <span style={{ color: '#181a1b', fontWeight: 700 }}>
                       {simResult.newApr !== null ? simResult.newApr.toFixed(2) + '%' : 'N/A'}
                     </span>
                   </div>
                   <div>
                     <b>Simulated Ranking:</b>{' '}
-                    <span style={{ color: '#b71c1c', fontWeight: 700 }}>
+                    <span style={{ color: '#181a1b', fontWeight: 700 }}>
                       {simResult.newRank !== null ? `#${simResult.newRank} of ${stakers.length} COLS stakers` : 'N/A'}
                     </span>
                   </div>
@@ -536,7 +539,7 @@ export const Stake = () => {
         <div className={styles.panel}>
           <div className={styles.icon}>
             <MultiversX />
-            <div style={{ background: '#27C180' }} className={styles.subicon}>
+            <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
               <FontAwesomeIcon icon={faGift} />
             </div>
           </div>
@@ -545,12 +548,13 @@ export const Stake = () => {
             <button
               type="button"
               style={{
-                background: '#27C180',
-                color: '#fff',
+                background: '#6ee7c7',
+                color: '#181a1b',
                 fontWeight: 700,
                 borderRadius: 7,
                 padding: '15px 30px',
-                border: 'none'
+                border: 'none',
+                boxShadow: '0 2px 8px #6ee7c7aa'
               }}
               className={classNames(styles.action)}
               disabled={pending}
@@ -561,12 +565,13 @@ export const Stake = () => {
             <button
               type="button"
               style={{
-                background: '#27C180',
-                color: '#fff',
+                background: '#6ee7c7',
+                color: '#181a1b',
                 fontWeight: 700,
                 borderRadius: 7,
                 padding: '15px 30px',
-                border: 'none'
+                border: 'none',
+                boxShadow: '0 2px 8px #6ee7c7aa'
               }}
               className={classNames(styles.action)}
               disabled={pending}

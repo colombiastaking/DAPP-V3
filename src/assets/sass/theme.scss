@@ -1,27 +1,28 @@
-/* Bootstrap overrides
+/* Mint/Teal Theme Refresh
 -------------------------------------------------- */
-$body: #000;
+$body: #111;
 $headings-font-weight: 300 !important;
-$primary: #1b46c2;
-$light: #fafafa;
+$primary: #6ee7c7; // Mint/teal from screenshot
+$accent: #4fd1c5;  // Slightly deeper mint
+$secondary: #a0aec0; // Soft gray for secondary text
+$background: #181a1b;
+$card-bg: #181a1b;
+$card-border: #23272a;
+$button-bg: $primary;
+$button-hover: #4fd1c5;
+$button-text: #181a1b;
+$apr-gradient: linear-gradient(90deg, #6ee7c7 0%, #4f8cff 100%);
+$price-glow: 0 0 12px #6ee7c7, 0 0 2px #fff;
 
-/* Do not move the imports from here.
-Override Bootstrap variables only above.
--------------------------------------------------- */
-
-// Bootstrap
-@import '../../../node_modules/bootstrap/scss/bootstrap.scss';
-
-/* Base
--------------------------------------------------- */
 html {
   min-height: 100%;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 body {
-  background: url('../img/bodyBackground.png') no-repeat center / cover, black;
-  font-family: 'Helvetica', sans-serif;
+  background: $background;
+  color: $primary;
+  font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
   box-sizing: border-box;
 
   &.modal-open #root {
@@ -33,6 +34,15 @@ body {
   min-height: 100vh;
 }
 
+a, .link, .dapp-name, .heading, .label, .value, .activeLabel {
+  color: $primary !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: $primary;
+  font-weight: 400;
+}
+
 .opacity-6 {
   opacity: 0.6;
 }
@@ -40,7 +50,7 @@ body {
 .dapp-icon {
   padding: 5px;
   border-radius: 50%;
-  background-color: $light;
+  background-color: $card-bg;
   width: 65px;
   height: 65px;
   display: flex;
@@ -69,12 +79,12 @@ body {
 
 /* Navbar
 -------------------------------------------------- */
-
 .dapp-name {
   line-height: 1;
-  border-left: 1px solid $gray-400;
+  border-left: 1px solid $accent;
   padding-left: 3px;
   margin-left: 4px;
+  color: $primary;
 }
 
 /* Dashboard
@@ -84,17 +94,21 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  color: $white;
+  color: $primary;
   margin: 0 7px;
 
   button {
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    background-color: $white;
+    background-color: $primary;
+    color: $button-text;
+    box-shadow: 0 2px 8px #6ee7c7aa;
 
     &:hover {
-      opacity: 0.9;
+      background: $button-hover;
+      color: $button-text;
+      opacity: 1;
     }
   }
 }
@@ -104,20 +118,26 @@ body {
     border-radius: 50%;
     width: 40px;
     height: 40px;
+    background: $accent;
   }
 
   &.table {
     .transaction-hash .trim {
-      @include media-breakpoint-down(xl) {
-        max-width: none;
-      }
-      @include media-breakpoint-down(lg) {
+      /* Responsive max-widths using standard media queries */
+      max-width: none;
+    }
+    @media (max-width: 1200px) {
+      .transaction-hash .trim {
         max-width: 26rem;
       }
-      @include media-breakpoint-down(md) {
+    }
+    @media (max-width: 992px) {
+      .transaction-hash .trim {
         max-width: 12rem;
       }
-      @include media-breakpoint-down(sm) {
+    }
+    @media (max-width: 576px) {
+      .transaction-hash .trim {
         max-width: 8rem;
       }
     }
@@ -130,87 +150,135 @@ body {
     td {
       white-space: nowrap;
       vertical-align: middle;
+      color: $primary;
     }
 
     tr:last-of-type {
       td {
-        border-bottom: 1px solid #dee2e6;
+        border-bottom: 1px solid $card-border;
       }
     }
   }
 }
 
-/* Actions
+/* Cards
 -------------------------------------------------- */
-
-.not-allwed {
-  cursor: not-allowed;
-}
-
-/* Loader, Transaction Success/Fail
--------------------------------------------------- */
-.page-state {
-  .lds-ellipsis {
-    display: inline-block;
-    position: relative;
-    width: 64px;
-    height: 64px;
-  }
-  .lds-ellipsis div {
-    position: absolute;
-    top: 27px;
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.1);
-    animation-timing-function: cubic-bezier(0, 1, 1, 0);
-  }
-  .bg-blue .lds-ellipsis div {
-    background: rgba(255, 255, 255, 0.4);
-  }
-  .lds-ellipsis div:nth-child(1) {
-    left: 6px;
-    animation: lds-ellipsis1 0.6s infinite;
-  }
-  .lds-ellipsis div:nth-child(2) {
-    left: 6px;
-    animation: lds-ellipsis2 0.6s infinite;
-  }
-  .lds-ellipsis div:nth-child(3) {
-    left: 26px;
-    animation: lds-ellipsis2 0.6s infinite;
-  }
-  .lds-ellipsis div:nth-child(4) {
-    left: 45px;
-    animation: lds-ellipsis3 0.6s infinite;
-  }
-  @keyframes lds-ellipsis1 {
-    0% {
-      transform: scale(0);
-    }
-    100% {
-      transform: scale(1);
+.cards {
+  .card {
+    background: $card-bg;
+    border: 1px solid $card-border;
+    color: $primary;
+    box-shadow: 0 2px 12px #000a;
+    border-radius: 14px;
+    padding: 18px;
+    font-size: 15px;
+    transition: box-shadow 0.2s;
+    &:hover {
+      box-shadow: 0 4px 24px #6ee7c755;
     }
   }
-  @keyframes lds-ellipsis3 {
-    0% {
-      transform: scale(1);
-    }
-    100% {
-      transform: scale(0);
-    }
+  .heading {
+    color: $primary;
   }
-  @keyframes lds-ellipsis2 {
-    0% {
-      transform: translate(0, 0);
-    }
-    100% {
-      transform: translate(19px, 0);
-    }
+  .value {
+    color: $primary;
+    font-size: 22px;
+    font-weight: 700;
+    text-shadow: 0 1px 8px #6ee7c755;
   }
 }
 
-/* Footer
+/* Buttons
+-------------------------------------------------- */
+button, .btn, .action-btn button {
+  background: $button-bg;
+  color: $button-text;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 12px 28px;
+  box-shadow: 0 2px 8px #6ee7c7aa;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  &:hover, &:focus {
+    background: $button-hover;
+    color: $button-text;
+    box-shadow: 0 4px 16px #6ee7c7cc;
+  }
+  &:active {
+    background: $accent;
+    color: $button-text;
+  }
+}
+
+/* APR Section
+-------------------------------------------------- */
+.stake .assetsBox {
+  background: $card-bg;
+  border: 2px solid $accent;
+  color: $primary;
+}
+.stake .assetsBox:nth-child(2) {
+  background: $apr-gradient !important;
+  border: 2px solid #6ee7c7;
+  color: #181a1b !important;
+  box-shadow: 0 2px 24px #6ee7c7cc;
+}
+.stake .assetsBox:nth-child(2) .title,
+.stake .assetsBox:nth-child(2) .aprValue,
+.stake .assetsBox:nth-child(2) b {
+  color: #181a1b !important;
+  text-shadow: 0 1px 8px #fff8;
+}
+.stake .assetsBox:nth-child(2) .aprValue {
+  font-size: 22px;
+  font-weight: 800;
+  background: none;
+  color: #181a1b !important;
+  text-shadow: 0 1px 8px #fff8;
+}
+
+/* Price Banner
+-------------------------------------------------- */
+.price-banner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  background: #111;
+  color: $primary;
+  border-radius: 14px;
+  padding: 20px 0;
+  margin: 24px 0 32px 0;
+  font-size: 22px;
+  font-weight: 700;
+  box-shadow: 0 2px 12px #6ee7c7aa;
+}
+.price-banner .price-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #181a1b;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 20px;
+  font-weight: 800;
+  box-shadow: 0 1px 8px #6ee7c7aa;
+}
+.price-banner .label {
+  color: $primary;
+  font-weight: 800;
+  font-size: 18px;
+  margin-right: 6px;
+}
+.price-banner .value {
+  color: #fff;
+  font-weight: 800;
+  font-size: 24px;
+  text-shadow: $price-glow;
+}
+
+/* Misc
 -------------------------------------------------- */
 footer {
   div {
@@ -221,18 +289,15 @@ footer {
     line-height: 1.155rem;
 
     a {
-      color: $black;
-
+      color: $primary;
       &:hover {
-        color: $black;
+        color: $accent;
       }
-
       #heart {
         height: 16px;
         width: 16px;
-
         path {
-          fill: #c00;
+          fill: #6ee7c7;
         }
       }
     }
