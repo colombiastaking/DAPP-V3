@@ -31,11 +31,11 @@ export interface ColsStakerRow {
   rank: number | null;
 }
 
-// Fetch latest COLS price from MultiversX API
+// Fetch latest COLS price from MultiversX API (hourly)
 async function fetchColsPriceFromApi() {
   try {
     const { data } = await axios.get(
-      'https://api.multiversx.com/mex/tokens/prices/daily/COLS-9d91b7'
+      'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7'
     );
     if (Array.isArray(data) && data.length > 0) {
       const last = data[data.length - 1];
@@ -199,7 +199,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
     const egldPrice = await fetchEgldPrice();
     setEgldPrice(egldPrice);
 
-    // 4. Fetch COLS price from MultiversX API
+    // 4. Fetch COLS price from MultiversX API (hourly)
     const fetchedColsPrice = await fetchColsPriceFromApi();
     setColsPrice(fetchedColsPrice);
 

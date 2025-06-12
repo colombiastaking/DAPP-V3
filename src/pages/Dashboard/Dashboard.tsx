@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Stake } from 'components/Stake';
 import { Withdrawals } from 'components/Withdrawals';
 import { ColsAprTable } from 'components/ColsAprTable';
+import { PriceBanner } from 'components/PriceBanner';
 
 import styles from './styles.module.scss';
 import useGlobalData from '../../hooks/useGlobalData';
@@ -41,6 +42,7 @@ export const Dashboard = () => {
 
   return (
     <div className={styles.dashboard}>
+      <PriceBanner />
       <Stake />
       <Withdrawals />
       <ColsAprTable />
