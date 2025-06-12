@@ -240,18 +240,19 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
     // --- Dynamic APRmax calculation ---
     // Target: Average-APRbonus
+    // Corrected formula:
     // targetAvgAprBonus =
     //   (lockedEgld *
-    //   baseApr *
-    //   (1 - serviceFee) / 100 *
-    //   serviceFee *
-    //   AGENCY_BUYBACK *
-    //   BONUS_BUYBACK_FACTOR *
-    //   egldPrice / colsPrice) / 365
+    //    baseApr /
+    //    ((1 - serviceFee) / 100) *
+    //    serviceFee *
+    //    AGENCY_BUYBACK *
+    //    BONUS_BUYBACK_FACTOR *
+    //    egldPrice / colsPrice) / 365
     const targetAvgAprBonus =
       (
         lockedEgld *
-        fetchedBaseApr *
+        fetchedBaseApr /
         ((1 - serviceFee) / 100) *
         serviceFee *
         AGENCY_BUYBACK *
