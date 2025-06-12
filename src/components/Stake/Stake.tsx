@@ -317,6 +317,11 @@ export const Stake = () => {
     try {
       val = parseFloat(simulatedCols);
       if (isNaN(val) || val < 0) throw new Error();
+      if (val > 40000) {
+        setSimError('Maximum COLS to simulate is 40,000');
+        setSimLoading(false);
+        return;
+      }
     } catch {
       setSimError('Invalid COLS value');
       setSimLoading(false);
@@ -444,13 +449,14 @@ export const Stake = () => {
                 >
                   <span style={{
                     color: '#181a1b',
-                    background: 'none',
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                    fontWeight: 700,
-                    fontSize: 18,
+                    background: '#ffe082',
+                    padding: '2px 12px',
+                    borderRadius: 6,
+                    fontWeight: 900,
+                    fontSize: 20,
                     letterSpacing: 0.5,
-                    display: 'inline-block'
+                    display: 'inline-block',
+                    boxShadow: '0 2px 8px #fff8'
                   }}>
                     {aprLoading
                       ? '...'
@@ -464,11 +470,23 @@ export const Stake = () => {
               <div>
                 <b>Your Ranking:</b>
                 <span className={styles.aprValue} style={{ color: '#181a1b', background: 'none' }}>
-                  {aprLoading
-                    ? '...'
-                    : userRank !== null
-                      ? `#${userRank} of ${stakers.length} COLS stakers`
-                      : 'N/A'}
+                  <span style={{
+                    color: '#fff',
+                    background: '#1976d2',
+                    padding: '2px 12px',
+                    borderRadius: 6,
+                    fontWeight: 900,
+                    fontSize: 18,
+                    letterSpacing: 0.5,
+                    display: 'inline-block',
+                    boxShadow: '0 2px 8px #fff8'
+                  }}>
+                    {aprLoading
+                      ? '...'
+                      : userRank !== null
+                        ? `#${userRank} of ${stakers.length} COLS stakers`
+                        : 'N/A'}
+                  </span>
                 </span>
               </div>
             </div>
@@ -479,9 +497,24 @@ export const Stake = () => {
                 <input
                   type="number"
                   min={0}
+                  max={40000}
                   step="any"
                   value={simulatedCols}
-                  onChange={e => setSimulatedCols(e.target.value)}
+                  onChange={e => {
+                    let val = e.target.value;
+                    if (val === '') {
+                      setSimulatedCols('');
+                      setSimError(null);
+                      return;
+                    }
+                    if (parseFloat(val) > 40000) {
+                      setSimulatedCols('40000');
+                      setSimError('Maximum COLS to simulate is 40,000');
+                    } else {
+                      setSimulatedCols(val);
+                      setSimError(null);
+                    }
+                  }}
                   style={{
                     width: 120,
                     padding: 6,
@@ -517,13 +550,33 @@ export const Stake = () => {
                 <div style={{ marginTop: 10, fontSize: 15 }}>
                   <div>
                     <b>Simulated Total APR:</b>{' '}
-                    <span style={{ color: '#181a1b', fontWeight: 700 }}>
+                    <span style={{
+                      color: '#181a1b',
+                      background: '#ffe082',
+                      padding: '2px 12px',
+                      borderRadius: 6,
+                      fontWeight: 900,
+                      fontSize: 20,
+                      letterSpacing: 0.5,
+                      display: 'inline-block',
+                      boxShadow: '0 2px 8px #fff8'
+                    }}>
                       {simResult.newApr !== null ? simResult.newApr.toFixed(2) + '%' : 'N/A'}
                     </span>
                   </div>
                   <div>
                     <b>Simulated Ranking:</b>{' '}
-                    <span style={{ color: '#181a1b', fontWeight: 700 }}>
+                    <span style={{
+                      color: '#fff',
+                      background: '#1976d2',
+                      padding: '2px 12px',
+                      borderRadius: 6,
+                      fontWeight: 900,
+                      fontSize: 18,
+                      letterSpacing: 0.5,
+                      display: 'inline-block',
+                      boxShadow: '0 2px 8px #fff8'
+                    }}>
                       {simResult.newRank !== null ? `#${simResult.newRank} of ${stakers.length} COLS stakers` : 'N/A'}
                     </span>
                   </div>
