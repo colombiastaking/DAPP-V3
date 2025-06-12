@@ -14,12 +14,10 @@ import { useGlobalContext } from 'context';
 const PEERME_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const PEERME_ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
 
-const APRmin = 0.01;
-const APRmax = 15;
-
 // --- CONSTANTS ---
 const AGENCY_BUYBACK = 0.3; // Agency buyback percentage
 const DAO_DISTRIBUTION_RATIO = 0.333; // Portion of buybacks distributed to DAO
+const BONUS_BUYBACK_FACTOR = 0.66; // For Average-APRbonus
 
 export interface ColsStakerRow {
   address: string;
@@ -91,6 +89,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
   const [colsPrice, setColsPrice] = useState<number>(0);
   const [baseApr, setBaseApr] = useState<number>(0);
   const [agencyLockedEgld, setAgencyLockedEgld] = useState<number>(0);
+  const [aprMax, setAprMax] = useState<number>(15);
 
   // Get agency service fee from global context
   const { contractDetails } = useGlobalContext();
@@ -147,6 +146,48 @@ export function useColsApr({ trigger }: { trigger: any }) {
     }
   }, []);
 
+  // --- Dynamic APRmax calculation ---
+  function calcAprBonusTableSum({
+    stakers,
+    egldPrice,
+    colsPrice,
+    aprMax,
+    aprMin
+  }: {
+    stakers: ColsStakerRow[];
+    egldPrice: number;
+    colsPrice: number;
+    aprMax: number;
+    aprMin: number;
+  }) {
+    // Only users with both COLS and eGLD staked
+    const filtered = stakers.filter(
+      (row: ColsStakerRow) => row.colsStaked > 0 && row.egldStaked > 0
+    );
+    // Calculate ratios
+    let minRatio = Infinity, maxRatio = -Infinity;
+    for (const row of filtered) {
+      row.ratio = (row.colsStaked * colsPrice) / (row.egldStaked * egldPrice);
+      if (row.ratio < minRatio) minRatio = row.ratio;
+      if (row.ratio > maxRatio) maxRatio = row.ratio;
+    }
+    for (const row of filtered) {
+      row.normalized = (maxRatio !== minRatio && row.ratio !== null)
+        ? (row.ratio - minRatio) / (maxRatio - minRatio)
+        : 0;
+      row.aprBonus = aprMin + (aprMax - aprMin) * Math.sqrt(row.normalized);
+    }
+    // COLS-DIST(i) = APR-BONUS(i)/100 * eGLD-staked(i) * eGLDprice / 365 / COLSprice
+    let sum = 0;
+    for (const row of filtered) {
+      if (row.aprBonus !== null) {
+        const dist = (row.aprBonus / 100) * row.egldStaked * egldPrice / 365 / colsPrice;
+        sum += dist;
+      }
+    }
+    return sum;
+  }
+
   // 4. Main calculation
   const recalc = useCallback(async () => {
     setLoading(true);
@@ -197,6 +238,75 @@ export function useColsApr({ trigger }: { trigger: any }) {
       rank: null
     }));
 
+    // --- Dynamic APRmax calculation ---
+    // Target: Average-APRbonus
+    // targetAvgAprBonus =
+    //   (lockedEgld *
+    //   baseApr *
+    //   (1 - serviceFee) / 100 *
+    //   serviceFee *
+    //   AGENCY_BUYBACK *
+    //   BONUS_BUYBACK_FACTOR *
+    //   egldPrice / colsPrice) / 365
+    const targetAvgAprBonus =
+      (
+        lockedEgld *
+        fetchedBaseApr *
+        ((1 - serviceFee) / 100) *
+        serviceFee *
+        AGENCY_BUYBACK *
+        BONUS_BUYBACK_FACTOR *
+        egldPrice / fetchedColsPrice
+      ) / 365;
+
+    // Iteratively adjust APRmax to match the sum of COLS-DIST
+    const aprMin = 0.02;
+    let aprMax = 15;
+    let step = 0.1;
+    let bestAprMax = aprMax;
+    let bestDiff = Infinity;
+    let maxIter = 200;
+    let iter = 0;
+    let lastSum = 0;
+    while (iter < maxIter) {
+      if (aprMax > 25) aprMax = 25;
+      if (aprMax < aprMin) aprMax = aprMin;
+      const sum = calcAprBonusTableSum({
+        stakers: table.map(r => ({ ...r })), // fresh copy
+        egldPrice,
+        colsPrice: fetchedColsPrice,
+        aprMax,
+        aprMin
+      });
+      const diff = Math.abs(sum - targetAvgAprBonus);
+      if (diff < 1) {
+        bestAprMax = aprMax;
+        break;
+      }
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestAprMax = aprMax;
+      }
+      // Decide direction
+      if (sum < targetAvgAprBonus) {
+        aprMax += step;
+      } else {
+        aprMax -= step;
+      }
+      // Cap aprMax at 25
+      if (aprMax > 25) aprMax = 25;
+      if (aprMax < aprMin) aprMax = aprMin;
+      // If direction changed, reduce step for finer search
+      if ((lastSum < targetAvgAprBonus && sum > targetAvgAprBonus) ||
+          (lastSum > targetAvgAprBonus && sum < targetAvgAprBonus)) {
+        step = Math.max(0.01, step / 2);
+      }
+      lastSum = sum;
+      iter++;
+    }
+    // If we hit iteration limit, use bestAprMax found (closest match)
+    setAprMax(bestAprMax);
+
     // 9. Calculate ratios
     for (const row of table) {
       if (row.egldStaked > 0 && fetchedColsPrice > 0 && egldPrice > 0) {
@@ -216,10 +326,10 @@ export function useColsApr({ trigger }: { trigger: any }) {
         row.normalized = null;
       }
     }
-    // 11. APR(i)
+    // 11. APR(i) with dynamic APRmax
     for (const row of table) {
       if (row.normalized !== null) {
-        row.aprBonus = APRmin + (APRmax - APRmin) * Math.sqrt(row.normalized);
+        row.aprBonus = aprMin + (bestAprMax - aprMin) * Math.sqrt(row.normalized);
       } else {
         row.aprBonus = null;
       }
@@ -278,5 +388,5 @@ export function useColsApr({ trigger }: { trigger: any }) {
     // eslint-disable-next-line
   }, [trigger, contractDetails]);
 
-  return { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, recalc };
+  return { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, aprMax, recalc };
 }
