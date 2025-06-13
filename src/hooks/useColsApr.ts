@@ -17,9 +17,7 @@ const PEERME_ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l9
 // --- CONSTANTS ---
 const AGENCY_BUYBACK = 0.3; // Agency buyback percentage
 const DAO_DISTRIBUTION_RATIO = 0.333; // Portion of buybacks distributed to DAO
-
-// --- Set the target average APR bonus as a constant for easy updates ---
-const TARGET_AVG_APR_BONUS = 65; // <-- Update this value as needed
+const BONUS_BUYBACK_FACTOR = 0.66; // For Average-APRbonus
 
 export interface ColsStakerRow {
   address: string;
@@ -240,8 +238,21 @@ export function useColsApr({ trigger }: { trigger: any }) {
       rank: null
     }));
 
-    // --- Use constant for targetAvgAprBonus ---
-    const targetAvgAprBonus = TARGET_AVG_APR_BONUS;
+    // --- Calculate TARGET_AVG_APR_BONUS ONCE, outside the APRmax loop ---
+    // Formula:
+    // TARGET_AVG_APR_BONUS =
+    //   (lockedEgld * Base_APR / (1 - service_fee) / 100 * service_fee * Agency_buyback_constant * 0.66 * eGLD_price / COLS_price) / 365
+    const targetAvgAprBonus =
+      (
+        lockedEgld *
+        fetchedBaseApr /
+        (1 - serviceFee) /
+        100 *
+        serviceFee *
+        AGENCY_BUYBACK *
+        BONUS_BUYBACK_FACTOR *
+        egldPrice / fetchedColsPrice
+      ) / 365;
 
     // Iteratively adjust APRmax to match the sum of COLS-DIST
     const aprMin = 0.3; // CHANGED FROM 0.02 TO 0.3

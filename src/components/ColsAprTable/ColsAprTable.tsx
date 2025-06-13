@@ -19,16 +19,23 @@ export function ColsAprTable() {
     (row: ColsStakerRow) => row.colsStaked > 0 && row.egldStaked > 0
   );
 
-  // Calculate COLS-DIST(i) for each eligible user
-  const rows = filtered.map((row: ColsStakerRow) => {
+  // Calculate COLS-DIST(i), APR(i), DAO APR for each eligible user
+  type RowType = { address: string; colsDist: number; aprI: number; daoApr: number };
+  const rows: RowType[] = filtered.map((row: ColsStakerRow) => {
     // COLS-DIST(i) = APR-BONUS(i)/100 * eGLD-staked(i) * eGLDprice / 365 / COLSprice
     const colsDist =
       row.aprBonus && row.egldStaked && egldPrice && colsPrice
         ? (row.aprBonus / 100) * row.egldStaked * egldPrice / 365 / colsPrice
         : 0;
+    // APR(i) = row.aprBonus
+    const aprI = row.aprBonus ?? 0;
+    // DAO APR = row.dao
+    const daoApr = row.dao ?? 0;
     return {
       address: row.address,
-      colsDist
+      colsDist,
+      aprI,
+      daoApr
     };
   });
 
@@ -36,12 +43,19 @@ export function ColsAprTable() {
     return <div>No eligible data for COLS-DIST table.</div>;
   }
 
-  // Prepare the text to copy (no header, just address;COLS distributed)
-  const tableText = rows
-    .map((r: { address: string; colsDist: number }) =>
-      `${r.address};${r.colsDist.toLocaleString(undefined, { maximumFractionDigits: 8 })}`
+  // Prepare the text to copy (header + address;COLS distributed;APR(i);DAO APR)
+  const header = 'address;COLS-DIST;APR(i);DAO APR';
+  const tableText = [
+    header,
+    ...rows.map((r: RowType) =>
+      [
+        r.address,
+        r.colsDist.toLocaleString(undefined, { maximumFractionDigits: 8 }),
+        r.aprI.toLocaleString(undefined, { maximumFractionDigits: 4 }),
+        r.daoApr.toLocaleString(undefined, { maximumFractionDigits: 4 })
+      ].join(';')
     )
-    .join('\n');
+  ].join('\n');
 
   // Copy handler
   const handleCopy = () => {
@@ -50,7 +64,7 @@ export function ColsAprTable() {
     setTimeout(() => setCopied(false), 1200);
   };
 
-  // Render as a copy-paste ready table (plain text, semicolon-separated, no header)
+  // Render as a copy-paste ready table (plain text, semicolon-separated, with header)
   return (
     <div style={{ margin: 16 }}>
       <h3 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
