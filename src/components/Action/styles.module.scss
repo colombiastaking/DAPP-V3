@@ -87,6 +87,7 @@
   margin: 0 !important;
   z-index: 1050 !important;
   background: none !important;
+  pointer-events: auto !important;
 }
 
 :global(.modal-dialog) {
@@ -95,6 +96,7 @@
   justify-content: center !important;
   align-items: center !important;
   display: flex !important;
+  pointer-events: auto !important;
 }
 
 :global(.modal-content) {
@@ -107,4 +109,5 @@
   justify-content: center;
   max-width: 400px;
   width: 100%;
+  pointer-events: auto !important;
 }

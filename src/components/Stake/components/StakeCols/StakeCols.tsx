@@ -12,6 +12,7 @@ import { Action, Submit } from 'components/Action';
 import { network } from 'config';
 
 import styles from '../Delegate/styles.module.scss';
+import stakeColsStyles from './styles.module.scss';
 
 // --- NEW: Info Modal for 15-day lock ---
 import { Modal } from 'react-bootstrap';
@@ -83,8 +84,7 @@ function WithdrawWarningModal({ show, onClose, onConfirm }: { show: boolean, onC
         </div>
         <div style={{ color: '#fff', fontSize: 16, marginBottom: 18 }}>
           <b>Before Withdrawing:</b><br />
-          Please ensure your <span style={{ color: '#ffe082' }}>last COLS stake</span> is older than <b>15 days</b>.<br />
-          Withdrawing before 15 days may not be possible or may result in loss of rewards.
+          Please ensure your <span style={{ color: '#ffe082' }}>last COLS stake</span> is older than <b>15 days</b>.
         </div>
         <button
           style={{
@@ -232,9 +232,7 @@ export const StakeCols = () => {
               fontSize: '16px'
             }}
           >
-            <span role="img" aria-label="fire">🔥</span>
             Stake COLS
-            <span role="img" aria-label="fire">🔥</span>
           </div>
         }
         render={(onClose: () => void) => (
@@ -386,26 +384,16 @@ export const StakeCols = () => {
       <div style={{ marginTop: 16, width: '100%', display: 'flex', justifyContent: 'center' }}>
         <button
           type="button"
-          className={classNames(styles.trigger, {
-            [styles.disabled]: pending
+          className={classNames(stakeColsStyles.trigger, {
+            [stakeColsStyles.disabled]: pending
           })}
-          style={{
-            background: '#303234',
-            color: '#fff',
-            fontWeight: 700,
-            borderRadius: 7,
-            padding: '15px 30px',
-            border: 'none',
-            fontSize: 16,
-            width: 180,
-            boxShadow: '0 2px 8px #6ee7c7aa'
-          }}
           onClick={handleWithdraw}
           disabled={pending}
         >
           Withdraw COLS
         </button>
       </div>
+      {/* Removed the lower Withdraw COLS button */}
     </div>
   );
 };

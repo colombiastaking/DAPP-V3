@@ -15,7 +15,7 @@ import { denominated } from 'helpers/denominate';
 import { Delegate } from './components/Delegate';
 import { Undelegate } from './components/Undelegate';
 import { StakeCols } from './components/StakeCols';
-import { WithdrawCols } from './components/WithdrawCols';
+// import { WithdrawCols } from './components/WithdrawCols'; // Removed
 
 import useStakeData from './hooks';
 import { useColsAprContext } from '../../context/ColsAprContext';
@@ -412,7 +412,8 @@ export const Stake = () => {
               <div className={styles.actionButtonWrapper}><Delegate /></div>
               <div className={styles.actionButtonWrapper}><StakeCols /></div>
               <div className={styles.actionButtonWrapper}><Undelegate /></div>
-              <div className={styles.actionButtonWrapper}><WithdrawCols /></div>
+              {/* <div className={styles.actionButtonWrapper}><WithdrawCols /></div> */}
+              {/* WithdrawCols button removed as requested */}
             </div>
           </div>
           {/* APR Panel */}

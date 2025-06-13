@@ -8,3 +8,32 @@
   box-shadow: 0 0 8px #ff9800;
   transition: box-shadow 0.2s;
 }
+
+/* Withdraw COLS button hover effect */
+.trigger {
+  background: #303234;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 7px;
+  padding: 15px 30px;
+  border: none;
+  font-size: 16px;
+  width: 180px;
+  box-shadow: 0 2px 8px #6ee7c7aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+
+  &:hover:not(.disabled) {
+    background: #6ee7c7 !important;
+    color: #181a1b !important;
+    box-shadow: 0 4px 16px #6ee7c7cc;
+    cursor: pointer;
+  }
+  &.disabled {
+    pointer-events: none;
+    color: rgba(255,255,255,0.5);
+    background: #23272a !important;
+  }
+}
