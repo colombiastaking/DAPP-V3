@@ -19,23 +19,17 @@ export function ColsAprTable() {
     (row: ColsStakerRow) => row.colsStaked > 0 && row.egldStaked > 0
   );
 
-  // Calculate COLS-DIST(i), APR(i), DAO APR for each eligible user
-  type RowType = { address: string; colsDist: number; aprI: number; daoApr: number };
+  // Calculate COLS-DIST(i) for each eligible user
+  type RowType = { address: string; colsDist: number };
   const rows: RowType[] = filtered.map((row: ColsStakerRow) => {
     // COLS-DIST(i) = APR-BONUS(i)/100 * eGLD-staked(i) * eGLDprice / 365 / COLSprice
     const colsDist =
       row.aprBonus && row.egldStaked && egldPrice && colsPrice
         ? (row.aprBonus / 100) * row.egldStaked * egldPrice / 365 / colsPrice
         : 0;
-    // APR(i) = row.aprBonus
-    const aprI = row.aprBonus ?? 0;
-    // DAO APR = row.dao
-    const daoApr = row.dao ?? 0;
     return {
       address: row.address,
-      colsDist,
-      aprI,
-      daoApr
+      colsDist
     };
   });
 
@@ -43,16 +37,14 @@ export function ColsAprTable() {
     return <div>No eligible data for COLS-DIST table.</div>;
   }
 
-  // Prepare the text to copy (header + address;COLS distributed;APR(i);DAO APR)
-  const header = 'address;COLS-DIST;APR(i);DAO APR';
+  // Prepare the text to copy (header + address;COLS distributed)
+  const header = 'address;COLS-DIST';
   const tableText = [
     header,
     ...rows.map((r: RowType) =>
       [
         r.address,
-        r.colsDist.toLocaleString(undefined, { maximumFractionDigits: 8 }),
-        r.aprI.toLocaleString(undefined, { maximumFractionDigits: 4 }),
-        r.daoApr.toLocaleString(undefined, { maximumFractionDigits: 4 })
+        r.colsDist.toLocaleString(undefined, { maximumFractionDigits: 8 })
       ].join(';')
     )
   ].join('\n');
