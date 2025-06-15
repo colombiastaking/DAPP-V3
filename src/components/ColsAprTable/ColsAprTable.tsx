@@ -37,17 +37,13 @@ export function ColsAprTable() {
     return <div>No eligible data for COLS-DIST table.</div>;
   }
 
-  // Prepare the text to copy (header + address;COLS distributed)
-  const header = 'address;COLS-DIST';
-  const tableText = [
-    header,
-    ...rows.map((r: RowType) =>
-      [
-        r.address,
-        r.colsDist.toLocaleString(undefined, { maximumFractionDigits: 8 })
-      ].join(';')
-    )
-  ].join('\n');
+  // Prepare the text to copy (no header, just address;COLS distributed)
+  const tableText = rows.map((r: RowType) =>
+    [
+      r.address,
+      r.colsDist.toLocaleString(undefined, { maximumFractionDigits: 8 })
+    ].join(';')
+  ).join('\n');
 
   // Copy handler
   const handleCopy = () => {
@@ -56,7 +52,7 @@ export function ColsAprTable() {
     setTimeout(() => setCopied(false), 1200);
   };
 
-  // Render as a copy-paste ready table (plain text, semicolon-separated, with header)
+  // Render as a copy-paste ready table (plain text, semicolon-separated, no header)
   return (
     <div style={{ margin: 16 }}>
       <h3 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

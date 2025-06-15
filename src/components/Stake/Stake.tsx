@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { faLock, faGift, faPercent } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import classNames from 'classnames';
-import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sendTransactions';
 import axios from 'axios';
 
 import { MultiversX } from 'assets/MultiversX';
@@ -15,18 +14,13 @@ import { denominated } from 'helpers/denominate';
 import { Delegate } from './components/Delegate';
 import { Undelegate } from './components/Undelegate';
 import { StakeCols } from './components/StakeCols';
-// import { WithdrawCols } from './components/WithdrawCols'; // Removed
 
 import useStakeData from './hooks';
 import { useColsAprContext } from '../../context/ColsAprContext';
 
 import styles from './styles.module.scss';
+import { ClaimColsButton } from './ClaimColsButton';
 
-const CLAIM_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
-const CLAIM_COLS_DATA = 'claimRewards@00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787';
-const CLAIM_COLS_GAS_LIMIT = 10_000_000;
-
-// Helper to denominate COLS (18 decimals)
 function denominateCols(raw: string, addCommas = true) {
   if (!raw || raw === '0') return '0';
   let str = raw.padStart(19, '0');
@@ -34,7 +28,6 @@ function denominateCols(raw: string, addCommas = true) {
   let decPart = raw.length > 18 ? str.slice(-18).replace(/0+$/, '') : '';
   let result = decPart ? `${intPart}.${decPart}` : intPart;
   if (addCommas) {
-    // Add thousands separator to int part
     const [i, d] = result.split('.');
     result = i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (d ? '.' + d : '');
   }
@@ -46,75 +39,15 @@ const ClaimCols = ({
 }: {
   onClaimed: () => void;
 }) => {
-  const { pending } = useGetActiveTransactionsStatus();
-  const [error, setError] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(false);
-
-  const handleClaimCols = async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      await sendTransactions({
-        transactions: [
-          {
-            value: '0',
-            data: CLAIM_COLS_DATA,
-            receiver: CLAIM_COLS_CONTRACT,
-            gasLimit: CLAIM_COLS_GAS_LIMIT
-          }
-        ]
-      });
-      setLoading(false);
-      onClaimed();
-    } catch (e: any) {
-      setError(e?.message || 'Failed to send transaction');
-      setLoading(false);
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      style={{
-        background: '#6ee7c7',
-        color: '#181a1b',
-        fontWeight: 700,
-        borderRadius: 7,
-        padding: '15px 30px',
-        border: 'none',
-        marginRight: 0,
-        marginBottom: 0,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        fontSize: 16,
-        boxShadow: '0 2px 8px #6ee7c7aa'
-      }}
-      onClick={handleClaimCols}
-      className={classNames(styles.action)}
-      disabled={pending || loading}
-    >
-      <span role="img" aria-label="fire">🔥</span>
-      Claim COLS
-      <span role="img" aria-label="fire">🔥</span>
-      {loading && (
-        <span style={{ marginLeft: 8, fontSize: 14 }}>...</span>
-      )}
-      {error && (
-        <span className={styles.error} style={{ marginLeft: 8 }}>{error}</span>
-      )}
-    </button>
-  );
+  return <ClaimColsButton onClaimed={onClaimed} />;
 };
 
-// --- Simulation logic ---
 async function fetchAgencyLockedEgld() {
   try {
     const { data } = await axios.get(
       `https://api.multiversx.com/providers/${network.delegationContract}`
     );
     if (data && typeof data.locked === 'string') {
-      // locked is in wei (1e18), convert to eGLD with 4 decimals
       const lockedEgld = Number(data.locked) / 1e18;
       return Math.round(lockedEgld * 10000) / 10000;
     }
@@ -148,14 +81,12 @@ function simulateAprAndRank({
   const AGENCY_BUYBACK = 0.3;
   const DAO_DISTRIBUTION_RATIO = 0.333;
 
-  // Build a new stakers array with the simulated value for the user
   const newStakers = stakers.map(s =>
     s.address === address
       ? { ...s, colsStaked: simulatedColsStaked }
       : s
   );
 
-  // Recalculate ratios
   for (const row of newStakers) {
     if (row.egldStaked > 0 && colsPrice > 0 && egldPrice > 0) {
       row.ratio = (row.colsStaked * colsPrice) / (row.egldStaked * egldPrice);
@@ -163,7 +94,6 @@ function simulateAprAndRank({
       row.ratio = null;
     }
   }
-  // Normalize
   const validRatios = newStakers.filter(r => r.ratio !== null).map(r => r.ratio);
   const minRatio = validRatios.length > 0 ? Math.min(...validRatios) : 0;
   const maxRatio = validRatios.length > 0 ? Math.max(...validRatios) : 0;
@@ -174,7 +104,6 @@ function simulateAprAndRank({
       row.normalized = null;
     }
   }
-  // APR Bonus
   for (const row of newStakers) {
     if (row.normalized !== null) {
       row.aprBonus = APRmin + (APRmax - APRmin) * Math.sqrt(row.normalized);
@@ -182,8 +111,6 @@ function simulateAprAndRank({
       row.aprBonus = null;
     }
   }
-  // DAO
-  // Use agencyLockedEgld (from API) instead of sum of egldStaked
   const totalEgldStaked = agencyLockedEgld;
   const sumColsStaked = newStakers.reduce((sum, r) => sum + (r.colsStaked || 0), 0);
   for (const row of newStakers) {
@@ -206,7 +133,6 @@ function simulateAprAndRank({
       row.dao = null;
     }
   }
-  // APR_TOTAL
   for (const row of newStakers) {
     if (row.egldStaked > 0) {
       row.aprTotal = baseApr + (row.aprBonus || 0) + (row.dao || 0);
@@ -214,7 +140,6 @@ function simulateAprAndRank({
       row.aprTotal = baseApr;
     }
   }
-  // Ranking
   const sorted = [...newStakers].sort((a, b) => (b.aprTotal || 0) - (a.aprTotal || 0));
   for (let i = 0; i < sorted.length; ++i) {
     sorted[i].rank = i + 1;
@@ -223,7 +148,6 @@ function simulateAprAndRank({
     const found = sorted.find(r => r.address === row.address);
     row.rank = found ? found.rank : null;
   }
-  // Find the simulated user's new APR and rank
   const user = newStakers.find(s => s.address === address);
   return {
     newApr: user && user.aprTotal ? user.aprTotal : null,
@@ -237,7 +161,6 @@ export const Stake = () => {
   const { userActiveStake, userClaimableRewards, stakedCols } = useGlobalContext();
   const { onRedelegate, onClaimRewards } = useStakeData();
 
-  // Loading/Error/Empty state logic
   const isLoading =
     userActiveStake.status === 'loading' ||
     userClaimableRewards.status === 'loading';
@@ -247,7 +170,6 @@ export const Stake = () => {
   const isEmpty =
     userActiveStake.data === '0' && userClaimableRewards.data === '0';
 
-  // --- Use live COLS APR data for user APR/ranking ---
   const { loading: aprLoading, stakers, baseApr, egldPrice, colsPrice, agencyLockedEgld } = useColsAprContext();
   const [userApr, setUserApr] = useState<number | null>(null);
   const [userRank, setUserRank] = useState<number | null>(null);
@@ -268,13 +190,11 @@ export const Stake = () => {
     }
   }, [address, stakers]);
 
-  // --- Simulation state ---
   const [simulatedCols, setSimulatedCols] = useState<string>('');
   const [simResult, setSimResult] = useState<{ newApr: number | null; newRank: number | null } | null>(null);
   const [simError, setSimError] = useState<string | null>(null);
   const [simLoading, setSimLoading] = useState(false);
 
-  // Find user's current eGLD staked
   let userEgldStaked = 0;
   if (Array.isArray(stakers) && address) {
     const user = stakers.find(s => s.address === address);
@@ -283,7 +203,6 @@ export const Stake = () => {
     }
   }
 
-  // Get serviceFee for simulation
   let serviceFee = 0.1;
   const { contractDetails } = useGlobalContext();
   if (
@@ -298,7 +217,6 @@ export const Stake = () => {
     }
   }
 
-  // Handle simulation apply
   const handleSimulate = async () => {
     setSimError(null);
     setSimResult(null);
@@ -327,12 +245,10 @@ export const Stake = () => {
       setSimLoading(false);
       return;
     }
-    // Fetch latest agency locked value for simulation
     let lockedEgld = agencyLockedEgld;
     try {
       lockedEgld = await fetchAgencyLockedEgld();
     } catch {}
-    // Use already loaded stakers, prices, etc.
     const result = simulateAprAndRank({
       stakers,
       address,
@@ -347,7 +263,6 @@ export const Stake = () => {
     setSimLoading(false);
   };
 
-  // Panels and UI
   return (
     <div
       className={classNames(
@@ -383,7 +298,6 @@ export const Stake = () => {
         </div>
       ) : (
         <div className={styles.assetsRow}>
-          {/* Active Assets Panel */}
           <div className={styles.assetsBox}>
             <div className={styles.icon}>
               <MultiversX />
@@ -412,11 +326,8 @@ export const Stake = () => {
               <div className={styles.actionButtonWrapper}><Delegate /></div>
               <div className={styles.actionButtonWrapper}><StakeCols /></div>
               <div className={styles.actionButtonWrapper}><Undelegate /></div>
-              {/* <div className={styles.actionButtonWrapper}><WithdrawCols /></div> */}
-              {/* WithdrawCols button removed as requested */}
             </div>
           </div>
-          {/* APR Panel */}
           <div
             className={styles.assetsBox}
             style={{
@@ -491,7 +402,6 @@ export const Stake = () => {
                 </span>
               </div>
             </div>
-            {/* --- Simulation UI --- */}
             <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid #e0e0e0' }}>
               <div style={{ fontWeight: 600, marginBottom: 6 }}>Simulate COLS Staked</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -584,11 +494,9 @@ export const Stake = () => {
                 </div>
               )}
             </div>
-            {/* --- End Simulation UI --- */}
           </div>
         </div>
       )}
-      {/* Claim Rewards Panel */}
       {!isLoading && !isError && !isEmpty && (
         <div className={styles.panel}>
           <div className={styles.icon}>
