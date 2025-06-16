@@ -57,102 +57,51 @@ async function fetchAgencyLockedEgld() {
   }
 }
 
-function simulateAprAndRank({
-  stakers,
-  address,
-  simulatedColsStaked,
-  colsPrice,
-  egldPrice,
+// --- NEW: Special APR for COLS-only users (updated formula) ---
+function calculateColsOnlyApr({
+  colsStaked,
+  sumColsStaked,
   baseApr,
   serviceFee,
-  agencyLockedEgld
+  agencyLockedEgld,
+  egldPrice,
+  colsPrice
 }: {
-  stakers: any[];
-  address: string;
-  simulatedColsStaked: number;
-  colsPrice: number;
-  egldPrice: number;
+  colsStaked: number;
+  sumColsStaked: number;
   baseApr: number;
   serviceFee: number;
   agencyLockedEgld: number;
+  egldPrice: number;
+  colsPrice: number;
 }) {
-  const APRmin = 0.01;
-  const APRmax = 15;
-  const AGENCY_BUYBACK = 0.3;
+  // Constants
+  const AgencyBuyback = 0.3;
   const DAO_DISTRIBUTION_RATIO = 0.333;
-
-  const newStakers = stakers.map(s =>
-    s.address === address
-      ? { ...s, colsStaked: simulatedColsStaked }
-      : s
-  );
-
-  for (const row of newStakers) {
-    if (row.egldStaked > 0 && colsPrice > 0 && egldPrice > 0) {
-      row.ratio = (row.colsStaked * colsPrice) / (row.egldStaked * egldPrice);
-    } else {
-      row.ratio = null;
-    }
-  }
-  const validRatios = newStakers.filter(r => r.ratio !== null).map(r => r.ratio);
-  const minRatio = validRatios.length > 0 ? Math.min(...validRatios) : 0;
-  const maxRatio = validRatios.length > 0 ? Math.max(...validRatios) : 0;
-  for (const row of newStakers) {
-    if (row.ratio !== null && maxRatio !== minRatio) {
-      row.normalized = (row.ratio - minRatio) / (maxRatio - minRatio);
-    } else {
-      row.normalized = null;
-    }
-  }
-  for (const row of newStakers) {
-    if (row.normalized !== null) {
-      row.aprBonus = APRmin + (APRmax - APRmin) * Math.sqrt(row.normalized);
-    } else {
-      row.aprBonus = null;
-    }
-  }
-  const totalEgldStaked = agencyLockedEgld;
-  const sumColsStaked = newStakers.reduce((sum, r) => sum + (r.colsStaked || 0), 0);
-  for (const row of newStakers) {
-    if (row.egldStaked > 0 && row.colsStaked > 0 && sumColsStaked > 0) {
-      const baseAprCorrected = baseApr / (1 - serviceFee) / 100;
-      const dao = (
-        (
-          (
-            totalEgldStaked *
-            baseAprCorrected *
-            AGENCY_BUYBACK *
-            serviceFee *
-            DAO_DISTRIBUTION_RATIO *
-            row.colsStaked
-          ) / sumColsStaked
-        ) / row.egldStaked
-      ) * 100;
-      row.dao = dao;
-    } else {
-      row.dao = null;
-    }
-  }
-  for (const row of newStakers) {
-    if (row.egldStaked > 0) {
-      row.aprTotal = baseApr + (row.aprBonus || 0) + (row.dao || 0);
-    } else {
-      row.aprTotal = baseApr;
-    }
-  }
-  const sorted = [...newStakers].sort((a, b) => (b.aprTotal || 0) - (a.aprTotal || 0));
-  for (let i = 0; i < sorted.length; ++i) {
-    sorted[i].rank = i + 1;
-  }
-  for (const row of newStakers) {
-    const found = sorted.find(r => r.address === row.address);
-    row.rank = found ? found.rank : null;
-  }
-  const user = newStakers.find(s => s.address === address);
-  return {
-    newApr: user && user.aprTotal ? user.aprTotal : null,
-    newRank: user && user.rank ? user.rank : null
-  };
+  if (
+    !colsStaked ||
+    !sumColsStaked ||
+    !baseApr ||
+    !agencyLockedEgld ||
+    !egldPrice ||
+    !colsPrice
+  )
+    return 0;
+  // Formula:
+  // APR-COLS-ONLY = (((Total_eGLD * (baseApr/(1-serviceFee)/100) * AgencyBuyback * serviceFee * DAO_DISTRIBUTION_RATIO * COLS_staked(i)) * eGLDPrice / COLSprice / SUM(COLS_staked)) /COLS_staked(i) * 100
+  const baseAprCorrected = baseApr / (1 - serviceFee) / 100;
+  const numerator =
+    agencyLockedEgld *
+    baseAprCorrected *
+    AgencyBuyback *
+    serviceFee *
+    DAO_DISTRIBUTION_RATIO *
+    colsStaked *
+    egldPrice;
+  const denominator = colsPrice * sumColsStaked * colsStaked;
+  if (denominator === 0) return 0;
+  const apr = (numerator / denominator) * 100;
+  return apr;
 }
 
 export const Stake = () => {
@@ -163,14 +112,26 @@ export const Stake = () => {
 
   const isLoading =
     userActiveStake.status === 'loading' ||
-    userClaimableRewards.status === 'loading';
+    userClaimableRewards.status === 'loading' ||
+    stakedCols.status === 'loading';
   const isError =
     userActiveStake.status === 'error' ||
-    userClaimableRewards.status === 'error';
-  const isEmpty =
-    userActiveStake.data === '0' && userClaimableRewards.data === '0';
+    userClaimableRewards.status === 'error' ||
+    stakedCols.status === 'error';
 
-  const { loading: aprLoading, stakers, baseApr, egldPrice, colsPrice, agencyLockedEgld } = useColsAprContext();
+  // --- New: COLS-only user detection ---
+  const hasEgldStaked = userActiveStake.data && userActiveStake.data !== '0';
+  const hasColsStaked = stakedCols.data && stakedCols.data !== '0';
+
+  // --- Use live COLS APR data for user APR/ranking ---
+  const {
+    loading: aprLoading,
+    stakers,
+    baseApr,
+    egldPrice,
+    colsPrice,
+    agencyLockedEgld
+  } = useColsAprContext();
   const [userApr, setUserApr] = useState<number | null>(null);
   const [userRank, setUserRank] = useState<number | null>(null);
 
@@ -180,7 +141,7 @@ export const Stake = () => {
       setUserRank(null);
       return;
     }
-    const idx = stakers.findIndex((s) => s.address === address);
+    const idx = stakers.findIndex((s: any) => s.address === address);
     if (idx === -1) {
       setUserApr(null);
       setUserRank(null);
@@ -190,19 +151,22 @@ export const Stake = () => {
     }
   }, [address, stakers]);
 
+  // --- Simulation state ---
   const [simulatedCols, setSimulatedCols] = useState<string>('');
   const [simResult, setSimResult] = useState<{ newApr: number | null; newRank: number | null } | null>(null);
   const [simError, setSimError] = useState<string | null>(null);
   const [simLoading, setSimLoading] = useState(false);
 
+  // Find user's current eGLD staked
   let userEgldStaked = 0;
   if (Array.isArray(stakers) && address) {
-    const user = stakers.find(s => s.address === address);
+    const user = stakers.find((s: any) => s.address === address);
     if (user && typeof user.egldStaked === 'number') {
       userEgldStaked = user.egldStaked;
     }
   }
 
+  // Get serviceFee for simulation
   let serviceFee = 0.1;
   const { contractDetails } = useGlobalContext();
   if (
@@ -217,102 +181,136 @@ export const Stake = () => {
     }
   }
 
-  const handleSimulate = async () => {
-    setSimError(null);
-    setSimResult(null);
-    setSimLoading(true);
-    if (!address) {
-      setSimError('Not logged in');
-      setSimLoading(false);
-      return;
-    }
-    if (!userEgldStaked || userEgldStaked <= 0) {
-      setSimError('You must have eGLD staked to simulate');
-      setSimLoading(false);
-      return;
-    }
-    let val = 0;
-    try {
-      val = parseFloat(simulatedCols);
-      if (isNaN(val) || val < 0) throw new Error();
-      if (val > 40000) {
-        setSimError('Maximum COLS to simulate is 40,000');
-        setSimLoading(false);
-        return;
-      }
-    } catch {
-      setSimError('Invalid COLS value');
-      setSimLoading(false);
-      return;
-    }
-    let lockedEgld = agencyLockedEgld;
-    try {
-      lockedEgld = await fetchAgencyLockedEgld();
-    } catch {}
-    const result = simulateAprAndRank({
-      stakers,
-      address,
-      simulatedColsStaked: val,
-      colsPrice,
-      egldPrice,
-      baseApr,
-      serviceFee,
-      agencyLockedEgld: lockedEgld
-    });
-    setSimResult(result);
-    setSimLoading(false);
-  };
+  // --- New: COLS-only APR calculation state ---
+  const [colsOnlyApr, setColsOnlyApr] = useState<number | null>(null);
+  const [colsOnlyAprLoading, setColsOnlyAprLoading] = useState(true);
 
-  return (
-    <div
-      className={classNames(
-        styles.stake,
-        { [styles.empty]: isLoading || isError || isEmpty },
-        'stake'
-      )}
-    >
-      {isLoading || isError || isEmpty ? (
+  // Helper: Are all required values loaded and valid?
+  const allColsAprInputsLoaded =
+    !aprLoading &&
+    stakedCols.status === 'loaded' &&
+    stakers &&
+    Array.isArray(stakers) &&
+    stakers.length > 0 &&
+    typeof baseApr === 'number' &&
+    !isNaN(baseApr) &&
+    typeof agencyLockedEgld === 'number' &&
+    !isNaN(agencyLockedEgld) &&
+    typeof egldPrice === 'number' &&
+    !isNaN(egldPrice) &&
+    typeof colsPrice === 'number' &&
+    !isNaN(colsPrice);
+
+  useEffect(() => {
+    if (
+      !hasEgldStaked &&
+      hasColsStaked &&
+      address &&
+      stakedCols.data &&
+      allColsAprInputsLoaded
+    ) {
+      setColsOnlyAprLoading(true);
+      const userCols = Number(stakedCols.data) / 1e18;
+      const sumCols = stakers.reduce(
+        (sum: number, s: any) => sum + (s.colsStaked || 0),
+        0
+      );
+      const apr = calculateColsOnlyApr({
+        colsStaked: userCols,
+        sumColsStaked: sumCols,
+        baseApr,
+        serviceFee,
+        agencyLockedEgld,
+        egldPrice,
+        colsPrice
+      });
+      setColsOnlyApr(apr);
+      setColsOnlyAprLoading(false);
+    } else if (!hasEgldStaked && hasColsStaked) {
+      setColsOnlyApr(null);
+      setColsOnlyAprLoading(true);
+    } else {
+      setColsOnlyApr(null);
+      setColsOnlyAprLoading(false);
+    }
+  }, [
+    hasEgldStaked,
+    hasColsStaked,
+    address,
+    stakedCols.data,
+    stakedCols.status,
+    stakers,
+    baseApr,
+    serviceFee,
+    agencyLockedEgld,
+    egldPrice,
+    colsPrice,
+    aprLoading,
+    allColsAprInputsLoaded
+  ]);
+
+  // --- Main UI ---
+  if (isLoading) {
+    return (
+      <div className={classNames(styles.stake, styles.empty, 'stake')}>
         <div className={styles.wrapper}>
           <strong className={styles.heading}>
             Welcome to Colombia Staking Dashboard!
           </strong>
-
           <div className={styles.logo}>
             <MultiversX />
-
             <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
               <FontAwesomeIcon icon={faLock} />
             </div>
           </div>
-
           <div className={styles.message}>
-            {isLoading
-              ? 'Retrieving staking data...'
-              : isError
-              ? 'There was an error trying to retrieve staking data.'
-              : `Currently you don't have any ${network.egldLabel} staked.`}
+            Retrieving staking data...
           </div>
-
           <Delegate />
           <StakeCols />
         </div>
-      ) : (
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={classNames(styles.stake, styles.empty, 'stake')}>
+        <div className={styles.wrapper}>
+          <strong className={styles.heading}>
+            Welcome to Colombia Staking Dashboard!
+          </strong>
+          <div className={styles.logo}>
+            <MultiversX />
+            <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
+              <FontAwesomeIcon icon={faLock} />
+            </div>
+          </div>
+          <div className={styles.message}>
+            There was an error trying to retrieve staking data.
+          </div>
+          <Delegate />
+          <StakeCols />
+        </div>
+      </div>
+    );
+  }
+
+  // --- New: COLS-only user panel ---
+  if (!hasEgldStaked && hasColsStaked) {
+    return (
+      <div className={classNames(styles.stake, 'stake')}>
         <div className={styles.assetsRow}>
+          {/* COLS-only Active Assets Panel */}
           <div className={styles.assetsBox}>
             <div className={styles.icon}>
               <MultiversX />
               <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
-                <FontAwesomeIcon icon={faLock} />
+                <span role="img" aria-label="fire" style={{ color: '#ff9800', fontSize: 20 }}>🔥</span>
               </div>
             </div>
             <div className={styles.title}>Active Assets</div>
             <div className={styles.activeAmountsRow}>
-              <span className={styles.activeAmount}>
-                <b>
-                  {denominated(userActiveStake.data || '...', { addCommas: true })} {network.egldLabel}
-                </b>
-                <div className={styles.activeLabel}>delegated</div>
-              </span>
               <span className={styles.activeAmount}>
                 <b>
                   {stakedCols.status === 'loaded'
@@ -325,9 +323,9 @@ export const Stake = () => {
             <div className={styles.actionsRow}>
               <div className={styles.actionButtonWrapper}><Delegate /></div>
               <div className={styles.actionButtonWrapper}><StakeCols /></div>
-              <div className={styles.actionButtonWrapper}><Undelegate /></div>
             </div>
           </div>
+          {/* COLS-only APR Panel */}
           <div
             className={styles.assetsBox}
             style={{
@@ -340,25 +338,11 @@ export const Stake = () => {
             <div className={styles.icon} style={{ background: '#fff' }}>
               <FontAwesomeIcon icon={faPercent} style={{ color: '#6ee7c7', fontSize: 32 }} />
             </div>
-            <div className={styles.title} style={{ color: '#181a1b' }}>APR for your eGLD</div>
+            <div className={styles.title} style={{ color: '#181a1b' }}>COLS APR</div>
             <div className={styles.aprInfo}>
               <div>
-                <b>Base APR:</b>
+                <b>COLS APR:</b>
                 <span className={styles.aprValue} style={{ color: '#181a1b', background: 'none' }}>
-                  {aprLoading ? '...' : Number(baseApr).toFixed(2)}%
-                </span>
-              </div>
-              <div>
-                <b>Total APR with Bonus:</b>
-                <span
-                  className={styles.aprValue}
-                  style={{
-                    color: '#181a1b',
-                    fontWeight: 700,
-                    background: 'none',
-                    textShadow: '0 1px 8px #fff8'
-                  }}
-                >
                   <span style={{
                     color: '#181a1b',
                     background: '#ffe082',
@@ -370,18 +354,339 @@ export const Stake = () => {
                     display: 'inline-block',
                     boxShadow: '0 2px 8px #fff8'
                   }}>
-                    {aprLoading
-                      ? '...'
-                      : userApr !== null
-                        ? Number(userApr).toFixed(2)
-                        : Number(baseApr).toFixed(2)
+                    {colsOnlyAprLoading
+                      ? <span style={{ fontWeight: 400 }}>...</span>
+                      : colsOnlyApr !== null
+                        ? colsOnlyApr.toFixed(2)
+                        : '0.00'
                     }%
                   </span>
                 </span>
               </div>
-              <div>
-                <b>Your Ranking:</b>
-                <span className={styles.aprValue} style={{ color: '#181a1b', background: 'none' }}>
+              <div style={{ fontSize: 13, color: '#181a1b', marginTop: 8 }}>
+                Delegate some eGLD to boost your APR
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Claim COLS Rewards Panel */}
+        <div className={styles.panel}>
+          <div className={styles.icon}>
+            <MultiversX />
+            <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
+              <FontAwesomeIcon icon={faGift} />
+            </div>
+          </div>
+          <div className={styles.title}>Claim COLS Rewards</div>
+          <div className={styles.actions}>
+            <ClaimCols onClaimed={() => {}} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Default: eGLD staked (original panel) ---
+  return (
+    <div
+      className={classNames(
+        styles.stake,
+        { [styles.empty]: !hasEgldStaked && !hasColsStaked },
+        'stake'
+      )}
+    >
+      <div className={styles.assetsRow}>
+        <div className={styles.assetsBox}>
+          <div className={styles.icon}>
+            <MultiversX />
+            <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
+              <span role="img" aria-label="fire" style={{ color: '#ff9800', fontSize: 20 }}>🔥</span>
+            </div>
+          </div>
+          <div className={styles.title}>Active Assets</div>
+          <div className={styles.activeAmountsRow}>
+            <span className={styles.activeAmount}>
+              <b>
+                {denominated(userActiveStake.data || '...', { addCommas: true })} {network.egldLabel}
+              </b>
+              <div className={styles.activeLabel}>delegated</div>
+            </span>
+            <span className={styles.activeAmount}>
+              <b>
+                {stakedCols.status === 'loaded'
+                  ? denominateCols(stakedCols.data || '0', true)
+                  : '...'} COLS
+              </b>
+              <div className={styles.activeLabel}>staked</div>
+            </span>
+          </div>
+          <div className={styles.actionsRow}>
+            <div className={styles.actionButtonWrapper}><Delegate /></div>
+            <div className={styles.actionButtonWrapper}><StakeCols /></div>
+            <div className={styles.actionButtonWrapper}><Undelegate /></div>
+          </div>
+        </div>
+        <div
+          className={styles.assetsBox}
+          style={{
+            borderColor: '#6ee7c7',
+            background: 'linear-gradient(90deg, #6ee7c7 0%, #4f8cff 100%)',
+            color: '#181a1b',
+            minWidth: 220
+          }}
+        >
+          <div className={styles.icon} style={{ background: '#fff' }}>
+            <FontAwesomeIcon icon={faPercent} style={{ color: '#6ee7c7', fontSize: 32 }} />
+          </div>
+          <div className={styles.title} style={{ color: '#181a1b' }}>APR for your eGLD</div>
+          <div className={styles.aprInfo}>
+            <div>
+              <b>Base APR:</b>
+              <span className={styles.aprValue} style={{ color: '#181a1b', background: 'none' }}>
+                {aprLoading ? '...' : Number(baseApr).toFixed(2)}%
+              </span>
+            </div>
+            <div>
+              <b>Total APR with Bonus:</b>
+              <span
+                className={styles.aprValue}
+                style={{
+                  color: '#181a1b',
+                  fontWeight: 700,
+                  background: 'none',
+                  textShadow: '0 1px 8px #fff8'
+                }}
+              >
+                <span style={{
+                  color: '#181a1b',
+                  background: '#ffe082',
+                  padding: '2px 12px',
+                  borderRadius: 6,
+                  fontWeight: 900,
+                  fontSize: 20,
+                  letterSpacing: 0.5,
+                  display: 'inline-block',
+                  boxShadow: '0 2px 8px #fff8'
+                }}>
+                  {aprLoading
+                    ? '...'
+                    : userApr !== null
+                      ? Number(userApr).toFixed(2)
+                      : Number(baseApr).toFixed(2)
+                  }%
+                </span>
+              </span>
+            </div>
+            <div>
+              <b>Your Ranking:</b>
+              <span className={styles.aprValue} style={{ color: '#181a1b', background: 'none' }}>
+                <span style={{
+                  color: '#fff',
+                  background: '#1976d2',
+                  padding: '2px 12px',
+                  borderRadius: 6,
+                  fontWeight: 900,
+                  fontSize: 18,
+                  letterSpacing: 0.5,
+                  display: 'inline-block',
+                  boxShadow: '0 2px 8px #fff8'
+                }}>
+                  {aprLoading
+                    ? '...'
+                    : userRank !== null
+                      ? `#${userRank} of ${stakers.length} COLS stakers`
+                      : 'N/A'}
+                </span>
+              </span>
+            </div>
+          </div>
+          <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid #e0e0e0' }}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>Simulate COLS Staked</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="number"
+                min={0}
+                max={40000}
+                step="any"
+                value={simulatedCols}
+                onChange={e => {
+                  let val = e.target.value;
+                  if (val === '') {
+                    setSimulatedCols('');
+                    setSimError(null);
+                    return;
+                  }
+                  if (parseFloat(val) > 40000) {
+                    setSimulatedCols('40000');
+                    setSimError('Maximum COLS to simulate is 40,000');
+                  } else {
+                    setSimulatedCols(val);
+                    setSimError(null);
+                  }
+                }}
+                style={{
+                  width: 120,
+                  padding: 6,
+                  borderRadius: 4,
+                  border: '1px solid #bbb',
+                  fontSize: 15
+                }}
+                placeholder="Enter COLS"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  setSimError(null);
+                  setSimResult(null);
+                  setSimLoading(true);
+                  if (!address) {
+                    setSimError('Not logged in');
+                    setSimLoading(false);
+                    return;
+                  }
+                  if (!userEgldStaked || userEgldStaked <= 0) {
+                    setSimError('You must have eGLD staked to simulate');
+                    setSimLoading(false);
+                    return;
+                  }
+                  let val = 0;
+                  try {
+                    val = parseFloat(simulatedCols);
+                    if (isNaN(val) || val < 0) throw new Error();
+                    if (val > 40000) {
+                      setSimError('Maximum COLS to simulate is 40,000');
+                      setSimLoading(false);
+                      return;
+                    }
+                  } catch {
+                    setSimError('Invalid COLS value');
+                    setSimLoading(false);
+                    return;
+                  }
+                  let lockedEgld = agencyLockedEgld;
+                  try {
+                    lockedEgld = await fetchAgencyLockedEgld();
+                  } catch {}
+                  // simulateAprAndRank is defined above
+                  const APRmin = 0.01;
+                  const APRmax = 15;
+                  const AGENCY_BUYBACK = 0.3;
+                  const DAO_DISTRIBUTION_RATIO = 0.333;
+                  const newStakers = stakers.map((s: any) =>
+                    s.address === address
+                      ? { ...s, colsStaked: val }
+                      : s
+                  );
+                  for (const row of newStakers) {
+                    if (row.egldStaked > 0 && colsPrice > 0 && egldPrice > 0) {
+                      row.ratio = (row.colsStaked * colsPrice) / (row.egldStaked * egldPrice);
+                    } else {
+                      row.ratio = null;
+                    }
+                  }
+                  const validRatios = newStakers.filter((r: any) => r.ratio !== null).map((r: any) => r.ratio);
+                  const minRatio = validRatios.length > 0 ? Math.min(...validRatios) : 0;
+                  const maxRatio = validRatios.length > 0 ? Math.max(...validRatios) : 0;
+                  for (const row of newStakers) {
+                    if (row.ratio !== null && maxRatio !== minRatio) {
+                      row.normalized = (row.ratio - minRatio) / (maxRatio - minRatio);
+                    } else {
+                      row.normalized = null;
+                    }
+                  }
+                  for (const row of newStakers) {
+                    if (row.normalized !== null) {
+                      row.aprBonus = APRmin + (APRmax - APRmin) * Math.sqrt(row.normalized);
+                    } else {
+                      row.aprBonus = null;
+                    }
+                  }
+                  const totalEgldStaked = lockedEgld;
+                  const sumColsStaked = newStakers.reduce(
+                    (sum: number, r: any) => sum + (r.colsStaked || 0),
+                    0
+                  );
+                  for (const row of newStakers) {
+                    if (row.egldStaked > 0 && row.colsStaked > 0 && sumColsStaked > 0) {
+                      const baseAprCorrected = baseApr / (1 - serviceFee) / 100;
+                      const dao = (
+                        (
+                          (
+                            totalEgldStaked *
+                            baseAprCorrected *
+                            AGENCY_BUYBACK *
+                            serviceFee *
+                            DAO_DISTRIBUTION_RATIO *
+                            row.colsStaked
+                          ) / sumColsStaked
+                        ) / row.egldStaked
+                      ) * 100;
+                      row.dao = dao;
+                    } else {
+                      row.dao = null;
+                    }
+                  }
+                  for (const row of newStakers) {
+                    if (row.egldStaked > 0) {
+                      row.aprTotal = baseApr + (row.aprBonus || 0) + (row.dao || 0);
+                    } else {
+                      row.aprTotal = baseApr;
+                    }
+                  }
+                  const sorted = [...newStakers].sort((a: any, b: any) => (b.aprTotal || 0) - (a.aprTotal || 0));
+                  for (let i = 0; i < sorted.length; ++i) {
+                    sorted[i].rank = i + 1;
+                  }
+                  for (const row of newStakers) {
+                    const found = sorted.find((r: any) => r.address === row.address);
+                    row.rank = found ? found.rank : null;
+                  }
+                  const user = newStakers.find((s: any) => s.address === address);
+                  setSimResult({
+                    newApr: user && user.aprTotal ? user.aprTotal : null,
+                    newRank: user && user.rank ? user.rank : null
+                  });
+                  setSimLoading(false);
+                }}
+                style={{
+                  background: '#6ee7c7',
+                  color: '#181a1b',
+                  border: 'none',
+                  borderRadius: 4,
+                  padding: '6px 16px',
+                  fontWeight: 600,
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px #6ee7c7aa'
+                }}
+                disabled={simLoading}
+              >
+                {simLoading ? 'Calculating...' : 'Apply'}
+              </button>
+            </div>
+            {simError && (
+              <div style={{ color: '#b71c1c', marginTop: 6, fontSize: 14 }}>{simError}</div>
+            )}
+            {simResult && (
+              <div style={{ marginTop: 10, fontSize: 15 }}>
+                <div>
+                  <b>Simulated Total APR:</b>{' '}
+                  <span style={{
+                    color: '#181a1b',
+                    background: '#ffe082',
+                    padding: '2px 12px',
+                    borderRadius: 6,
+                    fontWeight: 900,
+                    fontSize: 20,
+                    letterSpacing: 0.5,
+                    display: 'inline-block',
+                    boxShadow: '0 2px 8px #fff8'
+                  }}>
+                    {simResult.newApr !== null ? simResult.newApr.toFixed(2) + '%' : 'N/A'}
+                  </span>
+                </div>
+                <div>
+                  <b>Simulated Ranking:</b>{' '}
                   <span style={{
                     color: '#fff',
                     background: '#1976d2',
@@ -393,158 +698,61 @@ export const Stake = () => {
                     display: 'inline-block',
                     boxShadow: '0 2px 8px #fff8'
                   }}>
-                    {aprLoading
-                      ? '...'
-                      : userRank !== null
-                        ? `#${userRank} of ${stakers.length} COLS stakers`
-                        : 'N/A'}
+                    {simResult.newRank !== null ? `#${simResult.newRank} of ${stakers.length} COLS stakers` : 'N/A'}
                   </span>
-                </span>
-              </div>
-            </div>
-            <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid #e0e0e0' }}>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Simulate COLS Staked</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="number"
-                  min={0}
-                  max={40000}
-                  step="any"
-                  value={simulatedCols}
-                  onChange={e => {
-                    let val = e.target.value;
-                    if (val === '') {
-                      setSimulatedCols('');
-                      setSimError(null);
-                      return;
-                    }
-                    if (parseFloat(val) > 40000) {
-                      setSimulatedCols('40000');
-                      setSimError('Maximum COLS to simulate is 40,000');
-                    } else {
-                      setSimulatedCols(val);
-                      setSimError(null);
-                    }
-                  }}
-                  style={{
-                    width: 120,
-                    padding: 6,
-                    borderRadius: 4,
-                    border: '1px solid #bbb',
-                    fontSize: 15
-                  }}
-                  placeholder="Enter COLS"
-                />
-                <button
-                  type="button"
-                  onClick={handleSimulate}
-                  style={{
-                    background: '#6ee7c7',
-                    color: '#181a1b',
-                    border: 'none',
-                    borderRadius: 4,
-                    padding: '6px 16px',
-                    fontWeight: 600,
-                    fontSize: 15,
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px #6ee7c7aa'
-                  }}
-                  disabled={simLoading}
-                >
-                  {simLoading ? 'Calculating...' : 'Apply'}
-                </button>
-              </div>
-              {simError && (
-                <div style={{ color: '#b71c1c', marginTop: 6, fontSize: 14 }}>{simError}</div>
-              )}
-              {simResult && (
-                <div style={{ marginTop: 10, fontSize: 15 }}>
-                  <div>
-                    <b>Simulated Total APR:</b>{' '}
-                    <span style={{
-                      color: '#181a1b',
-                      background: '#ffe082',
-                      padding: '2px 12px',
-                      borderRadius: 6,
-                      fontWeight: 900,
-                      fontSize: 20,
-                      letterSpacing: 0.5,
-                      display: 'inline-block',
-                      boxShadow: '0 2px 8px #fff8'
-                    }}>
-                      {simResult.newApr !== null ? simResult.newApr.toFixed(2) + '%' : 'N/A'}
-                    </span>
-                  </div>
-                  <div>
-                    <b>Simulated Ranking:</b>{' '}
-                    <span style={{
-                      color: '#fff',
-                      background: '#1976d2',
-                      padding: '2px 12px',
-                      borderRadius: 6,
-                      fontWeight: 900,
-                      fontSize: 18,
-                      letterSpacing: 0.5,
-                      display: 'inline-block',
-                      boxShadow: '0 2px 8px #fff8'
-                    }}>
-                      {simResult.newRank !== null ? `#${simResult.newRank} of ${stakers.length} COLS stakers` : 'N/A'}
-                    </span>
-                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
-      {!isLoading && !isError && !isEmpty && (
-        <div className={styles.panel}>
-          <div className={styles.icon}>
-            <MultiversX />
-            <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
-              <FontAwesomeIcon icon={faGift} />
-            </div>
-          </div>
-          <div className={styles.title}>Claim Rewards</div>
-          <div className={styles.actions}>
-            <button
-              type="button"
-              style={{
-                background: '#6ee7c7',
-                color: '#181a1b',
-                fontWeight: 700,
-                borderRadius: 7,
-                padding: '15px 30px',
-                border: 'none',
-                boxShadow: '0 2px 8px #6ee7c7aa'
-              }}
-              className={classNames(styles.action)}
-              disabled={pending}
-              onClick={onClaimRewards(() => false)}
-            >
-              Claim eGLD Now
-            </button>
-            <button
-              type="button"
-              style={{
-                background: '#6ee7c7',
-                color: '#181a1b',
-                fontWeight: 700,
-                borderRadius: 7,
-                padding: '15px 30px',
-                border: 'none',
-                boxShadow: '0 2px 8px #6ee7c7aa'
-              }}
-              className={classNames(styles.action)}
-              disabled={pending}
-              onClick={onRedelegate(() => false)}
-            >
-              Redelegate eGLD
-            </button>
-            <ClaimCols onClaimed={() => {}} />
+      </div>
+      {/* Claim Rewards Panel */}
+      <div className={styles.panel}>
+        <div className={styles.icon}>
+          <MultiversX />
+          <div style={{ background: '#6ee7c7' }} className={styles.subicon}>
+            <FontAwesomeIcon icon={faGift} />
           </div>
         </div>
-      )}
+        <div className={styles.title}>Claim Rewards</div>
+        <div className={styles.actions}>
+          <button
+            type="button"
+            style={{
+              background: '#6ee7c7',
+              color: '#181a1b',
+              fontWeight: 700,
+              borderRadius: 7,
+              padding: '15px 30px',
+              border: 'none',
+              boxShadow: '0 2px 8px #6ee7c7aa'
+            }}
+            className={classNames(styles.action)}
+            disabled={pending}
+            onClick={onClaimRewards(() => false)}
+          >
+            Claim eGLD Now
+          </button>
+          <button
+            type="button"
+            style={{
+              background: '#6ee7c7',
+              color: '#181a1b',
+              fontWeight: 700,
+              borderRadius: 7,
+              padding: '15px 30px',
+              border: 'none',
+              boxShadow: '0 2px 8px #6ee7c7aa'
+            }}
+            className={classNames(styles.action)}
+            disabled={pending}
+            onClick={onRedelegate(() => false)}
+          >
+            Redelegate eGLD
+          </button>
+          <ClaimCols onClaimed={() => {}} />
+        </div>
+      </div>
     </div>
   );
 };
