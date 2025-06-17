@@ -29,6 +29,7 @@ export interface ColsStakerRow {
   dao: number | null;
   aprTotal: number | null;
   rank: number | null;
+  aprColsOnly?: number | null; // COLS-only APR
 }
 
 // Fetch latest COLS price from MultiversX API (hourly)
@@ -80,6 +81,46 @@ async function fetchAgencyLockedEgld() {
   } catch {
     return 0;
   }
+}
+
+// --- COLS-only APR formula (colsStaked removed from numerator and denominator) ---
+function calculateColsOnlyApr({
+  sumColsStaked,
+  baseApr,
+  serviceFee,
+  agencyLockedEgld,
+  egldPrice,
+  colsPrice
+}: {
+  sumColsStaked: number;
+  baseApr: number;
+  serviceFee: number;
+  agencyLockedEgld: number;
+  egldPrice: number;
+  colsPrice: number;
+}) {
+  if (
+    !sumColsStaked ||
+    !baseApr ||
+    !agencyLockedEgld ||
+    !egldPrice ||
+    !colsPrice
+  )
+    return 0;
+  // Formula:
+  // APR-COLS-ONLY = (((Total_eGLD * (baseApr/(1-serviceFee)/100) * AgencyBuyback * serviceFee * DAO_DISTRIBUTION_RATIO * eGLDPrice) / (COLSprice * SUM(COLS_staked))) * 100
+  const baseAprCorrected = baseApr / (1 - serviceFee) / 100;
+  const numerator =
+    agencyLockedEgld *
+    baseAprCorrected *
+    AGENCY_BUYBACK *
+    serviceFee *
+    DAO_DISTRIBUTION_RATIO *
+    egldPrice;
+  const denominator = colsPrice * sumColsStaked;
+  if (denominator === 0) return 0;
+  const apr = (numerator / denominator) * 100;
+  return apr;
 }
 
 export function useColsApr({ trigger }: { trigger: any }) {
@@ -235,7 +276,8 @@ export function useColsApr({ trigger }: { trigger: any }) {
       aprBonus: null,
       dao: null,
       aprTotal: null,
-      rank: null
+      rank: null,
+      aprColsOnly: null // will be set below
     }));
 
     // --- Calculate TARGET_AVG_APR_BONUS ONCE, outside the APRmax loop ---
@@ -373,6 +415,23 @@ export function useColsApr({ trigger }: { trigger: any }) {
       const found = sorted.find(r => r.address === row.address);
       row.rank = found ? found.rank : null;
     }
+
+    // 15. COLS-only APR: Calculate for all users with COLS staked
+    for (const row of table) {
+      if (row.colsStaked > 0) {
+        row.aprColsOnly = calculateColsOnlyApr({
+          sumColsStaked,
+          baseApr: fetchedBaseApr,
+          serviceFee,
+          agencyLockedEgld: lockedEgld,
+          egldPrice,
+          colsPrice: fetchedColsPrice
+        });
+      } else {
+        row.aprColsOnly = null;
+      }
+    }
+
     setStakers(table);
     setLoading(false);
   }, [fetchColsStakers, fetchEgldStaked, fetchEgldPrice, contractDetails]);
