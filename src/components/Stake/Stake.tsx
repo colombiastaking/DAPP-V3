@@ -19,6 +19,9 @@ import { useColsAprContext } from '../../context/ColsAprContext';
 import styles from './styles.module.scss';
 import { ClaimColsButton } from './ClaimColsButton';
 
+// --- Add useStakeData for eGLD claim/redelegate actions ---
+import useStakeData from './hooks';
+
 function denominateCols(raw: string, addCommas = true) {
   if (!raw || raw === '0') return '0';
   let str = raw.padStart(19, '0');
@@ -120,6 +123,9 @@ async function fetchAprCols({
 export const Stake = () => {
   const { address } = useGetAccountInfo();
   const { userActiveStake, userClaimableRewards, stakedCols } = useGlobalContext();
+
+  // Add eGLD claim/redelegate actions
+  const { onClaimRewards, onRedelegate } = useStakeData();
 
   const isLoading =
     userActiveStake.status === 'loading' ||
@@ -703,8 +709,46 @@ export const Stake = () => {
             <FontAwesomeIcon icon={faGift} />
           </div>
         </div>
-        <div className={styles.title}>Claim COLS Rewards</div>
+        <div className={styles.title}>Claim Rewards</div>
         <div className={styles.actions}>
+          <button
+            type="button"
+            style={{
+              background: '#6ee7c7',
+              color: '#181a1b',
+              fontWeight: 700,
+              borderRadius: 7,
+              padding: '15px 30px',
+              border: 'none',
+              marginRight: 0,
+              marginBottom: 0,
+              fontSize: 16,
+              boxShadow: '0 2px 8px #6ee7c7aa'
+            }}
+            className={classNames(styles.action)}
+            onClick={onClaimRewards(() => false)}
+          >
+            Claim eGLD Rewards
+          </button>
+          <button
+            type="button"
+            style={{
+              background: '#6ee7c7',
+              color: '#181a1b',
+              fontWeight: 700,
+              borderRadius: 7,
+              padding: '15px 30px',
+              border: 'none',
+              marginRight: 0,
+              marginBottom: 0,
+              fontSize: 16,
+              boxShadow: '0 2px 8px #6ee7c7aa'
+            }}
+            className={classNames(styles.action)}
+            onClick={onRedelegate(() => false)}
+          >
+            Redelegate eGLD
+          </button>
           <ClaimCols onClaimed={() => {}} />
         </div>
       </div>
