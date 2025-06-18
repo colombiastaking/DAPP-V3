@@ -57,7 +57,7 @@ async function fetchAprCols({
   totalColsStaked: number;
 }): Promise<number> {
   // Constants
-  const AgencyBuyback = 0.3;
+  const AgencyBuyback = 0.4; // updated from 0.3 to 0.4
   const DAO_Coefficient = 0.333;
 
   // Fetch Total eGLD locked in staking pool
@@ -570,7 +570,7 @@ export const Stake = () => {
                   } catch {}
                   const APRmin = 0.01;
                   const APRmax = 15;
-                  const AGENCY_BUYBACK = 0.3;
+                  const AGENCY_BUYBACK = 0.4;
                   const DAO_DISTRIBUTION_RATIO = 0.333;
                   const newStakers = stakers.map((s: any) =>
                     s.address === address
