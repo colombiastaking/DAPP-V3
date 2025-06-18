@@ -6,9 +6,8 @@ import classNames from 'classnames';
 import axios from 'axios';
 
 import { MultiversX } from 'assets/MultiversX';
-import { network } from 'config';
+import { network, denomination } from 'config';
 import { useGlobalContext } from 'context';
-import { denominated } from 'helpers/denominate';
 
 import { Delegate } from './components/Delegate';
 import { Undelegate } from './components/Undelegate';
@@ -22,17 +21,21 @@ import { ClaimColsButton } from './ClaimColsButton';
 // --- Add useStakeData for eGLD claim/redelegate actions ---
 import useStakeData from './hooks';
 
-function denominateCols(raw: string, addCommas = true) {
-  if (!raw || raw === '0') return '0';
-  let str = raw.padStart(19, '0');
-  const intPart = str.slice(0, -18) || '0';
-  let decPart = raw.length > 18 ? str.slice(-18).replace(/0+$/, '') : '';
-  let result = decPart ? `${intPart}.${decPart}` : intPart;
-  if (addCommas) {
-    const [i, d] = result.split('.');
-    result = i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (d ? '.' + d : '');
-  }
-  return result;
+// Format eGLD with max 3 decimals, converting from WEI (1e18) to EGLD
+function formatEgld(amount: string | number) {
+  const num = Number(amount);
+  if (isNaN(num)) return amount;
+  // Convert from WEI to EGLD (divide by 1e18)
+  const egld = num / Math.pow(10, denomination);
+  return egld.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+}
+
+// Format COLS with max 3 decimals, converting from WEI (1e18) to COLS
+function formatCols(raw: string | number) {
+  const num = Number(raw);
+  if (isNaN(num)) return raw;
+  const cols = num / 1e18;
+  return cols.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 });
 }
 
 const ClaimCols = ({
@@ -303,7 +306,7 @@ export const Stake = () => {
               <span className={styles.activeAmount}>
                 <b>
                   {stakedCols.status === 'loaded'
-                    ? denominateCols(stakedCols.data || '0', true)
+                    ? formatCols(stakedCols.data || '0')
                     : '...'} COLS
                 </b>
                 <div className={styles.activeLabel}>staked</div>
@@ -396,14 +399,16 @@ export const Stake = () => {
           <div className={styles.activeAmountsRow}>
             <span className={styles.activeAmount}>
               <b>
-                {denominated(userActiveStake.data || '...', { addCommas: true })} {network.egldLabel}
+                {userActiveStake.status === 'loaded'
+                  ? formatEgld(userActiveStake.data || '...')
+                  : '...'} {network.egldLabel}
               </b>
               <div className={styles.activeLabel}>delegated</div>
             </span>
             <span className={styles.activeAmount}>
               <b>
                 {stakedCols.status === 'loaded'
-                  ? denominateCols(stakedCols.data || '0', true)
+                  ? formatCols(stakedCols.data || '0')
                   : '...'} COLS
               </b>
               <div className={styles.activeLabel}>staked</div>
@@ -728,7 +733,7 @@ export const Stake = () => {
             className={classNames(styles.action)}
             onClick={onClaimRewards(() => false)}
           >
-            Claim eGLD Rewards
+            Claim eGLD
           </button>
           <button
             type="button"
