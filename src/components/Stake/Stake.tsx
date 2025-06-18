@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { faLock, faGift, faPercent } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import classNames from 'classnames';
 import axios from 'axios';
@@ -15,7 +14,6 @@ import { Delegate } from './components/Delegate';
 import { Undelegate } from './components/Undelegate';
 import { StakeCols } from './components/StakeCols';
 
-import useStakeData from './hooks';
 import { useColsAprContext } from '../../context/ColsAprContext';
 
 import styles from './styles.module.scss';
@@ -42,73 +40,86 @@ const ClaimCols = ({
   return <ClaimColsButton onClaimed={onClaimed} />;
 };
 
-async function fetchAgencyLockedEgld() {
+// --- Helper: Calculate APR-COLS for COLS-only users (final formula) ---
+async function fetchAprCols({
+  serviceFee,
+  baseApr,
+  totalColsStaked
+}: {
+  serviceFee: number;
+  baseApr: number;
+  totalColsStaked: number;
+}): Promise<number> {
+  // Constants
+  const AgencyBuyback = 0.3;
+  const DAO_Coefficient = 0.333;
+
+  // Fetch Total eGLD locked in staking pool
+  let totalEgldLocked = 0;
   try {
     const { data } = await axios.get(
       `https://api.multiversx.com/providers/${network.delegationContract}`
     );
     if (data && typeof data.locked === 'string') {
-      const lockedEgld = Number(data.locked) / 1e18;
-      return Math.round(lockedEgld * 10000) / 10000;
+      totalEgldLocked = Number(data.locked) / 1e18;
     }
-    return 0;
   } catch {
-    return 0;
+    totalEgldLocked = 0;
   }
-}
 
-// --- NEW: Special APR for COLS-only users (updated formula) ---
-function calculateColsOnlyApr({
-  colsStaked,
-  sumColsStaked,
-  baseApr,
-  serviceFee,
-  agencyLockedEgld,
-  egldPrice,
-  colsPrice
-}: {
-  colsStaked: number;
-  sumColsStaked: number;
-  baseApr: number;
-  serviceFee: number;
-  agencyLockedEgld: number;
-  egldPrice: number;
-  colsPrice: number;
-}) {
-  // Constants
-  const AgencyBuyback = 0.3;
-  const DAO_DISTRIBUTION_RATIO = 0.333;
+  // Fetch eGLD price
+  let egldPrice = 0;
+  try {
+    const { data } = await axios.get(`${network.apiAddress}/economics`);
+    egldPrice = Number(data.price);
+  } catch {
+    egldPrice = 0;
+  }
+
+  // Fetch COLS price (hourly)
+  let colsPrice = 0;
+  try {
+    const { data } = await axios.get(
+      'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7'
+    );
+    if (Array.isArray(data) && data.length > 0) {
+      const last = data[data.length - 1];
+      if (last && typeof last.value === 'number') {
+        colsPrice = last.value;
+      }
+    }
+  } catch {
+    colsPrice = 0;
+  }
+
+  // Formula:
+  // APR-COLS = Total_eGLD_locked × BaseAPR / (1 - ServiceFee) × ServiceFee × AgencyBuyback × DAO_Coefficient × (eGLD_Price / COLS_Price) / Total_COLS_Staked
+  // ServiceFee is a fraction (e.g. 0.1 for 10%)
+  // BaseAPR is a percentage (e.g. 10 for 10%)
   if (
-    !colsStaked ||
-    !sumColsStaked ||
+    !totalEgldLocked ||
+    !serviceFee ||
     !baseApr ||
-    !agencyLockedEgld ||
     !egldPrice ||
-    !colsPrice
+    !colsPrice ||
+    !totalColsStaked
   )
     return 0;
-  // Formula:
-  // APR-COLS-ONLY = (((Total_eGLD * (baseApr/(1-serviceFee)/100) * AgencyBuyback * serviceFee * DAO_DISTRIBUTION_RATIO * COLS_staked(i)) * eGLDPrice / COLSprice / SUM(COLS_staked)) /COLS_staked(i) * 100
-  const baseAprCorrected = baseApr / (1 - serviceFee) / 100;
-  const numerator =
-    agencyLockedEgld *
-    baseAprCorrected *
-    AgencyBuyback *
+  const aprCols =
+    totalEgldLocked *
+    (baseApr / (1 - serviceFee)) *
     serviceFee *
-    DAO_DISTRIBUTION_RATIO *
-    colsStaked *
-    egldPrice;
-  const denominator = colsPrice * sumColsStaked * colsStaked;
-  if (denominator === 0) return 0;
-  const apr = (numerator / denominator) * 100;
-  return apr;
+    AgencyBuyback *
+    DAO_Coefficient *
+    (egldPrice / colsPrice) /
+    totalColsStaked;
+
+  return aprCols;
 }
 
 export const Stake = () => {
-  const { pending } = useGetActiveTransactionsStatus();
   const { address } = useGetAccountInfo();
   const { userActiveStake, userClaimableRewards, stakedCols } = useGlobalContext();
-  const { onRedelegate, onClaimRewards } = useStakeData();
 
   const isLoading =
     userActiveStake.status === 'loading' ||
@@ -119,7 +130,7 @@ export const Stake = () => {
     userClaimableRewards.status === 'error' ||
     stakedCols.status === 'error';
 
-  // --- New: COLS-only user detection ---
+  // --- COLS-only user detection ---
   const hasEgldStaked = userActiveStake.data && userActiveStake.data !== '0';
   const hasColsStaked = stakedCols.data && stakedCols.data !== '0';
 
@@ -181,73 +192,45 @@ export const Stake = () => {
     }
   }
 
-  // --- New: COLS-only APR calculation state ---
-  const [colsOnlyApr, setColsOnlyApr] = useState<number | null>(null);
-  const [colsOnlyAprLoading, setColsOnlyAprLoading] = useState(true);
+  // --- New: COLS-only APR-COLS calculation state (final formula) ---
+  const [aprCols, setAprCols] = useState<number | null>(null);
+  const [aprColsLoading, setAprColsLoading] = useState(false);
 
-  // Helper: Are all required values loaded and valid?
-  const allColsAprInputsLoaded =
-    !aprLoading &&
-    stakedCols.status === 'loaded' &&
-    stakers &&
-    Array.isArray(stakers) &&
-    stakers.length > 0 &&
-    typeof baseApr === 'number' &&
-    !isNaN(baseApr) &&
-    typeof agencyLockedEgld === 'number' &&
-    !isNaN(agencyLockedEgld) &&
-    typeof egldPrice === 'number' &&
-    !isNaN(egldPrice) &&
-    typeof colsPrice === 'number' &&
-    !isNaN(colsPrice);
+  // Calculate total COLS staked (sum of all stakers' colsStaked)
+  let totalColsStaked = 0;
+  if (Array.isArray(stakers) && stakers.length > 0) {
+    totalColsStaked = stakers.reduce(
+      (sum: number, s: any) => sum + (s.colsStaked || 0),
+      0
+    );
+  }
 
   useEffect(() => {
+    // Only for COLS-only users
     if (
       !hasEgldStaked &&
       hasColsStaked &&
-      address &&
-      stakedCols.data &&
-      allColsAprInputsLoaded
+      typeof baseApr === 'number' &&
+      !isNaN(baseApr) &&
+      typeof serviceFee === 'number' &&
+      !isNaN(serviceFee) &&
+      totalColsStaked > 0
     ) {
-      setColsOnlyAprLoading(true);
-      const userCols = Number(stakedCols.data) / 1e18;
-      const sumCols = stakers.reduce(
-        (sum: number, s: any) => sum + (s.colsStaked || 0),
-        0
-      );
-      const apr = calculateColsOnlyApr({
-        colsStaked: userCols,
-        sumColsStaked: sumCols,
-        baseApr,
-        serviceFee,
-        agencyLockedEgld,
-        egldPrice,
-        colsPrice
-      });
-      setColsOnlyApr(apr);
-      setColsOnlyAprLoading(false);
-    } else if (!hasEgldStaked && hasColsStaked) {
-      setColsOnlyApr(null);
-      setColsOnlyAprLoading(true);
+      setAprColsLoading(true);
+      fetchAprCols({ serviceFee, baseApr, totalColsStaked })
+        .then(val => {
+          setAprCols(val);
+          setAprColsLoading(false);
+        })
+        .catch(() => {
+          setAprCols(0);
+          setAprColsLoading(false);
+        });
     } else {
-      setColsOnlyApr(null);
-      setColsOnlyAprLoading(false);
+      setAprCols(null);
+      setAprColsLoading(false);
     }
-  }, [
-    hasEgldStaked,
-    hasColsStaked,
-    address,
-    stakedCols.data,
-    stakedCols.status,
-    stakers,
-    baseApr,
-    serviceFee,
-    agencyLockedEgld,
-    egldPrice,
-    colsPrice,
-    aprLoading,
-    allColsAprInputsLoaded
-  ]);
+  }, [hasEgldStaked, hasColsStaked, baseApr, serviceFee, totalColsStaked]);
 
   // --- Main UI ---
   if (isLoading) {
@@ -354,10 +337,10 @@ export const Stake = () => {
                     display: 'inline-block',
                     boxShadow: '0 2px 8px #fff8'
                   }}>
-                    {colsOnlyAprLoading
+                    {aprColsLoading
                       ? <span style={{ fontWeight: 400 }}>...</span>
-                      : colsOnlyApr !== null
-                        ? colsOnlyApr.toFixed(2)
+                      : aprCols !== null
+                        ? aprCols.toFixed(2)
                         : '0.00'
                     }%
                   </span>
@@ -565,9 +548,15 @@ export const Stake = () => {
                   }
                   let lockedEgld = agencyLockedEgld;
                   try {
-                    lockedEgld = await fetchAgencyLockedEgld();
+                    lockedEgld = await axios.get(
+                      `https://api.multiversx.com/providers/${network.delegationContract}`
+                    ).then(res => {
+                      if (res.data && typeof res.data.locked === 'string') {
+                        return Math.round((Number(res.data.locked) / 1e18) * 10000) / 10000;
+                      }
+                      return agencyLockedEgld;
+                    });
                   } catch {}
-                  // simulateAprAndRank is defined above
                   const APRmin = 0.01;
                   const APRmax = 15;
                   const AGENCY_BUYBACK = 0.3;
@@ -714,42 +703,8 @@ export const Stake = () => {
             <FontAwesomeIcon icon={faGift} />
           </div>
         </div>
-        <div className={styles.title}>Claim Rewards</div>
+        <div className={styles.title}>Claim COLS Rewards</div>
         <div className={styles.actions}>
-          <button
-            type="button"
-            style={{
-              background: '#6ee7c7',
-              color: '#181a1b',
-              fontWeight: 700,
-              borderRadius: 7,
-              padding: '15px 30px',
-              border: 'none',
-              boxShadow: '0 2px 8px #6ee7c7aa'
-            }}
-            className={classNames(styles.action)}
-            disabled={pending}
-            onClick={onClaimRewards(() => false)}
-          >
-            Claim eGLD Now
-          </button>
-          <button
-            type="button"
-            style={{
-              background: '#6ee7c7',
-              color: '#181a1b',
-              fontWeight: 700,
-              borderRadius: 7,
-              padding: '15px 30px',
-              border: 'none',
-              boxShadow: '0 2px 8px #6ee7c7aa'
-            }}
-            className={classNames(styles.action)}
-            disabled={pending}
-            onClick={onRedelegate(() => false)}
-          >
-            Redelegate eGLD
-          </button>
           <ClaimCols onClaimed={() => {}} />
         </div>
       </div>
