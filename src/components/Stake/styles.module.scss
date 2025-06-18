@@ -42,30 +42,53 @@
 
   /* --- APR Panel Special Styling --- */
   .assetsBox:nth-child(2) {
-    background: linear-gradient(90deg, #6ee7c7 0%, #4f8cff 100%) !important;
-    border: 2px solid #6ee7c7;
+    /* New vibrant gradient and border for APR panel */
+    background: linear-gradient(120deg, #6ee7c7 0%, #23f7dd 40%, #4f8cff 100%) !important;
+    border: 2px solid #23f7dd;
     color: #181a1b !important;
-    box-shadow: 0 2px 24px #6ee7c7cc;
+    box-shadow: 0 4px 32px #23f7dd55, 0 2px 24px #4f8cff33;
     position: relative;
     overflow: hidden;
+    /* Add a subtle inner glow effect */
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      pointer-events: none;
+      box-shadow: 0 0 32px 8px #6ee7c7cc inset, 0 0 0 0 #fff0;
+      opacity: 0.18;
+      z-index: 1;
+    }
   }
   .assetsBox:nth-child(2) .icon {
     background: #fff;
-    border: 1px solid #6ee7c7;
-    box-shadow: 0 2px 12px #6ee7c755;
+    border: 1.5px solid #23f7dd;
+    box-shadow: 0 2px 16px #6ee7c7cc;
+    z-index: 2;
   }
   .assetsBox:nth-child(2) .title,
   .assetsBox:nth-child(2) .aprValue,
   .assetsBox:nth-child(2) b {
     color: #181a1b !important;
-    text-shadow: 0 1px 8px #fff8;
+    text-shadow: 0 1px 12px #fff8, 0 0 2px #23f7dd88;
+    z-index: 2;
   }
   .assetsBox:nth-child(2) .aprValue {
-    font-size: 22px;
-    font-weight: 800;
+    font-size: 26px;
+    font-weight: 900;
     background: none;
     color: #181a1b !important;
-    text-shadow: 0 1px 8px #fff8;
+    text-shadow: 0 2px 18px #fff8, 0 0 8px #23f7ddcc;
+    letter-spacing: 0.5px;
+    border-radius: 8px;
+    padding: 4px 18px;
+    margin-left: 8px;
+    margin-right: 8px;
+    box-shadow: 0 2px 16px #23f7dd44;
+    background: linear-gradient(90deg, #fff 0%, #e0f7fa 100%);
+    display: inline-block;
+    z-index: 2;
   }
 
   .icon {
@@ -246,6 +269,7 @@
     flex-direction: column;
     gap: 10px;
     text-align: left;
+    z-index: 2;
   }
 
   .aprValue {
@@ -254,6 +278,7 @@
     font-size: 16px;
     color: #181a1b;
     text-shadow: 0 1px 8px #fff8;
+    z-index: 2;
   }
 
   /* --- Responsive Claimable Rewards Panel --- */
