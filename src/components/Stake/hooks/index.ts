@@ -142,6 +142,7 @@ const useStakeData = () => {
     };
   };
 
+  // EXACTLY as in your provided method:
   const getUserClaimableRewards = async (): Promise<void> => {
     dispatch({
       type: 'getUserClaimableRewards',

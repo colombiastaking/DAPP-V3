@@ -42,14 +42,12 @@
 
   /* --- APR Panel Special Styling --- */
   .assetsBox:nth-child(2) {
-    /* New vibrant gradient and border for APR panel */
     background: linear-gradient(120deg, #6ee7c7 0%, #23f7dd 40%, #4f8cff 100%) !important;
     border: 2px solid #23f7dd;
     color: #181a1b !important;
     box-shadow: 0 4px 32px #23f7dd55, 0 2px 24px #4f8cff33;
     position: relative;
     overflow: hidden;
-    /* Add a subtle inner glow effect */
     &::after {
       content: '';
       position: absolute;
@@ -212,75 +210,6 @@
     }
   }
 
-  .actions {
-    display: flex;
-    align-items: stretch;
-    width: 100%;
-    flex-direction: column;
-
-    @media (min-width: 576px) {
-      align-items: center;
-      flex-direction: row;
-      justify-content: center;
-    }
-
-    .action {
-      justify-content: center;
-      display: flex;
-      align-items: center;
-      padding: 15px 30px;
-      border-radius: 7px;
-      color: #181a1b;
-      background: #6ee7c7;
-      border: none;
-      font-size: 14px;
-      font-weight: 700;
-      box-shadow: 0 2px 8px #6ee7c7aa;
-      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-
-      @media (min-width: 576px) {
-        width: 150px;
-      }
-
-      &.disabled {
-        pointer-events: none;
-        color: rgba(24,26,27,0.5);
-        background-color: #23272a !important;
-      }
-
-      &:not(:last-child) {
-        margin-bottom: 10px;
-
-        @media (min-width: 576px) {
-          margin-bottom: 0;
-          margin-right: 10px;
-        }
-      }
-    }
-  }
-
-  .aprInfo {
-    width: 100%;
-    margin-top: 10px;
-    font-size: 15px;
-    font-weight: 500;
-    color: #181a1b;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    text-align: left;
-    z-index: 2;
-  }
-
-  .aprValue {
-    margin-left: 8px;
-    font-weight: 700;
-    font-size: 16px;
-    color: #181a1b;
-    text-shadow: 0 1px 8px #fff8;
-    z-index: 2;
-  }
-
   /* --- Responsive Claimable Rewards Panel --- */
   .panel {
     margin-top: 32px;
@@ -328,14 +257,8 @@
       flex-direction: column;
       align-items: stretch;
       justify-content: center;
-      gap: 10px;
+      gap: 16px;
       margin-top: 10px;
-
-      @media (min-width: 576px) {
-        flex-direction: row;
-        align-items: center;
-        gap: 10px;
-      }
     }
   }
 }

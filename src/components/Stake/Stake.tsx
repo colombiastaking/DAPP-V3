@@ -17,15 +17,13 @@ import { useColsAprContext } from '../../context/ColsAprContext';
 
 import styles from './styles.module.scss';
 import { ClaimColsButton } from './ClaimColsButton';
-
-// --- Add useStakeData for eGLD claim/redelegate actions ---
+import { ClaimEgldButton } from './ClaimEgldButton';
 import useStakeData from './hooks';
 
 // Format eGLD with max 3 decimals, converting from WEI (1e18) to EGLD
 function formatEgld(amount: string | number) {
   const num = Number(amount);
   if (isNaN(num)) return amount;
-  // Convert from WEI to EGLD (divide by 1e18)
   const egld = num / Math.pow(10, denomination);
   return egld.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 });
 }
@@ -46,7 +44,6 @@ const ClaimCols = ({
   return <ClaimColsButton onClaimed={onClaimed} />;
 };
 
-// --- Helper: Calculate APR-COLS for COLS-only users (final formula) ---
 async function fetchAprCols({
   serviceFee,
   baseApr,
@@ -56,11 +53,9 @@ async function fetchAprCols({
   baseApr: number;
   totalColsStaked: number;
 }): Promise<number> {
-  // Constants
-  const AgencyBuyback = 0.4; // updated from 0.3 to 0.4
+  const AgencyBuyback = 0.4;
   const DAO_Coefficient = 0.333;
 
-  // Fetch Total eGLD locked in staking pool
   let totalEgldLocked = 0;
   try {
     const { data } = await axios.get(
@@ -73,7 +68,6 @@ async function fetchAprCols({
     totalEgldLocked = 0;
   }
 
-  // Fetch eGLD price
   let egldPrice = 0;
   try {
     const { data } = await axios.get(`${network.apiAddress}/economics`);
@@ -82,7 +76,6 @@ async function fetchAprCols({
     egldPrice = 0;
   }
 
-  // Fetch COLS price (hourly)
   let colsPrice = 0;
   try {
     const { data } = await axios.get(
@@ -98,10 +91,6 @@ async function fetchAprCols({
     colsPrice = 0;
   }
 
-  // Formula:
-  // APR-COLS = Total_eGLD_locked × BaseAPR / (1 - ServiceFee) × ServiceFee × AgencyBuyback × DAO_Coefficient × (eGLD_Price / COLS_Price) / Total_COLS_Staked
-  // ServiceFee is a fraction (e.g. 0.1 for 10%)
-  // BaseAPR is a percentage (e.g. 10 for 10%)
   if (
     !totalEgldLocked ||
     !serviceFee ||
@@ -126,9 +115,7 @@ async function fetchAprCols({
 export const Stake = () => {
   const { address } = useGetAccountInfo();
   const { userActiveStake, userClaimableRewards, stakedCols } = useGlobalContext();
-
-  // Add eGLD claim/redelegate actions
-  const { onClaimRewards, onRedelegate } = useStakeData();
+  const { onRedelegate } = useStakeData();
 
   const isLoading =
     userActiveStake.status === 'loading' ||
@@ -139,11 +126,9 @@ export const Stake = () => {
     userClaimableRewards.status === 'error' ||
     stakedCols.status === 'error';
 
-  // --- COLS-only user detection ---
   const hasEgldStaked = userActiveStake.data && userActiveStake.data !== '0';
   const hasColsStaked = stakedCols.data && stakedCols.data !== '0';
 
-  // --- Use live COLS APR data for user APR/ranking ---
   const {
     loading: aprLoading,
     stakers,
@@ -171,13 +156,11 @@ export const Stake = () => {
     }
   }, [address, stakers]);
 
-  // --- Simulation state ---
   const [simulatedCols, setSimulatedCols] = useState<string>('');
   const [simResult, setSimResult] = useState<{ newApr: number | null; newRank: number | null } | null>(null);
   const [simError, setSimError] = useState<string | null>(null);
   const [simLoading, setSimLoading] = useState(false);
 
-  // Find user's current eGLD staked
   let userEgldStaked = 0;
   if (Array.isArray(stakers) && address) {
     const user = stakers.find((s: any) => s.address === address);
@@ -186,7 +169,6 @@ export const Stake = () => {
     }
   }
 
-  // Get serviceFee for simulation
   let serviceFee = 0.1;
   const { contractDetails } = useGlobalContext();
   if (
@@ -201,11 +183,9 @@ export const Stake = () => {
     }
   }
 
-  // --- New: COLS-only APR-COLS calculation state (final formula) ---
   const [aprCols, setAprCols] = useState<number | null>(null);
   const [aprColsLoading, setAprColsLoading] = useState(false);
 
-  // Calculate total COLS staked (sum of all stakers' colsStaked)
   let totalColsStaked = 0;
   if (Array.isArray(stakers) && stakers.length > 0) {
     totalColsStaked = stakers.reduce(
@@ -215,7 +195,6 @@ export const Stake = () => {
   }
 
   useEffect(() => {
-    // Only for COLS-only users
     if (
       !hasEgldStaked &&
       hasColsStaked &&
@@ -241,7 +220,6 @@ export const Stake = () => {
     }
   }, [hasEgldStaked, hasColsStaked, baseApr, serviceFee, totalColsStaked]);
 
-  // --- Main UI ---
   if (isLoading) {
     return (
       <div className={classNames(styles.stake, styles.empty, 'stake')}>
@@ -288,12 +266,10 @@ export const Stake = () => {
     );
   }
 
-  // --- New: COLS-only user panel ---
   if (!hasEgldStaked && hasColsStaked) {
     return (
       <div className={classNames(styles.stake, 'stake')}>
         <div className={styles.assetsRow}>
-          {/* COLS-only Active Assets Panel */}
           <div className={styles.assetsBox}>
             <div className={styles.icon}>
               <MultiversX />
@@ -317,7 +293,6 @@ export const Stake = () => {
               <div className={styles.actionButtonWrapper}><StakeCols /></div>
             </div>
           </div>
-          {/* COLS-only APR Panel */}
           <div
             className={styles.assetsBox}
             style={{
@@ -361,7 +336,6 @@ export const Stake = () => {
             </div>
           </div>
         </div>
-        {/* Claim COLS Rewards Panel */}
         <div className={styles.panel}>
           <div className={styles.icon}>
             <MultiversX />
@@ -378,7 +352,6 @@ export const Stake = () => {
     );
   }
 
-  // --- Default: eGLD staked (original panel) ---
   return (
     <div
       className={classNames(
@@ -706,7 +679,6 @@ export const Stake = () => {
           </div>
         </div>
       </div>
-      {/* Claim Rewards Panel */}
       <div className={styles.panel}>
         <div className={styles.icon}>
           <MultiversX />
@@ -716,25 +688,7 @@ export const Stake = () => {
         </div>
         <div className={styles.title}>Claim Rewards</div>
         <div className={styles.actions}>
-          <button
-            type="button"
-            style={{
-              background: '#6ee7c7',
-              color: '#181a1b',
-              fontWeight: 700,
-              borderRadius: 7,
-              padding: '15px 30px',
-              border: 'none',
-              marginRight: 0,
-              marginBottom: 0,
-              fontSize: 16,
-              boxShadow: '0 2px 8px #6ee7c7aa'
-            }}
-            className={classNames(styles.action)}
-            onClick={onClaimRewards(() => false)}
-          >
-            Claim eGLD
-          </button>
+          <ClaimEgldButton onClaimed={() => {}} />
           <button
             type="button"
             style={{
