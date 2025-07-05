@@ -6,7 +6,7 @@ import { useState } from 'react';
 import styles from '../Undelegate/styles.module.scss';
 
 const WITHDRAW_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
-const GAS_LIMIT = 10_000_000;
+const GAS_LIMIT = 15_000_000;
 const RAW_DATA = 'withdraw@00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787';
 
 export const WithdrawCols = () => {

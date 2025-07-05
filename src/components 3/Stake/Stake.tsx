@@ -161,12 +161,10 @@ export const Stake = () => {
   const [simError, setSimError] = useState<string | null>(null);
   const [simLoading, setSimLoading] = useState(false);
 
+  // FIX: Use userActiveStake.data instead of stakers array for eGLD staked check
   let userEgldStaked = 0;
-  if (Array.isArray(stakers) && address) {
-    const user = stakers.find((s: any) => s.address === address);
-    if (user && typeof user.egldStaked === 'number') {
-      userEgldStaked = user.egldStaked;
-    }
+  if (userActiveStake && userActiveStake.data) {
+    userEgldStaked = Number(userActiveStake.data);
   }
 
   let serviceFee = 0.1;
@@ -511,6 +509,7 @@ export const Stake = () => {
                     setSimLoading(false);
                     return;
                   }
+                  // FIX: Use userEgldStaked from userActiveStake.data
                   if (!userEgldStaked || userEgldStaked <= 0) {
                     setSimError('You must have eGLD staked to simulate');
                     setSimLoading(false);
