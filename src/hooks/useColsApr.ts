@@ -15,7 +15,7 @@ const PEERME_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r
 const PEERME_ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
 
 // --- CONSTANTS ---
-const AGENCY_BUYBACK = 0.4; // Agency buyback percentage (updated from 0.3 to 0.4)
+const AGENCY_BUYBACK = 0.3; // Agency buyback percentage (updated from 0.4 to 0.3)
 const DAO_DISTRIBUTION_RATIO = 0.333; // Portion of buybacks distributed to DAO
 const BONUS_BUYBACK_FACTOR = 0.66; // For Average-APRbonus
 

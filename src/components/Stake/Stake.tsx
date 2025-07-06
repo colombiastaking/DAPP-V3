@@ -53,7 +53,7 @@ async function fetchAprCols({
   baseApr: number;
   totalColsStaked: number;
 }): Promise<number> {
-  const AgencyBuyback = 0.4;
+  const AgencyBuyback = 0.3;
   const DAO_Coefficient = 0.333;
 
   let totalEgldLocked = 0;
@@ -542,7 +542,7 @@ export const Stake = () => {
                   } catch {}
                   const APRmin = 0.01;
                   const APRmax = 15;
-                  const AGENCY_BUYBACK = 0.4;
+                  const AGENCY_BUYBACK = 0.3;
                   const DAO_DISTRIBUTION_RATIO = 0.333;
                   const newStakers = stakers.map((s: any) =>
                     s.address === address
