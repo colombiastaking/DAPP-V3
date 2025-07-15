@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
@@ -16,6 +16,8 @@ import { useColsAprContext } from '../../context/ColsAprContext';
 export const Dashboard = () => {
   const { address } = useGetAccountInfo();
   const [loading, setLoading] = useState(true);
+  const [initialColsAprLoading, setInitialColsAprLoading] = useState(true);
+  const hasShownInitialLoading = useRef(false);
 
   const navigate = useNavigate();
   const handleRedirect = () =>
@@ -24,10 +26,19 @@ export const Dashboard = () => {
   useEffect(handleRedirect, [address]);
   useGlobalData();
 
-  // --- Add: ColsApr loading state for prices, APR, ranking ---
+  // ColsApr loading state for prices, APR, ranking
   const { loading: colsAprLoading } = useColsAprContext();
 
-  if (loading || colsAprLoading) {
+  // Track initial ColsApr loading only on first login
+  useEffect(() => {
+    if (!colsAprLoading && initialColsAprLoading) {
+      setInitialColsAprLoading(false);
+      hasShownInitialLoading.current = true;
+    }
+  }, [colsAprLoading, initialColsAprLoading]);
+
+  // Show spinner only on first login while ColsApr is loading
+  if ((loading || (initialColsAprLoading && colsAprLoading)) && !hasShownInitialLoading.current) {
     return (
       <div
         style={{ fontSize: '30px' }}
