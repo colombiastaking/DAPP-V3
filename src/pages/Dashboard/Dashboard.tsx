@@ -11,6 +11,7 @@ import { PriceBanner } from 'components/PriceBanner';
 
 import styles from './styles.module.scss';
 import useGlobalData from '../../hooks/useGlobalData';
+import { useColsAprContext } from '../../context/ColsAprContext';
 
 export const Dashboard = () => {
   const { address } = useGetAccountInfo();
@@ -23,7 +24,10 @@ export const Dashboard = () => {
   useEffect(handleRedirect, [address]);
   useGlobalData();
 
-  if (loading) {
+  // --- Add: ColsApr loading state for prices, APR, ranking ---
+  const { loading: colsAprLoading } = useColsAprContext();
+
+  if (loading || colsAprLoading) {
     return (
       <div
         style={{ fontSize: '30px' }}
@@ -35,7 +39,7 @@ export const Dashboard = () => {
           spin={true}
           className='mr-3'
         />
-        Loading...
+        Loading staking data, prices, APR, and ranking...
       </div>
     );
   }
