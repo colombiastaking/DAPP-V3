@@ -17,6 +17,9 @@ export const App = () => (
   <BrowserRouter>
     <DappProvider
       environment={network.id}
+      dappConfig={{
+        shouldUseWebViewProvider: true
+      }}
       customNetworkConfig={{
         name: 'customConfig',
         apiTimeout: 6000,
