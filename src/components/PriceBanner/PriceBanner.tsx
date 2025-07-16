@@ -1,5 +1,6 @@
 import React from 'react';
 import { useColsAprContext } from '../../context/ColsAprContext';
+import { AnimatedDots } from '../AnimatedDots';
 
 const bannerStyle: React.CSSProperties = {
   display: 'flex',
@@ -50,13 +51,13 @@ export function PriceBanner() {
       <div style={priceBox}>
         <span style={labelStyle}>COLS Price:</span>
         <span style={valueStyle}>
-          {loading ? '...' : `$${Number(colsPrice).toLocaleString(undefined, { maximumFractionDigits: 6 })}`}
+          {loading ? <AnimatedDots /> : `$${Number(colsPrice).toLocaleString(undefined, { maximumFractionDigits: 6 })}`}
         </span>
       </div>
       <div style={priceBox}>
         <span style={labelStyle}>eGLD Price:</span>
         <span style={valueStyle}>
-          {loading ? '...' : `$${Number(egldPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+          {loading ? <AnimatedDots /> : `$${Number(egldPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
         </span>
       </div>
     </div>

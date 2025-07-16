@@ -36,14 +36,16 @@ import { ChangeServiceFee } from './components/ChangeServiceFee';
 import calculateAnnualPercentage from './helpers/calculateAnnualPercentage';
 
 import styles from './styles.module.scss';
+import { AnimatedDots } from 'components/AnimatedDots';
 
+interface CardDataType {
+  value?: string | React.ReactNode;
+  percentage?: string | React.ReactNode;
+}
 interface CardType {
   label: string;
   colors: string[];
-  data: {
-    value?: string | null;
-    percentage?: string | undefined;
-  };
+  data: CardDataType;
   title?: string;
   description?: string;
   modal?: ReactNode;
@@ -181,15 +183,15 @@ export const Cards = () => {
     }
   };
 
-  const getContractStakeData = useCallback(() => {
+  const getContractStakeData = useCallback((): CardDataType => {
     if (!totalNetworkStake.data || !totalActiveStake.data) {
       const loading =
         totalNetworkStake.status === 'loading' ||
         totalActiveStake.status === 'loading';
 
       return {
-        value: loading ? `... ${network.egldLabel}` : 'Stake Unknown',
-        percentage: loading ? '...%' : 'Data Unavailable'
+        value: loading ? <><AnimatedDots /> {network.egldLabel}</> : 'Stake Unknown',
+        percentage: loading ? <><AnimatedDots />%</> : 'Data Unavailable'
       };
     }
 
@@ -207,15 +209,15 @@ export const Cards = () => {
     };
   }, [totalNetworkStake, totalActiveStake.data]);
 
-  const getNodesNumber = useCallback(() => {
+  const getNodesNumber = useCallback((): CardDataType => {
     if (!totalNetworkStake.data || !nodesNumber.data) {
       const loading =
         totalNetworkStake.status === 'loading' ||
         nodesNumber.status === 'loading';
 
       return {
-        value: loading ? '...' : 'Nodes Unknown',
-        percentage: loading ? '...% of total nodes' : 'Data Unavailable'
+        value: loading ? <AnimatedDots /> : 'Nodes Unknown',
+        percentage: loading ? <><AnimatedDots />% of total nodes</> : 'Data Unavailable'
       };
     }
 
@@ -235,15 +237,15 @@ export const Cards = () => {
     };
   }, [totalNetworkStake, nodesNumber]);
 
-  const getDelegationCap = useCallback(() => {
+  const getDelegationCap = useCallback((): CardDataType => {
     if (!contractDetails.data || !totalActiveStake.data) {
       const loading =
         totalActiveStake.status === 'loading' ||
         contractDetails.status === 'loading';
 
       return {
-        value: loading ? `... ${network.egldLabel}` : 'Cap Unknown',
-        percentage: loading ? '...%' : 'Data Unavailable'
+        value: loading ? <><AnimatedDots /> {network.egldLabel}</> : 'Cap Unknown',
+        percentage: loading ? <><AnimatedDots />%</> : 'Data Unavailable'
       };
     }
 
@@ -258,7 +260,7 @@ export const Cards = () => {
     };
   }, [totalActiveStake.data, contractDetails.data]);
 
-  const getAnnualPercentage = () => {
+  const getAnnualPercentage = (): string | React.ReactNode => {
     const dependencies = [
       totalActiveStake,
       nodesNumber,
@@ -269,7 +271,7 @@ export const Cards = () => {
     ];
 
     if (dependencies.some((dependency) => dependency.status === 'loading')) {
-      return '...%';
+      return <><AnimatedDots />%</>;
     }
 
     if (dependencies.every((dependency) => dependency.data)) {
@@ -308,7 +310,7 @@ export const Cards = () => {
           usersNumber.status !== 'loaded'
             ? usersNumber.error
               ? 'Data Unavailable'
-              : '...'
+              : <AnimatedDots />
             : usersNumber.data
       }
     },
@@ -338,7 +340,7 @@ export const Cards = () => {
           ? contractDetails.data.serviceFee
           : contractDetails.error
           ? 'Service Fee Unknown'
-          : '...%'
+          : <><AnimatedDots />%</>
       }
     },
     {

@@ -5,6 +5,7 @@ import classNames from "classnames";
 import { sendTransactions } from "@multiversx/sdk-dapp/services/transactions/sendTransactions";
 import { network } from "config";
 import { useGlobalContext } from "context";
+import { AnimatedDots } from "components/AnimatedDots";
 
 // No need for denominateEgld, value is already formatted in context
 
@@ -83,7 +84,7 @@ export function ClaimEgldButton({ onClaimed }: { onClaimed: () => void }) {
       <span role="img" aria-label="gift">🎁</span>
       Claim eGLD
       {loading ? (
-        <span style={{ marginLeft: 8, fontSize: 14 }}>...</span>
+        <span style={{ marginLeft: 8, fontSize: 14 }}><AnimatedDots /></span>
       ) : (
         <span style={{
           marginLeft: 8,
@@ -99,7 +100,7 @@ export function ClaimEgldButton({ onClaimed }: { onClaimed: () => void }) {
       )}
       <span role="img" aria-label="gift">🎁</span>
       {txLoading && (
-        <span style={{ marginLeft: 8, fontSize: 14 }}>...</span>
+        <span style={{ marginLeft: 8, fontSize: 14 }}><AnimatedDots /></span>
       )}
       {error && (
         <span style={{ color: "#b71c1c", marginLeft: 8, fontSize: 13 }}>{error}</span>

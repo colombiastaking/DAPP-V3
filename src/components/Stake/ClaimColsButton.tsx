@@ -5,6 +5,7 @@ import classNames from "classnames";
 import { sendTransactions } from "@multiversx/sdk-dapp/services/transactions/sendTransactions";
 import { network } from "config";
 import { fetchClaimableCols } from "helpers/fetchClaimableCols";
+import { AnimatedDots } from "components/AnimatedDots";
 
 const CLAIM_COLS_CONTRACT = "erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0";
 const ENTITY_ADDRESS = "erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0";
@@ -109,7 +110,7 @@ export function ClaimColsButton({ onClaimed }: { onClaimed: () => void }) {
       <span role="img" aria-label="fire">🔥</span>
       Claim COLS
       {loading ? (
-        <span style={{ marginLeft: 8, fontSize: 14 }}>...</span>
+        <span style={{ marginLeft: 8, fontSize: 14 }}><AnimatedDots /></span>
       ) : (
         <span style={{
           marginLeft: 8,
@@ -125,7 +126,7 @@ export function ClaimColsButton({ onClaimed }: { onClaimed: () => void }) {
       )}
       <span role="img" aria-label="fire">🔥</span>
       {txLoading && (
-        <span style={{ marginLeft: 8, fontSize: 14 }}>...</span>
+        <span style={{ marginLeft: 8, fontSize: 14 }}><AnimatedDots /></span>
       )}
       {error && (
         <span style={{ color: "#b71c1c", marginLeft: 8, fontSize: 13 }}>{error}</span>
