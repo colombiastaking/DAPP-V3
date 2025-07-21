@@ -5,6 +5,7 @@ import withPageTitle from './components/PageTitle';
 import { Admin } from './pages/Admin';
 import { Dashboard } from './pages/Dashboard';
 import { Home } from './pages/Home';
+// import { NewBenefit } from './pages/NewBenefit'; // REMOVE old page
 
 export interface RouteType {
   path: string;
@@ -21,6 +22,7 @@ export const routeNames = {
   ledger: '/ledger',
   walletconnect: '/walletconnect',
   admin: '/admin'
+  // newBenefit: '/new-benefit' // REMOVE old route
 };
 
 const routes: RouteType[] = [
@@ -40,6 +42,7 @@ const routes: RouteType[] = [
     title: 'Admin',
     component: Admin
   }
+  // REMOVE old NewBenefit route
 ];
 
 const mappedRoutes = routes.map((route) => {

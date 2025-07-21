@@ -9,6 +9,7 @@ import { PriceBanner } from 'components/PriceBanner';
 
 import styles from './styles.module.scss';
 import useGlobalData from '../../hooks/useGlobalData';
+import { DashboardNewDelegator } from './NewDelegatorBenefit';
 
 export const Dashboard = () => {
   const { address } = useGetAccountInfo();
@@ -29,6 +30,7 @@ export const Dashboard = () => {
       <Stake />
       <Withdrawals />
       <ColsAprTable />
+      <DashboardNewDelegator />
     </div>
   );
 };
