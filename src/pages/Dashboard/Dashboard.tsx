@@ -4,18 +4,15 @@ import { useNavigate } from 'react-router-dom';
 
 import { Stake } from 'components/Stake';
 import { Withdrawals } from 'components/Withdrawals';
-import { ColsAprTable } from 'components/ColsAprTable';
 import { PriceBanner } from 'components/PriceBanner';
 
 import styles from './styles.module.scss';
 import useGlobalData from '../../hooks/useGlobalData';
-import { DashboardNewDelegator } from './NewDelegatorBenefit';
 
 export const Dashboard = () => {
   const { address } = useGetAccountInfo();
   const navigate = useNavigate();
 
-  // Redirect to unlock if not logged in
   useEffect(() => {
     if (!address) {
       navigate('/unlock');
@@ -29,8 +26,6 @@ export const Dashboard = () => {
       <PriceBanner />
       <Stake />
       <Withdrawals />
-      <ColsAprTable />
-      <DashboardNewDelegator />
     </div>
   );
 };
