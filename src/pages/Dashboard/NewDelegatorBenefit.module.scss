@@ -4,6 +4,9 @@
   align-items: center;
   justify-content: center;
   width: 100%;
+  box-sizing: border-box;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .benefitBox {
@@ -21,7 +24,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-sizing: border-box;
 }
+
 .sectionTitle {
   font-size: 20px;
   font-weight: 700;
@@ -286,10 +291,12 @@
   .benefitBox {
     max-width: 100vw;
     margin: 18px 0;
-    padding: 18px 4px 12px 4px;
+    padding: 18px 8px 12px 8px;
+    box-sizing: border-box;
   }
   .section {
-    padding: 12px 4px 8px 4px;
+    padding: 12px 8px 8px 8px;
+    box-sizing: border-box;
   }
   .providersButtonList {
     flex-direction: column;

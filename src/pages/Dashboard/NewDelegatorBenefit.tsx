@@ -1,11 +1,16 @@
-import { useEffect, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useState } from 'react';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import axios from 'axios';
 import classNames from 'classnames';
 import { network } from 'config';
 import { useColsAprContext } from '../../context/ColsAprContext';
 import { useGlobalContext } from '../../context';
+import { Formik } from 'formik';
+import { object, string } from 'yup';
+import BigNumber from 'bignumber.js';
+import { Modal } from 'react-bootstrap';
+import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sendTransactions';
+import { HelpIcon } from 'components/HelpIcon';
 import styles from './NewDelegatorBenefit.module.scss';
 
 function formatEgld(amount: string | number) {
@@ -17,79 +22,6 @@ function formatCols(amount: string | number) {
   const num = Number(amount);
   if (isNaN(num)) return amount;
   return (num / 1e18).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 });
-}
-
-// Universal HelpIcon using React portal for tooltips
-function HelpIcon({ text }: { text: string }) {
-  const [show, setShow] = useState(false);
-  const [coords, setCoords] = useState<{top: number, left: number}>({top: 0, left: 0});
-  const iconRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (show && iconRef.current) {
-      const rect = iconRef.current.getBoundingClientRect();
-      setCoords({
-        top: rect.top + window.scrollY,
-        left: rect.left + window.scrollX + 24
-      });
-    }
-  }, [show]);
-
-  return (
-    <>
-      <span
-        ref={iconRef}
-        style={{
-          display: 'inline-block',
-          position: 'relative',
-          marginLeft: 4,
-          cursor: 'pointer',
-          verticalAlign: 'middle',
-          zIndex: 100
-        }}
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onTouchStart={() => setShow((v) => !v)}
-        tabIndex={0}
-        aria-label="Help"
-      >
-        <span style={{
-          display: 'inline-block',
-          width: 18,
-          height: 18,
-          background: '#6ee7c7',
-          color: '#181a1b',
-          borderRadius: '50%',
-          textAlign: 'center',
-          fontWeight: 900,
-          fontSize: 14,
-          lineHeight: '18px',
-          boxShadow: '0 1px 4px #6ee7c7aa',
-          userSelect: 'none'
-        }}>?</span>
-      </span>
-      {show && createPortal(
-        <span style={{
-          position: 'absolute',
-          left: coords.left,
-          top: coords.top,
-          background: '#23272a',
-          color: '#ffe082',
-          borderRadius: 8,
-          padding: '10px 16px',
-          fontSize: 14,
-          fontWeight: 500,
-          boxShadow: '0 2px 8px #000a',
-          zIndex: 9999,
-          minWidth: 180,
-          maxWidth: 320,
-          whiteSpace: 'pre-line',
-          pointerEvents: 'none'
-        }}>{text}</span>,
-        document.body
-      )}
-    </>
-  );
 }
 
 function ContactClaimButton({ disabled, selectedProviders, totalEgld, userAddress, onClose }: {
@@ -160,90 +92,281 @@ function ContactClaimButton({ disabled, selectedProviders, totalEgld, userAddres
   );
 }
 
+function UndelegateModal({
+  show,
+  onClose,
+  providerName,
+  contract,
+  maxAmount,
+  egldLabel
+}: {
+  show: boolean,
+  onClose: () => void,
+  providerName: string,
+  contract: string,
+  maxAmount: string,
+  egldLabel: string
+}) {
+  const [pending, setPending] = useState(false);
+  return (
+    <Modal show={show} onHide={onClose} centered animation={false}>
+      <div style={{ padding: 32, textAlign: 'center', background: '#242526', borderRadius: 12 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 12, color: '#6ee7c7' }}>
+          Undelegate from {providerName}
+        </div>
+        <Formik
+          validationSchema={object().shape({
+            amount: string()
+              .required('Required')
+              .test('min', 'Value must be greater than zero.', (value = '0') =>
+                new BigNumber(value).isGreaterThan(0)
+              )
+              .test('max', `You can undelegate up to ${formatEgld(maxAmount)} ${egldLabel}.`, (value = '0') =>
+                new BigNumber(value).lte(new BigNumber(maxAmount).dividedBy(1e18))
+              )
+          })}
+          onSubmit={async ({ amount }) => {
+            setPending(true);
+            try {
+              let hexAmount = new BigNumber(amount).multipliedBy(1e18).toString(16);
+              if (hexAmount.length % 2 === 1) hexAmount = '0' + hexAmount;
+              await sendTransactions({
+                transactions: [
+                  {
+                    value: '0',
+                    data: `unDelegate@${hexAmount}`,
+                    receiver: contract,
+                    gasLimit: 12000000
+                  }
+                ]
+              });
+              setPending(false);
+              onClose();
+            } catch {
+              setPending(false);
+            }
+          }}
+          initialValues={{
+            amount: new BigNumber(maxAmount).dividedBy(1e18).toString()
+          }}
+        >
+          {({ values, errors, touched, handleChange, handleBlur, handleSubmit, setFieldValue }) => (
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: 16 }}>
+                <label>
+                  Amount to undelegate ({egldLabel}):&nbsp;
+                  <input
+                    type="number"
+                    name="amount"
+                    min={0}
+                    max={new BigNumber(maxAmount).dividedBy(1e18).toString()}
+                    value={values.amount}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    style={{ width: 120, borderRadius: 6, border: '1px solid #bbb', padding: 6, fontSize: 15 }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  style={{
+                    marginLeft: 8,
+                    background: '#303234',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '6px 16px',
+                    fontWeight: 600,
+                    fontSize: 15,
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => setFieldValue('amount', new BigNumber(maxAmount).dividedBy(1e18).toString())}
+                >
+                  Max
+                </button>
+              </div>
+              {errors.amount && touched.amount && (
+                <div style={{ color: '#f53855', marginBottom: 8 }}>{errors.amount}</div>
+              )}
+              <div style={{ marginTop: 18 }}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  style={{
+                    background: '#303234',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '10px 24px',
+                    fontSize: 15,
+                    marginRight: 8
+                  }}
+                  disabled={pending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: '#6ee7c7',
+                    color: '#181a1b',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '10px 24px',
+                    fontSize: 15,
+                    fontWeight: 700
+                  }}
+                  disabled={pending}
+                >
+                  {pending ? 'Processing...' : 'Sign Transaction'}
+                </button>
+              </div>
+            </form>
+          )}
+        </Formik>
+      </div>
+    </Modal>
+  );
+}
+
 export function DashboardNewDelegator() {
   const { address } = useGetAccountInfo();
   const { stakedCols } = useGlobalContext();
   const [loading, setLoading] = useState(true);
-  const [providerMap, setProviderMap] = useState<Record<string, string>>({});
-  const [userDelegations, setUserDelegations] = useState<any[]>([]);
+  const [, setProviderMap] = useState<Record<string, string>>({});
+  const [allProviders, setAllProviders] = useState<any[]>([]);
   const [colombiaStaked, setColombiaStaked] = useState('0');
   const [selectedContracts, setSelectedContracts] = useState<string[]>([]);
   const [status, setStatus] = useState<'none'|'undelegating'|'eligible'|'completed'>('none');
   const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
+  const [undelegateModal, setUndelegateModal] = useState<{contract: string, providerName: string, maxAmount: string} | null>(null);
 
   const { baseApr, colsPrice, egldPrice } = useColsAprContext();
 
-  // Fetch all providers and user delegations
-  useEffect(() => {
-    if (!address) return;
+  // Fetch all providers, user delegations, and waiting (unbonding) delegations
+  const fetchAllData = async () => {
     setLoading(true);
-    Promise.all([
-      axios.get('https://api.multiversx.com/providers?type=staking'),
-      axios.get(`https://api.multiversx.com/accounts/${address}/delegation`)
-    ]).then(([provRes, delRes]) => {
-      // Build provider address => identity map
+    try {
+      const [provRes, delRes, colRes, wdRes] = await Promise.all([
+        axios.get('https://api.multiversx.com/providers?type=staking'),
+        axios.get(`https://api.multiversx.com/accounts/${address}/delegation`),
+        axios.get(`https://api.multiversx.com/accounts/${address}/delegation/${network.delegationContract}`),
+        axios.get(`https://api.multiversx.com/accounts/${address}/withdrawals`)
+      ]);
       const map: Record<string, string> = {};
       for (const p of provRes.data || []) {
         map[p.provider] = p.identity || p.provider;
       }
       setProviderMap(map);
-      setUserDelegations(delRes.data || []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-    // Fetch user's staked eGLD with Colombia
-    axios.get(`https://api.multiversx.com/accounts/${address}/delegation/${network.delegationContract}`)
-      .then(res => setColombiaStaked(res.data?.userActiveStake || '0'))
-      .catch(() => setColombiaStaked('0'));
-    // Fetch pending withdrawals (to check if user has unstaked from provider)
-    axios.get(`https://api.multiversx.com/accounts/${address}/withdrawals`)
-      .then(res => setPendingWithdrawals(res.data || []))
-      .catch(() => setPendingWithdrawals([]));
+
+      // Build allProviders: for each provider, show active stake and/or waiting (unbonding) eGLD
+      const providers: any[] = [];
+      (delRes.data || []).forEach((d: any) => {
+        // Active stake
+        if (d.contract !== network.delegationContract && Number(d.userActiveStake) > 0) {
+          providers.push({
+            contract: d.contract,
+            userActiveStake: d.userActiveStake,
+            waiting: false,
+            waitingAmount: '0',
+            providerName: map[d.contract] || d.contract
+          });
+        }
+        // Waiting (unbonding) eGLD
+        if (d.contract !== network.delegationContract && Array.isArray(d.userUndelegatedList)) {
+          d.userUndelegatedList.forEach((u: any, idx: number) => {
+            if (Number(u.amount) > 0) {
+              providers.push({
+                contract: d.contract,
+                userActiveStake: '0',
+                waiting: true,
+                waitingAmount: u.amount,
+                providerName: map[d.contract] || d.contract,
+                timeLeft: u.seconds,
+                key: d.contract + '-waiting-' + idx
+              });
+            }
+          });
+        }
+      });
+      setAllProviders(providers);
+      setColombiaStaked(colRes.data?.userActiveStake || '0');
+      setPendingWithdrawals(wdRes.data || []);
+    } catch {
+      // handle error if needed
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!address) return;
+    fetchAllData();
+    // eslint-disable-next-line
   }, [address]);
 
-  // Filter out Colombia Staking from userDelegations
-  const otherDelegations = userDelegations.filter((d: any) =>
-    d.contract !== network.delegationContract && Number(d.userActiveStake) > 0
-  );
+  const totalColsStaked = Number(stakedCols?.data || 0);
 
   // Multi-select logic (button system)
-  const selectedProviders = otherDelegations
-    .filter((d: any) => selectedContracts.includes(d.contract))
+  const selectedProviders = allProviders
+    .filter((d: any) => selectedContracts.includes(d.contract + (d.waiting ? '-waiting-' + (d.key?.split('-waiting-')[1] || 0) : '')))
     .map((d: any) => ({
       ...d,
-      name: providerMap[d.contract] || d.contract
+      name: d.providerName
     }));
 
-  const totalEgldToMigrate = selectedProviders.reduce((sum, d) => sum + Number(d.userActiveStake), 0);
+  // For migration, sum both active and waiting eGLD
+  const totalEgldToMigrate = selectedProviders.reduce(
+    (sum, d) =>
+      sum +
+      (d.waiting
+        ? Number(d.waitingAmount)
+        : Number(d.userActiveStake)),
+    0
+  );
 
-  // Required COLS: must have 1 COLS per eGLD to be migrated, in addition to what is already required for Colombia Staking
   const currentColombiaEgld = Number(colombiaStaked);
-  const totalColsStaked = Number(stakedCols?.data || 0);
   const requiredCols = currentColombiaEgld + totalEgldToMigrate;
   const hasEnoughCols = totalColsStaked >= requiredCols;
   const missingCols = hasEnoughCols ? 0 : requiredCols - totalColsStaked;
 
-  // Status logic
   useEffect(() => {
     if (selectedProviders.length === 0) { setStatus('none'); return; }
     if (currentColombiaEgld > 0 && currentColombiaEgld >= totalEgldToMigrate) {
       setStatus('completed');
-    } else if (hasEnoughCols && selectedProviders.every(
-      (sp) => pendingWithdrawals.some(
-        (w) => w.contract === sp.contract && Number(w.userAmount) > 0
+    } else if (
+      hasEnoughCols &&
+      selectedProviders.every(
+        (sp) =>
+          sp.waiting ||
+          pendingWithdrawals.some(
+            (w) => w.contract === sp.contract && Number(w.userAmount) > 0
+          )
       )
-    )) {
+    ) {
       setStatus('eligible');
     } else if (hasEnoughCols) {
       setStatus('undelegating');
     } else {
       setStatus('none');
     }
-  }, [selectedProviders, currentColombiaEgld, totalColsStaked, totalEgldToMigrate, pendingWithdrawals, hasEnoughCols]);
+  }, [
+    selectedProviders,
+    currentColombiaEgld,
+    totalColsStaked,
+    totalEgldToMigrate,
+    pendingWithdrawals,
+    hasEnoughCols
+  ]);
 
-  // Calculate 10-day APR reward in COLS
-  const apr10d = baseApr && egldPrice && colsPrice && totalEgldToMigrate
-    ? ((totalEgldToMigrate / 1e18) * (baseApr/100) * (10/365) * egldPrice / colsPrice).toFixed(3)
-    : '0';
+  const apr10d =
+    baseApr && egldPrice && colsPrice && totalEgldToMigrate
+      ? (
+          (totalEgldToMigrate / 1e18) *
+          (baseApr / 100) *
+          (10 / 365) *
+          egldPrice /
+          colsPrice
+        ).toFixed(3)
+      : '0';
 
   if (loading) return <div className={styles.centered}><div className={styles.loading}>Loading...</div></div>;
 
@@ -259,27 +382,36 @@ export function DashboardNewDelegator() {
         <div className={styles.section}>
           <div className={styles.rowLabel}>
             Your eGLD Staked with Other Providers
-            <HelpIcon text="These are your current eGLD delegations with other providers. Select one or more to start the migration process." />
+            <HelpIcon text="These are your current eGLD delegations with other providers. Select one or more to start the migration process. If you have eGLD in the waiting period (unbonding), it will also appear here." />
           </div>
-          {otherDelegations.length === 0 && (
-            <div>No eGLD staked with other providers.</div>
+          {allProviders.length === 0 && (
+            <div>No eGLD staked or waiting with other providers.</div>
           )}
           <div className={styles.providersButtonList}>
-            {otherDelegations.map((d: any) => {
-              const providerName = providerMap[d.contract] || d.contract;
-              const isSelected = selectedContracts.includes(d.contract);
-              const requiredColsForThis = currentColombiaEgld + Number(d.userActiveStake);
+            {allProviders.map((d: any, idx: number) => {
+              const providerName = d.providerName;
+              const key = d.contract + (d.waiting ? '-waiting-' + idx : '');
+              const isSelected = selectedContracts.includes(key);
+              const requiredColsForThis =
+                currentColombiaEgld +
+                (d.waiting ? Number(d.waitingAmount) : Number(d.userActiveStake));
               const hasEnoughColsForThis = totalColsStaked >= requiredColsForThis;
-              const missingColsForThis = hasEnoughColsForThis ? 0 : requiredColsForThis - totalColsStaked;
+              const missingColsForThis = hasEnoughColsForThis
+                ? 0
+                : requiredColsForThis - totalColsStaked;
               return (
                 <button
-                  key={d.contract}
-                  className={classNames(styles.providerBtn, { [styles.selectedBtn]: isSelected })}
+                  key={key}
+                  className={classNames(styles.providerBtn, {
+                    [styles.selectedBtn]: isSelected
+                  })}
                   onClick={() => {
                     if (isSelected) {
-                      setSelectedContracts(prev => prev.filter(c => c !== d.contract));
+                      setSelectedContracts((prev) =>
+                        prev.filter((c) => c !== key)
+                      );
                     } else {
-                      setSelectedContracts(prev => [...prev, d.contract]);
+                      setSelectedContracts((prev) => [...prev, key]);
                     }
                   }}
                   type="button"
@@ -288,29 +420,52 @@ export function DashboardNewDelegator() {
                     <b>{providerName}</b>
                   </div>
                   <div>
-                    <span>Staked: {formatEgld(d.userActiveStake)} EGLD</span>
+                    {d.waiting ? (
+                      <span>
+                        Waiting: {formatEgld(d.waitingAmount)} EGLD
+                        <span style={{ color: '#ffe082', marginLeft: 8 }}>
+                          (in unbonding period, available in {Math.ceil(Number(d.timeLeft) / 3600)}h)
+                        </span>
+                      </span>
+                    ) : (
+                      <span>Staked: {formatEgld(d.userActiveStake)} EGLD</span>
+                    )}
                   </div>
                   {isSelected && (
                     <div className={styles.providerBtnActions}>
-                      <a href={`https://explorer.multiversx.com/accounts/${d.contract}`} target="_blank" rel="noopener noreferrer">View</a>
-                      {hasEnoughColsForThis && (
+                      <a
+                        href={`https://explorer.multiversx.com/accounts/${d.contract}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View
+                      </a>
+                      {!d.waiting && hasEnoughColsForThis && (
                         <button
                           className={styles.undelegateBtn}
                           type="button"
-                          onClick={e => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            window.open(`https://wallet.multiversx.com/delegation/${d.contract}`, '_blank');
+                            setUndelegateModal({
+                              contract: d.contract,
+                              providerName,
+                              maxAmount: d.userActiveStake
+                            });
                           }}
                         >
                           Undelegate
                         </button>
                       )}
-                      <HelpIcon text={
-                        hasEnoughColsForThis
-                          ? "Click to undelegate from this provider."
-                          : "You need to stake enough COLS before you can undelegate from this provider. (You need at least your current Colombia eGLD + this provider's eGLD in COLS staked.)"
-                      } />
-                      {!hasEnoughColsForThis && (
+                      <HelpIcon
+                        text={
+                          d.waiting
+                            ? "This eGLD is in the waiting period (unbonding) and will be available to withdraw soon."
+                            : hasEnoughColsForThis
+                            ? "Click to undelegate from this provider."
+                            : "You need to stake enough COLS before you can undelegate from this provider. (You need at least your current Colombia eGLD + this provider's eGLD in COLS staked.)"
+                        }
+                      />
+                      {!hasEnoughColsForThis && !d.waiting && (
                         <div className={styles.missingCols}>
                           <span>
                             <b>Missing COLS:</b> {formatCols(missingColsForThis)}
@@ -336,16 +491,19 @@ export function DashboardNewDelegator() {
                 <input
                   type="number"
                   min={0}
-                  value={Number(requiredCols)/1e18}
+                  value={Number(requiredCols) / 1e18}
                   readOnly
-                  style={{width:100}}
-                /> COLS
+                  style={{ width: 100 }}
+                />{' '}
+                COLS
               </label>
-              <HelpIcon text={
-                hasEnoughCols
-                  ? "You have enough COLS staked to be eligible for the 10 days benefit."
-                  : "You need to stake more COLS to be eligible. Stake at least as many COLS as your current Colombia eGLD plus the eGLD you want to migrate."
-              } />
+              <HelpIcon
+                text={
+                  hasEnoughCols
+                    ? 'You have enough COLS staked to be eligible for the 10 days benefit.'
+                    : 'You need to stake more COLS to be eligible. Stake at least as many COLS as your current Colombia eGLD plus the eGLD you want to migrate.'
+                }
+              />
             </div>
             {!hasEnoughCols && (
               <div className={styles.missingCols}>
@@ -354,7 +512,12 @@ export function DashboardNewDelegator() {
                 </span>
                 <button
                   className={styles.stakeBtn}
-                  onClick={() => window.open('https://app.multiversx.com/tokens/COLS-9d91b7', '_blank')}
+                  onClick={() =>
+                    window.open(
+                      'https://app.multiversx.com/tokens/COLS-9d91b7',
+                      '_blank'
+                    )
+                  }
                   disabled={hasEnoughCols}
                 >
                   Stake {formatCols(missingCols > 0 ? missingCols : requiredCols)} COLS
@@ -363,22 +526,31 @@ export function DashboardNewDelegator() {
               </div>
             )}
             {hasEnoughCols && (
-              <div style={{ color: '#6ee7c7', fontWeight: 600, marginTop: 8 }}>
+              <div
+                style={{
+                  color: '#6ee7c7',
+                  fontWeight: 600,
+                  marginTop: 8
+                }}
+              >
                 You have enough COLS staked to migrate the selected eGLD.
               </div>
             )}
-            <div style={{marginTop:12}}>
+            <div style={{ marginTop: 12 }}>
               <b>10-day APR Reward (in COLS):</b> {apr10d}
               <HelpIcon text="This is the amount of COLS you will receive as a reward for moving your eGLD and staking COLS." />
             </div>
-            <div style={{marginTop:12}}>
-              <b>Status:</b> {status === 'none' && 'Select provider(s) and stake COLS'}
+            <div style={{ marginTop: 12 }}>
+              <b>Status:</b>{' '}
+              {status === 'none' && 'Select provider(s) and stake COLS'}
               {status === 'undelegating' && 'Waiting for undelegation...'}
-              {status === 'eligible' && 'Eligible! You can now claim your reward.'}
-              {status === 'completed' && 'Completed! You will receive your reward soon.'}
+              {status === 'eligible' &&
+                'Eligible! You can now claim your reward.'}
+              {status === 'completed' &&
+                'Completed! You will receive your reward soon.'}
               <HelpIcon text="You can only claim the reward after you have staked the required COLS and completed the undelegation from your previous provider(s)." />
             </div>
-            <div style={{marginTop:18}}>
+            <div style={{ marginTop: 18 }}>
               <ContactClaimButton
                 disabled={!(status === 'eligible')}
                 selectedProviders={selectedProviders}
@@ -387,6 +559,19 @@ export function DashboardNewDelegator() {
               />
             </div>
           </div>
+        )}
+        {undelegateModal && (
+          <UndelegateModal
+            show={!!undelegateModal}
+            onClose={async () => {
+              setUndelegateModal(null);
+              await fetchAllData();
+            }}
+            providerName={undelegateModal.providerName}
+            contract={undelegateModal.contract}
+            maxAmount={undelegateModal.maxAmount}
+            egldLabel={network.egldLabel}
+          />
         )}
       </div>
     </div>
