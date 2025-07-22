@@ -1,3 +1,4 @@
+{/* eslint-disable react-hooks/exhaustive-deps */}
 import { useEffect, useState } from 'react';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import axios from 'axios';
@@ -232,8 +233,9 @@ export function DashboardNewDelegator() {
   const { address } = useGetAccountInfo();
   const { stakedCols } = useGlobalContext();
   const [loading, setLoading] = useState(true);
-  const [, setProviderMap] = useState<Record<string, string>>({});
-  const [allProviders, setAllProviders] = useState<any[]>([]);
+  const [providerMap, setProviderMap] = useState<Record<string, string>>({});
+  const [delegationList, setDelegationList] = useState<any[]>([]);
+  const [providerDetails, setProviderDetails] = useState<any[]>([]);
   const [colombiaStaked, setColombiaStaked] = useState('0');
   const [selectedContracts, setSelectedContracts] = useState<string[]>([]);
   const [status, setStatus] = useState<'none'|'undelegating'|'eligible'|'completed'>('none');
@@ -242,15 +244,13 @@ export function DashboardNewDelegator() {
 
   const { baseApr, colsPrice, egldPrice } = useColsAprContext();
 
-  // Fetch all providers, user delegations, and waiting (unbonding) delegations
-  const fetchAllData = async () => {
+  // Step 1: Fetch provider list and delegation list (raw, with possible waiting eGLD)
+  const fetchProviderListAndDelegation = async () => {
     setLoading(true);
     try {
-      const [provRes, delRes, colRes, wdRes] = await Promise.all([
+      const [provRes, delRes] = await Promise.all([
         axios.get('https://api.multiversx.com/providers?type=staking'),
-        axios.get(`https://api.multiversx.com/accounts/${address}/delegation`),
-        axios.get(`https://api.multiversx.com/accounts/${address}/delegation/${network.delegationContract}`),
-        axios.get(`https://api.multiversx.com/accounts/${address}/withdrawals`)
+        axios.get(`https://api.multiversx.com/accounts/${address}/delegation`)
       ]);
       const map: Record<string, string> = {};
       for (const p of provRes.data || []) {
@@ -258,21 +258,35 @@ export function DashboardNewDelegator() {
       }
       setProviderMap(map);
 
-      // Build allProviders: for each provider, show active stake and/or waiting (unbonding) eGLD
+      setDelegationList(delRes.data || []);
+    } catch {
+      setDelegationList([]);
+    }
+    setLoading(false);
+  };
+
+  // Step 2: Interpret delegationList directly for providerDetails
+  const buildProviderDetailsFromDelegationList = () => {
+    setLoading(true);
+    try {
+      // Only consider providers (not Colombia Staking itself)
       const providers: any[] = [];
-      (delRes.data || []).forEach((d: any) => {
+      (delegationList || []).forEach((d: any) => {
+        if (!d.contract || d.contract === network.delegationContract) return;
+        const providerName = providerMap[d.contract] || d.contract;
         // Active stake
-        if (d.contract !== network.delegationContract && Number(d.userActiveStake) > 0) {
+        if (d.userActiveStake && Number(d.userActiveStake) > 0) {
           providers.push({
             contract: d.contract,
             userActiveStake: d.userActiveStake,
             waiting: false,
             waitingAmount: '0',
-            providerName: map[d.contract] || d.contract
+            providerName,
+            key: d.contract + '-active'
           });
         }
         // Waiting (unbonding) eGLD
-        if (d.contract !== network.delegationContract && Array.isArray(d.userUndelegatedList)) {
+        if (Array.isArray(d.userUndelegatedList) && d.userUndelegatedList.length > 0) {
           d.userUndelegatedList.forEach((u: any, idx: number) => {
             if (Number(u.amount) > 0) {
               providers.push({
@@ -280,7 +294,7 @@ export function DashboardNewDelegator() {
                 userActiveStake: '0',
                 waiting: true,
                 waitingAmount: u.amount,
-                providerName: map[d.contract] || d.contract,
+                providerName,
                 timeLeft: u.seconds,
                 key: d.contract + '-waiting-' + idx
               });
@@ -288,26 +302,49 @@ export function DashboardNewDelegator() {
           });
         }
       });
-      setAllProviders(providers);
-      setColombiaStaked(colRes.data?.userActiveStake || '0');
-      setPendingWithdrawals(wdRes.data || []);
+      setProviderDetails(providers);
     } catch {
-      // handle error if needed
+      setProviderDetails([]);
     }
     setLoading(false);
   };
 
+  // Fetch Colombia Staking and withdrawals for eligibility logic
+  const fetchColombiaAndWithdrawals = async () => {
+    try {
+      const [colRes, wdRes] = await Promise.all([
+        axios.get(`https://api.multiversx.com/accounts/${address}/delegation/${network.delegationContract}`),
+        axios.get(`https://api.multiversx.com/accounts/${address}/withdrawals`)
+      ]);
+      setColombiaStaked(colRes.data?.userActiveStake || '0');
+      setPendingWithdrawals(wdRes.data || []);
+    } catch {
+      setColombiaStaked('0');
+      setPendingWithdrawals([]);
+    }
+  };
+
+  // Main effect: fetch provider list and delegation, then build details, then Colombia/withdrawals
   useEffect(() => {
     if (!address) return;
-    fetchAllData();
-    // eslint-disable-next-line
+    fetchProviderListAndDelegation();
   }, [address]);
+
+  useEffect(() => {
+    if (delegationList.length > 0) {
+      buildProviderDetailsFromDelegationList();
+      fetchColombiaAndWithdrawals();
+    } else {
+      setProviderDetails([]);
+    }
+    // eslint-disable-next-line
+  }, [JSON.stringify(delegationList)]);
 
   const totalColsStaked = Number(stakedCols?.data || 0);
 
   // Multi-select logic (button system)
-  const selectedProviders = allProviders
-    .filter((d: any) => selectedContracts.includes(d.contract + (d.waiting ? '-waiting-' + (d.key?.split('-waiting-')[1] || 0) : '')))
+  const selectedProviders = providerDetails
+    .filter((d: any) => selectedContracts.includes(d.key))
     .map((d: any) => ({
       ...d,
       name: d.providerName
@@ -384,13 +421,13 @@ export function DashboardNewDelegator() {
             Your eGLD Staked with Other Providers
             <HelpIcon text="These are your current eGLD delegations with other providers. Select one or more to start the migration process. If you have eGLD in the waiting period (unbonding), it will also appear here." />
           </div>
-          {allProviders.length === 0 && (
+          {providerDetails.length === 0 && (
             <div>No eGLD staked or waiting with other providers.</div>
           )}
           <div className={styles.providersButtonList}>
-            {allProviders.map((d: any, idx: number) => {
+            {providerDetails.map((d: any) => {
               const providerName = d.providerName;
-              const key = d.contract + (d.waiting ? '-waiting-' + idx : '');
+              const key = d.key;
               const isSelected = selectedContracts.includes(key);
               const requiredColsForThis =
                 currentColombiaEgld +
@@ -563,10 +600,7 @@ export function DashboardNewDelegator() {
         {undelegateModal && (
           <UndelegateModal
             show={!!undelegateModal}
-            onClose={async () => {
-              setUndelegateModal(null);
-              await fetchAllData();
-            }}
+            onClose={() => setUndelegateModal(null)}
             providerName={undelegateModal.providerName}
             contract={undelegateModal.contract}
             maxAmount={undelegateModal.maxAmount}
