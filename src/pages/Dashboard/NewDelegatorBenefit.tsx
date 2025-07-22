@@ -14,6 +14,9 @@ import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sen
 import { HelpIcon } from 'components/HelpIcon';
 import styles from './NewDelegatorBenefit.module.scss';
 
+// --- Withdrawal component for unbonding eGLD ---
+import { useRef } from 'react';
+
 function formatEgld(amount: string | number) {
   const num = Number(amount);
   if (isNaN(num)) return amount;
@@ -229,6 +232,114 @@ function UndelegateModal({
   );
 }
 
+// --- Withdrawal component for unbonding eGLD for any provider ---
+function Withdrawal({
+  providerName,
+  contract,
+  amount,
+  seconds,
+  onWithdrawn
+}: {
+  providerName: string,
+  contract: string,
+  amount: string,
+  seconds: number,
+  onWithdrawn?: () => void
+}) {
+  const [counter, setCounter] = useState(seconds);
+  const [pending, setPending] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setCounter(seconds);
+    if (seconds > 0) {
+      intervalRef.current = setInterval(() => {
+        setCounter((c) => (c > 0 ? c - 1 : 0));
+      }, 1000);
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
+    }
+  }, [seconds]);
+
+  const getTimeLeft = () => {
+    if (counter <= 0) return "Ready";
+    const h = Math.floor(counter / 3600);
+    const m = Math.floor((counter % 3600) / 60);
+    const s = counter % 60;
+    return `${h}h ${m}m ${s}s`;
+  };
+
+  const handleWithdraw = async () => {
+    setPending(true);
+    try {
+      await sendTransactions({
+        transactions: [
+          {
+            value: "0",
+            data: "withdraw",
+            receiver: contract,
+            gasLimit: 12000000
+          }
+        ]
+      });
+      setPending(false);
+      if (onWithdrawn) onWithdrawn();
+    } catch {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        background: "#23272a",
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 10,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12
+      }}
+    >
+      <div>
+        <div style={{ fontWeight: 700, color: "#6ee7c7" }}>{providerName}</div>
+        <div>
+          <b>{formatEgld(amount)} EGLD</b>
+        </div>
+        <div style={{ fontSize: 13, color: "#ffe082" }}>
+          {counter > 0 ? (
+            <>
+              <span>Wait: {getTimeLeft()}</span>
+            </>
+          ) : (
+            <span>Ready to withdraw</span>
+          )}
+        </div>
+      </div>
+      <button
+        type="button"
+        style={{
+          background: counter > 0 ? "#303234" : "#6ee7c7",
+          color: counter > 0 ? "#888" : "#181a1b",
+          fontWeight: 700,
+          borderRadius: 7,
+          padding: "10px 24px",
+          border: "none",
+          fontSize: 15,
+          cursor: counter > 0 || pending ? "not-allowed" : "pointer",
+          opacity: pending ? 0.7 : 1
+        }}
+        disabled={counter > 0 || pending}
+        onClick={handleWithdraw}
+      >
+        {pending ? "Processing..." : "Withdraw"}
+      </button>
+    </div>
+  );
+}
+
 export function DashboardNewDelegator() {
   const { address } = useGetAccountInfo();
   const { stakedCols } = useGlobalContext();
@@ -437,81 +548,92 @@ export function DashboardNewDelegator() {
                 ? 0
                 : requiredColsForThis - totalColsStaked;
               return (
-                <button
-                  key={key}
-                  className={classNames(styles.providerBtn, {
-                    [styles.selectedBtn]: isSelected
-                  })}
-                  onClick={() => {
-                    if (isSelected) {
-                      setSelectedContracts((prev) =>
-                        prev.filter((c) => c !== key)
-                      );
-                    } else {
-                      setSelectedContracts((prev) => [...prev, key]);
-                    }
-                  }}
-                  type="button"
-                >
-                  <div>
-                    <b>{providerName}</b>
-                  </div>
-                  <div>
-                    {d.waiting ? (
-                      <span>
-                        Waiting: {formatEgld(d.waitingAmount)} EGLD
-                        <span style={{ color: '#ffe082', marginLeft: 8 }}>
-                          (in unbonding period, available in {Math.ceil(Number(d.timeLeft) / 3600)}h)
-                        </span>
-                      </span>
-                    ) : (
-                      <span>Staked: {formatEgld(d.userActiveStake)} EGLD</span>
-                    )}
-                  </div>
-                  {isSelected && (
-                    <div className={styles.providerBtnActions}>
-                      <a
-                        href={`https://explorer.multiversx.com/accounts/${d.contract}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View
-                      </a>
-                      {!d.waiting && hasEnoughColsForThis && (
-                        <button
-                          className={styles.undelegateBtn}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setUndelegateModal({
-                              contract: d.contract,
-                              providerName,
-                              maxAmount: d.userActiveStake
-                            });
-                          }}
-                        >
-                          Undelegate
-                        </button>
-                      )}
-                      <HelpIcon
-                        text={
-                          d.waiting
-                            ? "This eGLD is in the waiting period (unbonding) and will be available to withdraw soon."
-                            : hasEnoughColsForThis
-                            ? "Click to undelegate from this provider."
-                            : "You need to stake enough COLS before you can undelegate from this provider. (You need at least your current Colombia eGLD + this provider's eGLD in COLS staked.)"
-                        }
-                      />
-                      {!hasEnoughColsForThis && !d.waiting && (
-                        <div className={styles.missingCols}>
-                          <span>
-                            <b>Missing COLS:</b> {formatCols(missingColsForThis)}
+                <div key={key} style={{ width: "100%" }}>
+                  <button
+                    className={classNames(styles.providerBtn, {
+                      [styles.selectedBtn]: isSelected
+                    })}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedContracts((prev) =>
+                          prev.filter((c) => c !== key)
+                        );
+                      } else {
+                        setSelectedContracts((prev) => [...prev, key]);
+                      }
+                    }}
+                    type="button"
+                  >
+                    <div>
+                      <b>{providerName}</b>
+                    </div>
+                    <div>
+                      {d.waiting ? (
+                        <span>
+                          Waiting: {formatEgld(d.waitingAmount)} EGLD
+                          <span style={{ color: '#ffe082', marginLeft: 8 }}>
+                            (in unbonding period, available in {Math.ceil(Number(d.timeLeft) / 3600)}h)
                           </span>
-                        </div>
+                        </span>
+                      ) : (
+                        <span>Staked: {formatEgld(d.userActiveStake)} EGLD</span>
                       )}
                     </div>
+                    {isSelected && (
+                      <div className={styles.providerBtnActions}>
+                        <a
+                          href={`https://explorer.multiversx.com/accounts/${d.contract}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View
+                        </a>
+                        {!d.waiting && hasEnoughColsForThis && (
+                          <button
+                            className={styles.undelegateBtn}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUndelegateModal({
+                                contract: d.contract,
+                                providerName,
+                                maxAmount: d.userActiveStake
+                              });
+                            }}
+                          >
+                            Undelegate
+                          </button>
+                        )}
+                        <HelpIcon
+                          text={
+                            d.waiting
+                              ? "This eGLD is in the waiting period (unbonding) and will be available to withdraw soon."
+                              : hasEnoughColsForThis
+                              ? "Click to undelegate from this provider."
+                              : "You need to stake enough COLS before you can undelegate from this provider. (You need at least your current Colombia eGLD + this provider's eGLD in COLS staked.)"
+                          }
+                        />
+                        {!hasEnoughColsForThis && !d.waiting && (
+                          <div className={styles.missingCols}>
+                            <span>
+                              <b>Missing COLS:</b> {formatCols(missingColsForThis)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                  {/* Show withdrawal UI for waiting entries */}
+                  {d.waiting && (
+                    <Withdrawal
+                      providerName={providerName}
+                      contract={d.contract}
+                      amount={d.waitingAmount}
+                      seconds={Number(d.timeLeft)}
+                      onWithdrawn={fetchProviderListAndDelegation}
+                    />
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
