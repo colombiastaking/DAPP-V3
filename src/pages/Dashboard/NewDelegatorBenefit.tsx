@@ -1,5 +1,5 @@
 {/* eslint-disable react-hooks/exhaustive-deps */}
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import axios from 'axios';
 import classNames from 'classnames';
@@ -13,9 +13,6 @@ import { Modal } from 'react-bootstrap';
 import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sendTransactions';
 import { HelpIcon } from 'components/HelpIcon';
 import styles from './NewDelegatorBenefit.module.scss';
-
-// --- Withdrawal component for unbonding eGLD ---
-import { useRef } from 'react';
 
 function formatEgld(amount: string | number) {
   const num = Number(amount);
@@ -61,7 +58,7 @@ function ContactClaimButton({ disabled, selectedProviders, totalEgld, userAddres
           <ul>
             <li>
               <a href="https://t.me/ColombiaStaking" target="_blank" rel="noopener noreferrer">
-                <span role="img" aria-label="telegram">💬</span> Telegram (send a private message)
+                <span role="img" aria-label="telegram">💬</span> Telegram
               </a>
               <button className={styles.copyBtn} onClick={handleCopy} style={{marginLeft:8}}>
                 {copied ? "Copied!" : "Copy Message"}
@@ -69,7 +66,7 @@ function ContactClaimButton({ disabled, selectedProviders, totalEgld, userAddres
             </li>
             <li>
               <a href="https://x.com/ColombiaStaking" target="_blank" rel="noopener noreferrer">
-                <span role="img" aria-label="x">𝕏</span> X (Twitter) (send a private message)
+                <span role="img" aria-label="x">𝕏</span> X
               </a>
               <button className={styles.copyBtn} onClick={handleCopy} style={{marginLeft:8}}>
                 {copied ? "Copied!" : "Copy Message"}
@@ -84,10 +81,6 @@ function ContactClaimButton({ disabled, selectedProviders, totalEgld, userAddres
           <div className={styles.contactNote}>
             <b>Instructions:</b> Please send a private message or email with your wallet address and the provider(s) you migrated from.<br />
             <b>Payment will be made after you delegate your eGLD to Colombia Staking.</b>
-            <div style={{marginTop:8, background:'#181a1b', borderRadius:6, padding:8, fontSize:13}}>
-              <b>Message to send:</b>
-              <pre style={{whiteSpace:'pre-wrap', background:'#23272a', color:'#ffe082', borderRadius:4, padding:8, marginTop:4, fontSize:13}}>{userMsg}</pre>
-            </div>
           </div>
           <button className={styles.closeContact} onClick={() => { setShowOptions(false); onClose && onClose(); }}>Close</button>
         </div>
@@ -295,26 +288,25 @@ function Withdrawal({
       style={{
         background: "#23272a",
         borderRadius: 8,
-        padding: 16,
+        padding: 12,
         marginBottom: 10,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 12
+        gap: 8,
+        flexDirection: "row"
       }}
     >
-      <div>
-        <div style={{ fontWeight: 700, color: "#6ee7c7" }}>{providerName}</div>
-        <div>
+      <div style={{ flex: 1, textAlign: "center" }}>
+        <div style={{ fontWeight: 700, color: "#6ee7c7", fontSize: 15 }}>{providerName}</div>
+        <div style={{ fontSize: 15 }}>
           <b>{formatEgld(amount)} EGLD</b>
         </div>
         <div style={{ fontSize: 13, color: "#ffe082" }}>
           {counter > 0 ? (
-            <>
-              <span>Wait: {getTimeLeft()}</span>
-            </>
+            <span>{getTimeLeft()}</span>
           ) : (
-            <span>Ready to withdraw</span>
+            <span>Ready</span>
           )}
         </div>
       </div>
@@ -325,11 +317,12 @@ function Withdrawal({
           color: counter > 0 ? "#888" : "#181a1b",
           fontWeight: 700,
           borderRadius: 7,
-          padding: "10px 24px",
+          padding: "10px 18px",
           border: "none",
           fontSize: 15,
           cursor: counter > 0 || pending ? "not-allowed" : "pointer",
-          opacity: pending ? 0.7 : 1
+          opacity: pending ? 0.7 : 1,
+          minWidth: 100
         }}
         disabled={counter > 0 || pending}
         onClick={handleWithdraw}
@@ -535,7 +528,7 @@ export function DashboardNewDelegator() {
           {providerDetails.length === 0 && (
             <div>No eGLD staked or waiting with other providers.</div>
           )}
-          <div className={styles.providersButtonList}>
+          <div className={styles.providersButtonList} style={{ flexDirection: "column", gap: 12 }}>
             {providerDetails.map((d: any) => {
               const providerName = d.providerName;
               const key = d.key;
@@ -553,6 +546,15 @@ export function DashboardNewDelegator() {
                     className={classNames(styles.providerBtn, {
                       [styles.selectedBtn]: isSelected
                     })}
+                    style={{
+                      width: "100%",
+                      marginBottom: 8,
+                      textAlign: "center",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      display: "flex",
+                      flexDirection: "column"
+                    }}
                     onClick={() => {
                       if (isSelected) {
                         setSelectedContracts((prev) =>
@@ -564,17 +566,10 @@ export function DashboardNewDelegator() {
                     }}
                     type="button"
                   >
-                    <div>
-                      <b>{providerName}</b>
-                    </div>
-                    <div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{providerName}</div>
+                    <div style={{ fontSize: 15, margin: "4px 0" }}>
                       {d.waiting ? (
-                        <span>
-                          Waiting: {formatEgld(d.waitingAmount)} EGLD
-                          <span style={{ color: '#ffe082', marginLeft: 8 }}>
-                            (in unbonding period, available in {Math.ceil(Number(d.timeLeft) / 3600)}h)
-                          </span>
-                        </span>
+                        <span>Waiting: {formatEgld(d.waitingAmount)} EGLD</span>
                       ) : (
                         <span>Staked: {formatEgld(d.userActiveStake)} EGLD</span>
                       )}
