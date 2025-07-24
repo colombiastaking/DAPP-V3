@@ -36,6 +36,7 @@ function simulateAprAndRank({
   stakers,
   address,
   simulatedColsStaked,
+  simulatedEgldStaked,
   colsPrice,
   egldPrice,
   baseApr,
@@ -45,6 +46,7 @@ function simulateAprAndRank({
   stakers: any[];
   address: string;
   simulatedColsStaked: number;
+  simulatedEgldStaked: number;
   colsPrice: number;
   egldPrice: number;
   baseApr: number;
@@ -59,7 +61,7 @@ function simulateAprAndRank({
   // 1. Build a new stakers array with the simulated value for the user
   const newStakers = stakers.map(s =>
     s.address === address
-      ? { ...s, colsStaked: simulatedColsStaked }
+      ? { ...s, colsStaked: simulatedColsStaked, egldStaked: simulatedEgldStaked }
       : s
   );
 
@@ -180,19 +182,32 @@ export const Stake = () => {
   }, [address, stakers]);
 
   // --- Simulation State ---
-  const [simulatedCols, setSimulatedCols] = useState<string>("");
+  // Prefill logic: use actual staked values, or 1/1 if none, and round to integer
+  let actualEgld = 0;
+  let actualCols = 0;
+  if (Array.isArray(stakers) && address) {
+    const user = stakers.find(s => s.address === address);
+    if (user) {
+      if (typeof user.egldStaked === 'number') actualEgld = user.egldStaked;
+      if (typeof user.colsStaked === 'number') actualCols = user.colsStaked;
+    }
+  }
+  const defaultEgld = actualEgld > 0 ? Math.round(actualEgld) : 1;
+  const defaultCols = actualCols > 0 ? Math.round(actualCols) : 1;
+
+  const [simulatedCols, setSimulatedCols] = useState<string>(defaultCols.toString());
+  const [simulatedEgld, setSimulatedEgld] = useState<string>(defaultEgld.toString());
   const [simResult, setSimResult] = useState<{ newApr: number | null; newRank: number | null } | null>(null);
   const [simError, setSimError] = useState<string | null>(null);
   const [simLoading, setSimLoading] = useState(false);
 
-  // Find user's current eGLD staked
-  let userEgldStaked = 0;
-  if (Array.isArray(stakers) && address) {
-    const user = stakers.find(s => s.address === address);
-    if (user && typeof user.egldStaked === 'number') {
-      userEgldStaked = user.egldStaked;
-    }
-  }
+  // Update prefill if user/account changes
+  useEffect(() => {
+    setSimulatedCols(defaultCols.toString());
+    setSimulatedEgld(defaultEgld.toString());
+    setSimError(null);
+    setSimResult(null);
+  }, [defaultCols, defaultEgld, address]);
 
   // Get serviceFee for simulation
   let serviceFee = 0.1;
@@ -218,22 +233,30 @@ export const Stake = () => {
       setSimLoading(false);
       return;
     }
-    if (!userEgldStaked || userEgldStaked <= 0) {
-      setSimError("You must have eGLD staked to simulate");
-      setSimLoading(false);
-      return;
-    }
-    let val = 0;
+    let valCols = 0;
+    let valEgld = 0;
     try {
-      val = parseFloat(simulatedCols);
-      if (isNaN(val) || val < 0) throw new Error();
-      if (val > 40000) {
+      valCols = parseFloat(simulatedCols);
+      valEgld = parseFloat(simulatedEgld);
+      if (isNaN(valCols) || valCols < 0) throw new Error();
+      if (isNaN(valEgld) || valEgld < 0) throw new Error();
+      if (valCols > 40000) {
         setSimError("Maximum COLS to simulate is 40,000");
         setSimLoading(false);
         return;
       }
+      if (valEgld > 1000000) {
+        setSimError("Maximum eGLD to simulate is 1,000,000");
+        setSimLoading(false);
+        return;
+      }
+      if (valCols === 0 && valEgld === 0) {
+        setSimError("Enter at least one non-zero value");
+        setSimLoading(false);
+        return;
+      }
     } catch {
-      setSimError("Invalid COLS value");
+      setSimError("Invalid COLS or eGLD value");
       setSimLoading(false);
       return;
     }
@@ -241,7 +264,8 @@ export const Stake = () => {
     const result = simulateAprAndRank({
       stakers,
       address,
-      simulatedColsStaked: val,
+      simulatedColsStaked: valCols,
+      simulatedEgldStaked: valEgld,
       colsPrice,
       egldPrice,
       baseApr,
@@ -381,8 +405,8 @@ export const Stake = () => {
             </div>
           </div>
           <div style={{ marginTop: 18, paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>Simulate COLS Staked</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>Simulate COLS &amp; eGLD Staked</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <input
                 type="number"
                 min={0}
@@ -405,14 +429,46 @@ export const Stake = () => {
                   }
                 }}
                 style={{
-                  width: 120,
+                  width: 100,
                   padding: 6,
                   borderRadius: 4,
                   border: "1px solid #bbb",
                   fontSize: 15
                 }}
-                placeholder="Enter COLS"
+                placeholder="COLS"
               />
+              <span style={{ fontWeight: 700, color: "#181a1b" }}>COLS</span>
+              <input
+                type="number"
+                min={0}
+                max={1000000}
+                step="any"
+                value={simulatedEgld}
+                onChange={e => {
+                  let val = e.target.value;
+                  if (val === "") {
+                    setSimulatedEgld("");
+                    setSimError(null);
+                    return;
+                  }
+                  if (parseFloat(val) > 1000000) {
+                    setSimulatedEgld("1000000");
+                    setSimError("Maximum eGLD to simulate is 1,000,000");
+                  } else {
+                    setSimulatedEgld(val);
+                    setSimError(null);
+                  }
+                }}
+                style={{
+                  width: 100,
+                  padding: 6,
+                  borderRadius: 4,
+                  border: "1px solid #bbb",
+                  fontSize: 15
+                }}
+                placeholder={network.egldLabel}
+              />
+              <span style={{ fontWeight: 700, color: "#181a1b" }}>{network.egldLabel}</span>
               <button
                 type="button"
                 onClick={handleSimulate}
@@ -432,6 +488,7 @@ export const Stake = () => {
                 {simLoading ? "Calculating..." : "Apply"}
               </button>
             </div>
+            {/* Instructional text removed as requested */}
             {simError && (
               <div style={{ color: "#b71c1c", marginTop: 6, fontSize: 14 }}>{simError}</div>
             )}
