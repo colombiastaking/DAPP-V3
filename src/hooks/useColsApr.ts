@@ -218,7 +218,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         : 0;
       row.aprBonus = aprMin + (aprMax - aprMin) * Math.sqrt(row.normalized);
     }
-    // COLS-DIST(i) = APR-BONUS(i)/100 * eGLD-staked(i) * eGLDprice / 365 / COLSprice
+    // COLS-DIST(i) = APR-BONUS(i)/100 * eGLD-staked(i) * eGLDprice / 365 / colsPrice
     let sum = 0;
     for (const row of filtered) {
       if (row.aprBonus !== null) {
@@ -397,26 +397,8 @@ export function useColsApr({ trigger }: { trigger: any }) {
         row.dao = null;
       }
     }
-    // 13. APR_TOTAL: Only for users with active eGLD staked, otherwise just base APR
-    for (const row of table) {
-      if (row.egldStaked > 0) {
-        row.aprTotal = fetchedBaseApr + (row.aprBonus || 0) + (row.dao || 0);
-      } else {
-        row.aprTotal = fetchedBaseApr;
-      }
-    }
-    // 14. Ranking
-    const sorted = [...table].sort((a, b) => (b.aprTotal || 0) - (a.aprTotal || 0));
-    for (let i = 0; i < sorted.length; ++i) {
-      sorted[i].rank = i + 1;
-    }
-    // assign ranks back
-    for (const row of table) {
-      const found = sorted.find(r => r.address === row.address);
-      row.rank = found ? found.rank : null;
-    }
 
-    // 15. COLS-only APR: Calculate for all users with COLS staked
+    // 13. COLS-only APR: Calculate for all users with COLS staked (MOVED UP)
     for (const row of table) {
       if (row.colsStaked > 0) {
         row.aprColsOnly = calculateColsOnlyApr({
@@ -430,6 +412,31 @@ export function useColsApr({ trigger }: { trigger: any }) {
       } else {
         row.aprColsOnly = null;
       }
+    }
+
+    // 14. APR_TOTAL: 
+    // If user has eGLD, use normal formula. 
+    // If user has no eGLD but has COLS, use aprColsOnly.
+    // Otherwise, just base APR.
+    for (const row of table) {
+      if (row.egldStaked > 0) {
+        row.aprTotal = fetchedBaseApr + (row.aprBonus || 0) + (row.dao || 0);
+      } else if (row.colsStaked > 0) {
+        row.aprTotal = row.aprColsOnly !== null ? row.aprColsOnly : fetchedBaseApr;
+      } else {
+        row.aprTotal = fetchedBaseApr;
+      }
+    }
+
+    // 15. Ranking
+    const sorted = [...table].sort((a, b) => (b.aprTotal || 0) - (a.aprTotal || 0));
+    for (let i = 0; i < sorted.length; ++i) {
+      sorted[i].rank = i + 1;
+    }
+    // assign ranks back
+    for (const row of table) {
+      const found = sorted.find(r => r.address === row.address);
+      row.rank = found ? found.rank : null;
     }
 
     setStakers(table);
