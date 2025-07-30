@@ -17,6 +17,21 @@ import { StakeCols } from "./components/StakeCols";
 import { Undelegate } from "./components/Undelegate";
 import { DashboardNewDelegator } from "../../pages/Dashboard/NewDelegatorBenefit";
 import { ColsAprTable } from "../ColsAprTable";
+import { RankingTable } from "./RankingTable";
+
+// League colors and icons for APR section
+const LEAGUES = [
+  { name: "Gold", color: "#FFD700", icon: "🥇" },
+  { name: "Silver", color: "#C0C0C0", icon: "🥈" },
+  { name: "Bronze", color: "#CD7F32", icon: "🥉" }
+];
+
+function getLeague(rank: number, total: number) {
+  const perLeague = Math.ceil(total / 3);
+  if (rank <= perLeague) return 0; // Gold
+  if (rank <= perLeague * 2) return 1; // Silver
+  return 2; // Bronze
+}
 
 function formatEgld(amount: string | number) {
   const num = Number(amount);
@@ -31,7 +46,7 @@ function formatCols(raw: string | number) {
   return cols.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 });
 }
 
-// --- Universal Simulation logic ---
+// --- Universal Simulation logic (matches useColsApr.ts) ---
 function simulateAprAndRank({
   stakers,
   address,
@@ -53,10 +68,12 @@ function simulateAprAndRank({
   serviceFee: number;
   agencyLockedEgld: number;
 }) {
-  const APRmin = 0.01;
-  const APRmax = 15;
+  // --- Constants (must match useColsApr.ts) ---
+  const APRmin = 0.3;
+  let APRmax = 15;
   const AGENCY_BUYBACK = 0.3;
   const DAO_DISTRIBUTION_RATIO = 0.333;
+  const BONUS_BUYBACK_FACTOR = 0.66;
 
   // If user is not in stakers, add them as a synthetic row for simulation
   let found = stakers.find((s: any) => s.address === address);
@@ -83,7 +100,96 @@ function simulateAprAndRank({
     );
   }
 
-  // 1. Recalculate ratios
+  // 1. Calculate targetAvgAprBonus (as in useColsApr.ts)
+  const targetAvgAprBonus =
+    (
+      agencyLockedEgld *
+      baseApr /
+      (1 - serviceFee) /
+      100 *
+      serviceFee *
+      AGENCY_BUYBACK *
+      BONUS_BUYBACK_FACTOR *
+      egldPrice / colsPrice
+    ) / 365;
+
+  // 2. Iteratively adjust APRmax to match the sum of COLS-DIST
+  let step = 0.1;
+  let bestAprMax = APRmax;
+  let bestDiff = Infinity;
+  let maxIter = 200;
+  let iter = 0;
+  let lastSum = 0;
+  function calcAprBonusTableSum({
+    stakers,
+    egldPrice,
+    colsPrice,
+    aprMax,
+    aprMin
+  }: {
+    stakers: any[];
+    egldPrice: number;
+    colsPrice: number;
+    aprMax: number;
+    aprMin: number;
+  }) {
+    const filtered = stakers.filter(
+      (row: any) => row.colsStaked > 0 && row.egldStaked > 0
+    );
+    let minRatio = Infinity, maxRatio = -Infinity;
+    for (const row of filtered) {
+      row.ratio = (row.colsStaked * colsPrice) / (row.egldStaked * egldPrice);
+      if (row.ratio < minRatio) minRatio = row.ratio;
+      if (row.ratio > maxRatio) maxRatio = row.ratio;
+    }
+    for (const row of filtered) {
+      row.normalized = (maxRatio !== minRatio && row.ratio !== null)
+        ? (row.ratio - minRatio) / (maxRatio - minRatio)
+        : 0;
+      row.aprBonus = aprMin + (aprMax - aprMin) * Math.sqrt(row.normalized);
+    }
+    let sum = 0;
+    for (const row of filtered) {
+      if (row.aprBonus !== null) {
+        const dist = (row.aprBonus / 100) * row.egldStaked * egldPrice / 365 / colsPrice;
+        sum += dist;
+      }
+    }
+    return sum;
+  }
+  while (iter < maxIter) {
+    if (APRmax > 25) APRmax = 25;
+    if (APRmax < APRmin) APRmax = APRmin;
+    const sum = calcAprBonusTableSum({
+      stakers: newStakers.map(r => ({ ...r })),
+      egldPrice,
+      colsPrice,
+      aprMax: APRmax,
+      aprMin: APRmin
+    });
+    const diff = Math.abs(sum - targetAvgAprBonus);
+    if (diff < 1) {
+      bestAprMax = APRmax;
+      break;
+    }
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestAprMax = APRmax;
+    }
+    if (sum < targetAvgAprBonus) {
+      APRmax += step;
+    } else {
+      APRmax -= step;
+    }
+    if ((lastSum < targetAvgAprBonus && sum > targetAvgAprBonus) ||
+        (lastSum > targetAvgAprBonus && sum < targetAvgAprBonus)) {
+      step = Math.max(0.01, step / 2);
+    }
+    lastSum = sum;
+    iter++;
+  }
+
+  // 3. Calculate ratios
   for (const row of newStakers) {
     if (row.egldStaked > 0 && colsPrice > 0 && egldPrice > 0) {
       row.ratio = (row.colsStaked * colsPrice) / (row.egldStaked * egldPrice);
@@ -91,8 +197,7 @@ function simulateAprAndRank({
       row.ratio = null;
     }
   }
-
-  // 2. Normalize
+  // 4. Normalize
   const validRatios = newStakers.filter((r: any) => r.ratio !== null).map((r: any) => r.ratio);
   const minRatio = validRatios.length > 0 ? Math.min(...validRatios) : 0;
   const maxRatio = validRatios.length > 0 ? Math.max(...validRatios) : 0;
@@ -103,17 +208,15 @@ function simulateAprAndRank({
       row.normalized = null;
     }
   }
-
-  // 3. APR Bonus
+  // 5. APR Bonus
   for (const row of newStakers) {
     if (row.normalized !== null) {
-      row.aprBonus = APRmin + (APRmax - APRmin) * Math.sqrt(row.normalized);
+      row.aprBonus = APRmin + (bestAprMax - APRmin) * Math.sqrt(row.normalized);
     } else {
       row.aprBonus = null;
     }
   }
-
-  // 4. DAO
+  // 6. DAO
   const totalEgldStaked = agencyLockedEgld;
   const sumColsStaked = newStakers.reduce((sum: number, r: any) => sum + (r.colsStaked || 0), 0);
   for (const row of newStakers) {
@@ -136,11 +239,9 @@ function simulateAprAndRank({
       row.dao = null;
     }
   }
-
-  // 5. COLS-only APR: Calculate for all users with COLS staked
+  // 7. COLS-only APR
   for (const row of newStakers) {
     if (row.colsStaked > 0) {
-      // Use the same formula as in useColsApr.ts
       const baseAprCorrected = baseApr / (1 - serviceFee) / 100;
       const numerator =
         agencyLockedEgld *
@@ -155,8 +256,7 @@ function simulateAprAndRank({
       row.aprColsOnly = null;
     }
   }
-
-  // 6. APR_TOTAL: If user has eGLD, use normal formula. If user has no eGLD but has COLS, use aprColsOnly. Otherwise, just base APR.
+  // 8. APR_TOTAL
   for (const row of newStakers) {
     if (row.egldStaked > 0) {
       row.aprTotal = baseApr + (row.aprBonus || 0) + (row.dao || 0);
@@ -166,8 +266,7 @@ function simulateAprAndRank({
       row.aprTotal = baseApr;
     }
   }
-
-  // 7. Ranking
+  // 9. Ranking
   const sorted = [...newStakers].sort((a: any, b: any) => (b.aprTotal || 0) - (a.aprTotal || 0));
   for (let i = 0; i < sorted.length; ++i) {
     sorted[i].rank = i + 1;
@@ -176,8 +275,7 @@ function simulateAprAndRank({
     const found = sorted.find((r: any) => r.address === row.address);
     row.rank = found ? found.rank : null;
   }
-
-  // 8. Find the simulated user's new APR and rank
+  // 10. Find the simulated user's new APR and rank
   const user = newStakers.find((s: any) => s.address === address);
   return {
     newApr: user && user.aprTotal !== undefined && user.aprTotal !== null ? user.aprTotal : null,
@@ -231,7 +329,6 @@ export const Stake = () => {
   }, [address, stakers]);
 
   // --- Simulation State ---
-  // Prefill logic: use actual staked values, or 1/1 if none, and round to integer
   let actualEgld = 0;
   let actualCols = 0;
   if (Array.isArray(stakers) && address) {
@@ -250,7 +347,6 @@ export const Stake = () => {
   const [simError, setSimError] = useState<string | null>(null);
   const [simLoading, setSimLoading] = useState(false);
 
-  // Update prefill if user/account changes
   useEffect(() => {
     setSimulatedCols(defaultCols.toString());
     setSimulatedEgld(defaultEgld.toString());
@@ -258,7 +354,6 @@ export const Stake = () => {
     setSimResult(null);
   }, [defaultCols, defaultEgld, address]);
 
-  // Get serviceFee for simulation
   let serviceFee = 0.1;
   if (
     contractDetails &&
@@ -272,7 +367,6 @@ export const Stake = () => {
     }
   }
 
-  // Handle simulation apply
   const handleSimulate = async () => {
     setSimError(null);
     setSimResult(null);
@@ -299,13 +393,11 @@ export const Stake = () => {
         setSimLoading(false);
         return;
       }
-      // Allow simulation even if both are zero, but show N/A as result
     } catch {
       setSimError("Invalid COLS or eGLD value");
       setSimLoading(false);
       return;
     }
-    // Use already loaded stakers, prices, etc.
     const result = simulateAprAndRank({
       stakers,
       address,
@@ -320,6 +412,15 @@ export const Stake = () => {
     setSimResult(result);
     setSimLoading(false);
   };
+
+  // Find user's league for APR section (after effect)
+  let leagueIdx = 2;
+  if (Array.isArray(stakers) && address) {
+    const user = stakers.find((s: any) => s.address === address);
+    if (user && user.rank) {
+      leagueIdx = getLeague(user.rank, stakers.length);
+    }
+  }
 
   return (
     <div
@@ -366,14 +467,17 @@ export const Stake = () => {
         <div
           className={styles.assetsBox}
           style={{
-            borderColor: "#6ee7c7",
-            background: "linear-gradient(90deg, #6ee7c7 0%, #4f8cff 100%)",
+            borderColor: "transparent",
+            background: "linear-gradient(120deg, #fffbe6 0%, #ffe082 40%, #FFD700 100%)",
             color: "#181a1b",
-            minWidth: 220
+            minWidth: 220,
+            boxShadow: "0 0 32px 8px #FFD70055, 0 2px 24px #FFD70033"
           }}
         >
           <div className={styles.icon} style={{ background: "#fff" }}>
-            <FontAwesomeIcon icon={faPercent} style={{ color: "#6ee7c7", fontSize: 32 }} />
+            <span style={{ fontSize: 32 }}>
+              {LEAGUES[leagueIdx].icon}
+            </span>
           </div>
           <div className={styles.title} style={{ color: "#181a1b" }}>
             {isColsOnly ? "APR for your COLS" : "APR for your eGLD"}
@@ -579,6 +683,8 @@ export const Stake = () => {
           </div>
         </div>
       </div>
+      {/* --- Gamified Ranking Table --- */}
+      <RankingTable />
       {/* Claim Rewards Section */}
       <div className={styles.panel}>
         <div className={styles.icon}>
