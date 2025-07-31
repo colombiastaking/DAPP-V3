@@ -1,3 +1,4 @@
+{/* eslint-disable react-hooks/exhaustive-deps */}
 import { useEffect, useState } from "react";
 import { faPercent } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,6 +19,8 @@ import { Undelegate } from "./components/Undelegate";
 import { DashboardNewDelegator } from "../../pages/Dashboard/NewDelegatorBenefit";
 import { ColsAprTable } from "../ColsAprTable";
 import { RankingTable } from "./RankingTable";
+import axios from "axios";
+import { AnimatedDots } from "components/AnimatedDots";
 
 // League colors and icons for APR section
 const LEAGUES = [
@@ -283,6 +286,39 @@ function simulateAprAndRank({
   };
 }
 
+// --- Fetch latest values for simulation ---
+async function fetchLatestSimulationData(delegationContract: string) {
+  // Fetch baseApr, agencyLockedEgld, egldPrice, colsPrice
+  let baseApr = 0, agencyLockedEgld = 0, egldPrice = 0, colsPrice = 0;
+  try {
+    // baseApr and agencyLockedEgld
+    const { data } = await axios.get(`https://api.multiversx.com/providers/${delegationContract}`);
+    if (data && typeof data.apr === "number") baseApr = data.apr;
+    if (data && typeof data.locked === "string") {
+      agencyLockedEgld = Number(data.locked) / 1e18;
+      agencyLockedEgld = Math.round(agencyLockedEgld * 10000) / 10000;
+    }
+  } catch {}
+  try {
+    // egldPrice
+    const { data } = await axios.get(`https://api.multiversx.com/economics`);
+    if (data && typeof data.price === "number") egldPrice = data.price;
+  } catch {}
+  try {
+    // colsPrice
+    const { data } = await axios.get(
+      "https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7"
+    );
+    if (Array.isArray(data) && data.length > 0) {
+      const last = data[data.length - 1];
+      if (last && typeof last.value === "number") {
+        colsPrice = Math.round(last.value * 1000) / 1000;
+      }
+    }
+  } catch {}
+  return { baseApr, agencyLockedEgld, egldPrice, colsPrice };
+}
+
 export const Stake = () => {
   const { address } = useGetAccountInfo();
   const { userActiveStake, stakedCols, contractDetails } = useGlobalContext();
@@ -367,6 +403,7 @@ export const Stake = () => {
     }
   }
 
+  // --- FIX: Always use latest values for simulation ---
   const handleSimulate = async () => {
     setSimError(null);
     setSimResult(null);
@@ -398,16 +435,45 @@ export const Stake = () => {
       setSimLoading(false);
       return;
     }
+
+    // Wait for all real data to be loaded
+    if (
+      aprLoading ||
+      !Array.isArray(stakers) ||
+      stakers.length === 0 ||
+      !contractDetails.data
+    ) {
+      setSimError("Please wait for all data to load before simulating.");
+      setSimLoading(false);
+      return;
+    }
+
+    // Fetch latest values for simulation
+    let simBaseApr = baseApr;
+    let simAgencyLockedEgld = agencyLockedEgld;
+    let simEgldPrice = egldPrice;
+    let simColsPrice = colsPrice;
+
+    // Fetch latest from API to ensure simulation matches reality
+    try {
+      const latest = await fetchLatestSimulationData(network.delegationContract);
+      if (latest.baseApr) simBaseApr = latest.baseApr;
+      if (latest.agencyLockedEgld) simAgencyLockedEgld = latest.agencyLockedEgld;
+      if (latest.egldPrice) simEgldPrice = latest.egldPrice;
+      if (latest.colsPrice) simColsPrice = latest.colsPrice;
+    } catch {}
+
+    // Use already loaded stakers, but with latest values
     const result = simulateAprAndRank({
       stakers,
       address,
       simulatedColsStaked: valCols,
       simulatedEgldStaked: valEgld,
-      colsPrice,
-      egldPrice,
-      baseApr,
+      colsPrice: simColsPrice,
+      egldPrice: simEgldPrice,
+      baseApr: simBaseApr,
       serviceFee,
-      agencyLockedEgld
+      agencyLockedEgld: simAgencyLockedEgld
     });
     setSimResult(result);
     setSimLoading(false);
@@ -638,7 +704,7 @@ export const Stake = () => {
                 }}
                 disabled={simLoading}
               >
-                {simLoading ? "Calculating..." : "Apply"}
+                {simLoading ? <><AnimatedDots /> Calculating...</> : "Apply"}
               </button>
             </div>
             {simError && (
