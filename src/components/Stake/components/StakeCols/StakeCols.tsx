@@ -21,6 +21,7 @@ const COLS_TOKEN_ID = 'COLS-9d91b7';
 const COLS_TOKEN_ID_HEX = '434f4c532d396439316237';
 const STAKE_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const GAS_LIMIT = 15_000_000;
+const WITHDRAW_GAS_LIMIT = 20_000_000; // Updated for Withdraw COLS
 const STAKE_METHOD_HEX = '7374616b65'; // "stake" in hex
 const FIXED_HEX_ADDRESS = '00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787';
 
@@ -174,7 +175,7 @@ export const StakeCols = () => {
                 value: '0',
                 data: 'withdraw@00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787',
                 receiver: STAKE_CONTRACT,
-                gasLimit: GAS_LIMIT
+                gasLimit: WITHDRAW_GAS_LIMIT // Changed from GAS_LIMIT (15M) to 20M
               }
             ]
           });
