@@ -1,119 +1,172 @@
-<div style="text-align:center">
-  <img
-  src="https://github.com/multiversx/mx-delegation-dapp/blob/main/preview.png"
-  alt="MultiversX Network">
-</div>
-<br>
+# 🇨🇴 Colombia Staking DApp  
+## APR & Ranking Calculation Overview
 
-[![](https://img.shields.io/badge/made%20by-MultiversX-blue.svg)](http://multiversx.com/)
-<br />
+Welcome to the technical overview of APR and staker ranking logic used in the **Colombia Staking DApp**. This system is built to reward users who actively stake both **eGLD** and **COLS** tokens by calculating fair and dynamic APR bonuses based on staking ratios and DAO contributions.
 
-<p align="center">
+---
 
- <h3 align="center">Dapp boilerplate for Delegation </h3>
+## 📊 1. Data Sources
 
-  <p align="center">
-The react implementation for Dashboard Delegation
-    <br />
-    <br />
-    <br />
-    ·
-    <a href="https://github.com/multiversx/mx-delegation-dapp/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/multiversx/mx-delegation-dapp/issues">Request Feature</a>
-  </p>
-</p>
+- **Staker Data**: From PeerMe COLS contract and Colombia Staking delegation smart contract.
+- **Token Prices**: Real-time prices for eGLD and COLS from the MultiversX API.
+- **Base APR & Service Fee**: From the MultiversX provider API and smart contract config.
 
-<!-- TABLE OF CONTENTS -->
-<details open="open">
-  <summary>Table of Contents</summary>
-  <ol>
-    <li><a href="#built-with">Built With</a>    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-  </ol>
-</details>
+---
 
-### Built With
+## 💰 2. APR Calculation
 
-- [React](https://reactjs.org/)
-- [Typescript](https://www.typescriptlang.org/)
-- [Bootstrap](https://getbootstrap.com)
+### 🔹 2.1 Base APR
+- Pulled directly from the MultiversX API.
+- Standard annual yield for all delegators, **before** any bonuses.
 
-<!-- GETTING STARTED -->
+### 🔹 2.2 COLS Bonus APR
 
-## Getting Started
+Users are rewarded for higher **COLS/eGLD staking ratios**.
 
-The dapp is a client side only poject and is built using the Create React App scripts.
+#### Step 1: Ratio Calculation
+```math
+ratio = (COLS_staked × COLS_price) / (eGLD_staked × eGLD_price)
+```
 
-Follow the next step to start using this dapp or follow the next tutorial on [Youtube](https://www.youtube.com/watch?v=BkjUmBsmQYM)
+#### Step 2: Normalization
+```math
+normalized = (ratio - minRatio) / (maxRatio - minRatio)
+```
 
-### Prerequisites
+#### Step 3: Bonus APR Assignment
+```math
+APR_BONUS = APRmin + (APRmax - APRmin) × √normalized
+```
+- `APRmin` typically = 0.3%
+- `APRmax` is dynamically adjusted
 
-For _development_ you will need to have the following:
+#### Step 4: Dynamic APRmax Targeting
+Ensures system balance:
+```math
+targetAvgAprBonus = 
+((agencyLockedEgld × baseApr / (1 - serviceFee) / 100 × serviceFee × AGENCY_BUYBACK × BONUS_BUYBACK_FACTOR × eGLD_price) / COLS_price) / 365
+```
 
-- node version 16.20.2
-- npm
+System loops to adjust `APRmax` until all user bonuses match this target.
 
-### Instalation and running
+---
 
-### Step 1. Install modules
+### 🔹 2.3 DAO Reward APR
 
-From a terminal, navigate to the project folder and run `yarn install`
+Portion of agency buybacks redistributed to COLS stakers:
+```math
+DAO(i) = (((Total_eGLD × baseApr / (1 - serviceFee) / 100 × 
+AgencyBuyback × serviceFee × DAO_DISTRIBUTION_RATIO × COLS_staked(i)) 
+/ SUM(COLS_staked)) / eGLD_staked(i)) × 100
+```
 
-### Step 2. Update Configs
+> **Note**: Only users staking both COLS and eGLD receive DAO rewards.
 
-In the application's src folder there are 3 config files (config.devnet.ts, config.testnet.ts, config.mainnet.ts).
+---
 
-Based on the environment used the configs will need to be updated:
+### 🔹 2.4 COLS-Only APR
 
-- delegationContract : should contain the address of the Delegation Smart Contract received after the creation of Delegation Smart Contract
-- also check the walletAddress, apiAddress and explorerAddress
+For users staking only COLS (no eGLD):
+```math
+APR_COLS_ONLY = 
+(((Total_eGLD × baseApr / (1 - serviceFee) / 100 × AgencyBuyback × serviceFee × DAO_DISTRIBUTION_RATIO × eGLD_price) 
+/ (COLS_price × SUM(COLS_staked))) × 100
+```
 
-### Step 3. Create .env file
+---
 
-- copy `.env.example` to `.env`
-- leave as it is to deploy on a root domain e.g. `staking.yourcompany.com` or add path e.g. `PUBLIC_URL=/staking/` if you wish to deploy the app in a subfolder.
+### 🔹 2.5 Total APR Summary
 
-### Step 4. Build for testing and production use
+| User Staking | Formula |
+|--------------|---------|
+| COLS + eGLD  | `baseApr + APR_BONUS + DAO` |
+| COLS only    | `APR_COLS_ONLY` |
+| Neither      | `baseApr` |
 
-A build of the app is necessary to deploy for testing purposes or for production use.
-The dapp is configured with build scripts targeting either the public devnet, the public testnet or the public mainnet.
+---
 
-For testing on the devnet run => `yarn run build-devnet`
+## 🏅 3. Ranking Calculation
 
-For testing on the testnet run => `yarn run build-testnet`
+### 🔸 3.1 Sorting
+Stakers are ranked in **descending order** of `APR_TOTAL`.
 
-For production use on the mainnet run => `yarn run build-mainnet`
+### 🔸 3.2 Rank Assignment
+```math
+rank = index + 1
+```
 
-### Step 5. Run the dashboard
+### 🔸 3.3 League Gamification
 
-To run the project locally run `yarn start` from the project folder. This will start the React app in development mode, using the configs found in the config.ts file.
+- 🥇 **Gold**: Top third
+- 🥈 **Silver**: Middle third
+- 🥉 **Bronze**: Bottom third
 
-<!-- ROADMAP -->
+Leagues are visually represented in the DApp.
 
-## Roadmap
+### 🔸 3.4 User Insights
+- UI highlights **your rank, league**, and required APR to reach the next league.
+- Top 5 stakers are always shown.
+- Window around your position also displayed.
 
-See the [open issues](https://github.com/multiversx/mx-delegation-dapp/issues) for a list of proposed features (and known issues).
+---
 
-<!-- CONTRIBUTING -->
+## 🧪 4. Simulation Feature
 
-## Contributing
+- Users can simulate their APR and rank by inputting **hypothetical eGLD and COLS** amounts.
+- Simulation uses live price and APR values for accurate forecasting.
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+---
 
-One can contribute by creating _pull requests_, or by opening _issues_ for discovered bugs or desired features.
+## ⚙️ 5. Constants & Parameters
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+| Parameter | Value | Description |
+|----------|-------|-------------|
+| `AGENCY_BUYBACK` | 0.3 | 30% of agency rewards used for buybacks |
+| `DAO_DISTRIBUTION_RATIO` | 0.333 | 33.3% of buybacks to DAO rewards |
+| `BONUS_BUYBACK_FACTOR` | 0.66 | Used in bonus average APR targeting |
+| `APRmin` | 0.3% | Minimum COLS bonus APR |
+| `APRmax` | Up to 25% | Dynamically adjusted |
+
+---
+
+## 🛡️ 6. Security & Fairness
+
+- All computations use **real-time and on-chain data**.
+- **Dynamic APRmax** prevents over-rewarding or under-rewarding users.
+- Square root normalization ensures fair bonus distribution, even for large holders.
+
+---
+
+## 📘 7. Example Calculation
+
+**User A stakes:**
+- 1000 eGLD  
+- 1000 COLS  
+- COLS price = $1  
+- eGLD price = $40  
+- Base APR = 8%  
+- Service fee = 10%
+
+#### Step-by-step:
+1. `ratio = (1000×1)/(1000×40) = 0.025`
+2. Normalize ratio across all users
+3. Calculate `APR_BONUS` using normalized sqrt curve
+4. Compute DAO reward
+5. `APR_TOTAL = baseApr + APR_BONUS + DAO`
+6. Sort users → assign ranks → place in leagues
+
+---
+
+## 🧬 8. Code References
+
+| File | Description |
+|------|-------------|
+| `src/hooks/useColsApr.ts` | Main APR calculation logic |
+| `src/components/Stake/RankingTable.tsx` | UI for ranking & leagues |
+| `src/components/Stake/Stake.tsx` | APR display and simulation |
+
+---
+
+## ✅ 9. Conclusion
+
+The **Colombia Staking DApp** uses a transparent, dynamic, and fair algorithm to calculate APR and rankings. By incentivizing dual staking and rewarding participation through a gamified structure, it encourages users to contribute actively to the ecosystem and COLS token economy.
