@@ -2,7 +2,7 @@ import { NotificationModal } from '@multiversx/sdk-dapp/UI/NotificationModal';
 import { SignTransactionsModals } from '@multiversx/sdk-dapp/UI/SignTransactionsModals';
 import { TransactionsToastList } from '@multiversx/sdk-dapp/UI/TransactionsToastList';
 import { DappProvider } from '@multiversx/sdk-dapp/wrappers/DappProvider';
-import { Route, Routes, BrowserRouter } from 'react-router-dom';
+import { Route, Routes, BrowserRouter, Navigate } from 'react-router-dom';
 
 import { Layout } from 'components/Layout';
 import { network } from 'config';
@@ -34,6 +34,7 @@ export const App = () => (
             <NotificationModal />
 
             <Routes>
+              <Route path="/" element={<Navigate to={routeNames.unlock} replace />} />
               <Route path={routeNames.unlock} element={<Unlock />} />
 
               {routes.map((route: Omit<RouteType, 'title'>, index: number) => (

@@ -1,3 +1,4 @@
+// Add import for Migration page
 import { ComponentType } from 'react';
 import { dAppName } from 'config';
 import withPageTitle from './components/PageTitle';
@@ -5,7 +6,10 @@ import withPageTitle from './components/PageTitle';
 import { Admin } from './pages/Admin';
 import { Dashboard } from './pages/Dashboard';
 import { Home } from './pages/Home';
-// import { NewBenefit } from './pages/NewBenefit'; // REMOVE old page
+import { Delegation } from './pages/Delegation';
+import { Stake } from './pages/Stake';
+import { Simulation } from './pages/Simulation';
+import { Migration } from './pages/Migration'; // Ensure import
 
 export interface RouteType {
   path: string;
@@ -16,13 +20,17 @@ export interface RouteType {
 
 export const routeNames = {
   home: '/',
+  user: '/user',
   dashboard: '/dashboard',
+  delegation: '/delegate',
+  stake: '/stake',
+  simulation: '/simulation',
+  migration: '/migration', // Ensure route name
   transaction: '/transaction',
   unlock: '/unlock',
   ledger: '/ledger',
   walletconnect: '/walletconnect',
   admin: '/admin'
-  // newBenefit: '/new-benefit' // REMOVE old route
 };
 
 const routes: RouteType[] = [
@@ -32,9 +40,39 @@ const routes: RouteType[] = [
     component: Home
   },
   {
+    path: routeNames.user,
+    title: 'User',
+    component: Home,
+    authenticatedRoute: true
+  },
+  {
     path: routeNames.dashboard,
     title: 'Dashboard',
     component: Dashboard,
+    authenticatedRoute: true
+  },
+  {
+    path: routeNames.delegation,
+    title: 'Delegation',
+    component: Delegation,
+    authenticatedRoute: true
+  },
+  {
+    path: routeNames.stake,
+    title: 'Stake',
+    component: Stake,
+    authenticatedRoute: true
+  },
+  {
+    path: routeNames.simulation,
+    title: 'Simulation',
+    component: Simulation,
+    authenticatedRoute: true
+  },
+  {
+    path: routeNames.migration,
+    title: 'Migration',
+    component: Migration,
     authenticatedRoute: true
   },
   {
@@ -42,7 +80,6 @@ const routes: RouteType[] = [
     title: 'Admin',
     component: Admin
   }
-  // REMOVE old NewBenefit route
 ];
 
 const mappedRoutes = routes.map((route) => {

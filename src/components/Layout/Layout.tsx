@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom';
 import routes, { routeNames } from 'routes';
 
 import { Navbar } from './components/Navbar';
+import { BottomNav } from 'components/BottomNav';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { search } = useLocation();
@@ -23,6 +24,9 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           {children}
         </AuthenticatedRoutesWrapper>
       </main>
+
+      {/* Bottom navigation for mobile devices */}
+      <BottomNav />
     </div>
   );
 };

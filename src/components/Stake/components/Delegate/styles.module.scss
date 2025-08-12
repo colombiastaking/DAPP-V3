@@ -10,25 +10,30 @@
   }
 
   .trigger {
-    background: #2044f5;
+    background: #6ee7c7;
     justify-content: center;
     display: flex;
     align-items: center;
     padding: 15px 30px;
-    border-radius: 7px;
-    color: white;
+    border-radius: 8px;
+    color: #181a1b;
     border: none;
-    font-size: 14px;
-    width: 100%;
+    font-size: 16px;
+    font-weight: 700;
+    width: 180px;
+    box-shadow: 0 2px 8px #6ee7c7aa;
+    transition: box-shadow 0.2s;
 
-    @media (min-width: 576px) {
-      width: 150px;
+    &:hover:not(.disabled) {
+      box-shadow: 0 4px 16px #4f8cffcc;
+      cursor: pointer;
     }
 
     &.disabled {
       pointer-events: none;
-      color: rgba(white, 0.5);
+      color: rgba(24, 26, 27, 0.5);
       background-color: #303234 !important;
+      box-shadow: none;
     }
   }
 
@@ -38,77 +43,5 @@
       display: flex;
       justify-content: center;
     }
-  }
-}
-
-.delegate {
-  .field {
-    label {
-      text-align: left;
-      display: block;
-      line-height: 1;
-      color: #808ea3;
-      font-size: 12px;
-      margin-bottom: 10px;
-    }
-
-    .group {
-      position: relative;
-
-      .input {
-        width: 100%;
-        padding: 15px;
-        font-size: 12px;
-        line-height: 1;
-        color: white;
-        background: #202020;
-        border-radius: 6px;
-        border: none;
-        outline: none;
-      }
-
-      .max {
-        position: absolute;
-        display: flex;
-        background: #303234;
-        justify-content: center;
-        line-height: 1;
-        color: white !important;
-        border-radius: 6px;
-        align-items: center;
-        right: 5px;
-        top: 5px;
-        bottom: 5px;
-        text-decoration: none;
-        padding: 10px;
-
-        &.disabled {
-          pointer-events: none;
-          opacity: 0.5;
-        }
-      }
-    }
-
-    .description {
-      line-height: 1;
-      color: white;
-      margin-top: 10px;
-      font-size: 12px;
-      display: block;
-      text-align: left;
-
-      span {
-        margin-right: 5px;
-        color: #808ea3;
-      }
-    }
-  }
-
-  .error {
-    margin-top: 1rem;
-    font-size: 0.75rem;
-    display: block;
-    color: #f53855;
-    line-height: 1;
   }
 }

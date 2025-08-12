@@ -21,7 +21,7 @@ const COLS_TOKEN_ID = 'COLS-9d91b7';
 const COLS_TOKEN_ID_HEX = '434f4c532d396439316237';
 const STAKE_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const GAS_LIMIT = 15_000_000;
-const WITHDRAW_GAS_LIMIT = 20_000_000; // Updated for Withdraw COLS
+const WITHDRAW_GAS_LIMIT = 20_000_000; // Used for Withdraw COLS button
 const STAKE_METHOD_HEX = '7374616b65'; // "stake" in hex
 const FIXED_HEX_ADDRESS = '00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787';
 
@@ -75,55 +75,6 @@ function LockInfoModal({ show, onClose, onConfirm }: { show: boolean, onClose: (
   );
 }
 
-// --- NEW: Withdraw Warning Modal ---
-function WithdrawWarningModal({ show, onClose, onConfirm }: { show: boolean, onClose: () => void, onConfirm: () => void }) {
-  return (
-    <Modal show={show} onHide={onClose} centered animation={false}>
-      <div style={{ padding: 32, textAlign: 'center', background: '#242526', borderRadius: 12 }}>
-        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 12, color: '#ff9800' }}>
-          <span role="img" aria-label="warning">⚠️</span> Withdrawal Notice
-        </div>
-        <div style={{ color: '#fff', fontSize: 16, marginBottom: 18 }}>
-          <b>Before Withdrawing:</b><br />
-          Please ensure your <span style={{ color: '#ffe082' }}>last COLS stake</span> is older than <b>15 days</b>.
-        </div>
-        <button
-          style={{
-            background: '#ff9800',
-            color: '#181a1b',
-            fontWeight: 700,
-            borderRadius: 7,
-            padding: '12px 30px',
-            border: 'none',
-            fontSize: 16,
-            marginTop: 8,
-            boxShadow: '0 2px 8px #ff9800aa'
-          }}
-          onClick={onConfirm}
-        >
-          Yes, Proceed to Withdraw
-        </button>
-        <button
-          style={{
-            background: '#303234',
-            color: '#fff',
-            fontWeight: 600,
-            borderRadius: 7,
-            padding: '10px 24px',
-            border: 'none',
-            fontSize: 15,
-            marginTop: 16,
-            marginLeft: 8
-          }}
-          onClick={onClose}
-        >
-          Cancel
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
 export const StakeCols = () => {
   const { address } = useGetAccountInfo();
   const { pending } = useGetActiveTransactionsStatus();
@@ -134,10 +85,6 @@ export const StakeCols = () => {
   // --- NEW: Modal state for lock info ---
   const [showLockInfo, setShowLockInfo] = useState(false);
   const [pendingStakeAction, setPendingStakeAction] = useState<null | (() => void)>(null);
-
-  // --- NEW: Modal state for withdraw warning ---
-  const [showWithdrawWarning, setShowWithdrawWarning] = useState(false);
-  const [pendingWithdrawAction, setPendingWithdrawAction] = useState<null | (() => void)>(null);
 
   // Fetch COLS balance
   useEffect(() => {
@@ -160,28 +107,50 @@ export const StakeCols = () => {
     if (address) fetchCols();
   }, [address]);
 
-  // --- NEW: Wrapped Withdraw Handler ---
+  const handleStakeSubmit = async (amount: string, onClose: () => void) => {
+    setError(null);
+    setShowLockInfo(true);
+    setPendingStakeAction(() => async () => {
+      try {
+        const amountHex = amountToHex(amount);
+        const data = [
+          'ESDTTransfer',
+          COLS_TOKEN_ID_HEX,
+          amountHex,
+          STAKE_METHOD_HEX,
+          FIXED_HEX_ADDRESS
+        ].join('@');
+
+        await sendTransactions({
+          transactions: [
+            {
+              value: '0',
+              data,
+              receiver: STAKE_CONTRACT,
+              gasLimit: GAS_LIMIT
+            }
+          ]
+        });
+        onClose();
+      } catch (e: any) {
+        setError(e?.message || 'Failed to send transaction');
+      }
+    });
+  };
+
+  // Withdraw handler using WITHDRAW_GAS_LIMIT
   const handleWithdraw = async () => {
     setError(null);
     try {
-      // Show warning modal before actual withdraw
-      setShowWithdrawWarning(true);
-      setPendingWithdrawAction(() => async () => {
-        setShowWithdrawWarning(false);
-        try {
-          await sendTransactions({
-            transactions: [
-              {
-                value: '0',
-                data: 'withdraw@00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787',
-                receiver: STAKE_CONTRACT,
-                gasLimit: WITHDRAW_GAS_LIMIT // Changed from GAS_LIMIT (15M) to 20M
-              }
-            ]
-          });
-        } catch (e: any) {
-          setError(e?.message || 'Failed to send transaction');
-        }
+      await sendTransactions({
+        transactions: [
+          {
+            value: '0',
+            data: 'withdraw@00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787',
+            receiver: STAKE_CONTRACT,
+            gasLimit: WITHDRAW_GAS_LIMIT
+          }
+        ]
       });
     } catch (e: any) {
       setError(e?.message || 'Failed to send transaction');
@@ -190,7 +159,6 @@ export const StakeCols = () => {
 
   return (
     <div className={styles.wrapper}>
-      {/* --- Lock Info Modal for Staking --- */}
       <LockInfoModal
         show={showLockInfo}
         onClose={() => {
@@ -201,18 +169,6 @@ export const StakeCols = () => {
           setShowLockInfo(false);
           if (pendingStakeAction) pendingStakeAction();
           setPendingStakeAction(null);
-        }}
-      />
-      {/* --- Withdraw Warning Modal --- */}
-      <WithdrawWarningModal
-        show={showWithdrawWarning}
-        onClose={() => {
-          setShowWithdrawWarning(false);
-          setPendingWithdrawAction(null);
-        }}
-        onConfirm={() => {
-          if (pendingWithdrawAction) pendingWithdrawAction();
-          setPendingWithdrawAction(null);
         }}
       />
       <Action
@@ -267,38 +223,7 @@ export const StakeCols = () => {
                   )
               })}
               initialValues={{ amount: '1' }}
-              onSubmit={async ({ amount }) => {
-                setError(null);
-                // Show lock info modal before actual stake
-                setShowLockInfo(true);
-                setPendingStakeAction(() => async () => {
-                  try {
-                    // Build ESDTTransfer@TOKEN_ID_HEX@amountHex@stake@FIXED_HEX_ADDRESS
-                    const amountHex = amountToHex(amount);
-                    const data = [
-                      'ESDTTransfer',
-                      COLS_TOKEN_ID_HEX,
-                      amountHex,
-                      STAKE_METHOD_HEX,
-                      FIXED_HEX_ADDRESS
-                    ].join('@');
-
-                    await sendTransactions({
-                      transactions: [
-                        {
-                          value: '0',
-                          data,
-                          receiver: STAKE_CONTRACT,
-                          gasLimit: GAS_LIMIT
-                        }
-                      ]
-                    });
-                    onClose();
-                  } catch (e: any) {
-                    setError(e?.message || 'Failed to send transaction');
-                  }
-                });
-              }}
+              onSubmit={({ amount }) => handleStakeSubmit(amount, onClose)}
             >
               {({
                 errors,
@@ -315,10 +240,10 @@ export const StakeCols = () => {
                 };
 
                 return (
-                  <form onSubmit={handleSubmit}>
+                  <form onSubmit={handleSubmit} style={{ position: 'relative' }}>
                     <div className={styles.field}>
                       <label htmlFor="amount">COLS Amount</label>
-                      <div className={styles.group}>
+                      <div className={styles.group} style={{ position: 'relative' }}>
                         <input
                           type="number"
                           name="amount"
@@ -342,8 +267,8 @@ export const StakeCols = () => {
                           style={{
                             position: 'absolute',
                             right: 5,
-                            top: 5,
-                            bottom: 5,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
                             background: '#303234',
                             color: '#fff',
                             borderRadius: 6,
@@ -351,7 +276,10 @@ export const StakeCols = () => {
                             alignItems: 'center',
                             justifyContent: 'center',
                             padding: '10px',
-                            textDecoration: 'none'
+                            textDecoration: 'none',
+                            maxWidth: '60px',
+                            height: 'auto',
+                            lineHeight: 'normal'
                           }}
                         >
                           Max
@@ -381,7 +309,6 @@ export const StakeCols = () => {
           </div>
         )}
       />
-      {/* --- Withdraw COLS Button (with warning) --- */}
       <div style={{ marginTop: 16, width: '100%', display: 'flex', justifyContent: 'center' }}>
         <button
           type="button"
@@ -394,7 +321,6 @@ export const StakeCols = () => {
           Withdraw COLS
         </button>
       </div>
-      {/* Removed the lower Withdraw COLS button */}
     </div>
   );
 };

@@ -87,219 +87,71 @@ h1, h2, h3, h4, h5, h6 {
   color: $primary;
 }
 
-/* Dashboard
--------------------------------------------------- */
-.action-btn {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  color: $primary;
-  margin: 0 7px;
+/* Neon Theme Overrides (data-theme="neon") */
+[data-theme="neon"] {
+  /* Neon-inspired overrides to give a fresh look without changing logic */
 
-  button {
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    background-color: $primary;
-    color: $button-text;
-    box-shadow: 0 2px 8px #6ee7c7aa;
-
-    &:hover {
-      background: $button-hover;
-      color: $button-text;
-      opacity: 1;
-    }
-  }
-}
-
-.transactions {
-  .transaction-icon {
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    background: $accent;
+  html, body {
+    background: #0b1020;
   }
 
-  &.table {
-    .transaction-hash .trim {
-      /* Responsive max-widths using standard media queries */
-      max-width: none;
-    }
-    @media (max-width: 1200px) {
-      .transaction-hash .trim {
-        max-width: 26rem;
-      }
-    }
-    @media (max-width: 992px) {
-      .transaction-hash .trim {
-        max-width: 12rem;
-      }
-    }
-    @media (max-width: 576px) {
-      .transaction-hash .trim {
-        max-width: 8rem;
-      }
-    }
-
-    td,
-    tr {
-      padding: 0.65rem;
-    }
-
-    td {
-      white-space: nowrap;
-      vertical-align: middle;
-      color: $primary;
-    }
-
-    tr:last-of-type {
-      td {
-        border-bottom: 1px solid $card-border;
-      }
-    }
+  body {
+    color: #eaffff;
   }
-}
 
-/* Cards
--------------------------------------------------- */
-.cards {
-  .card {
-    background: $card-bg;
-    border: 1px solid $card-border;
-    color: $primary;
-    box-shadow: 0 2px 12px #000a;
-    border-radius: 14px;
-    padding: 18px;
-    font-size: 15px;
-    transition: box-shadow 0.2s;
-    &:hover {
-      box-shadow: 0 4px 24px #6ee7c755;
-    }
+  /* Cards and surfaces */
+  .cards {
+    background: rgba(0, 0, 0, 0.25);
   }
-  .heading {
-    color: $primary;
+
+  .cards .card {
+    background: linear-gradient(135deg, rgba(20, 28, 60, 0.95), rgba(10, 12, 28, 0.95));
+    border-color: #2bffea;
+    color: #eaffff;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.45);
   }
-  .value {
-    color: $primary;
-    font-size: 22px;
+
+  /* Primary buttons and actions */
+  button, .btn, .action-btn button {
+    background: linear-gradient(90deg, #00ffd4 0%, #6a5cff 100%);
+    color: #041016;
+    border: none;
+    border-radius: 8px;
     font-weight: 700;
-    text-shadow: 0 1px 8px #6ee7c755;
   }
-}
 
-/* Buttons
--------------------------------------------------- */
-button, .btn, .action-btn button {
-  background: $button-bg;
-  color: $button-text;
-  border: none;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 16px;
-  padding: 12px 28px;
-  box-shadow: 0 2px 8px #6ee7c7aa;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  &:hover, &:focus {
-    background: $button-hover;
-    color: $button-text;
-    box-shadow: 0 4px 16px #6ee7c7cc;
+  button:hover, .btn:hover, .action-btn button:hover {
+    filter: brightness(1.05);
   }
-  &:active {
-    background: $accent;
-    color: $button-text;
+
+  /* Navbar tweaks for neon UI */
+  .delegation-nav {
+    background: linear-gradient(90deg, rgba(2,4,12,0.9) 0%, rgba(12,18,40,0.9) 100%);
   }
-}
 
-/* APR Section
--------------------------------------------------- */
-.stake .assetsBox {
-  background: $card-bg;
-  border: 2px solid $accent;
-  color: $primary;
-}
-.stake .assetsBox:nth-child(2) {
-  background: $apr-gradient !important;
-  border: 2px solid #6ee7c7;
-  color: #181a1b !important;
-  box-shadow: 0 2px 24px #6ee7c7cc;
-}
-.stake .assetsBox:nth-child(2) .title,
-.stake .assetsBox:nth-child(2) .aprValue,
-.stake .assetsBox:nth-child(2) b {
-  color: #181a1b !important;
-  text-shadow: 0 1px 8px #fff8;
-}
-.stake .assetsBox:nth-child(2) .aprValue {
-  font-size: 22px;
-  font-weight: 800;
-  background: none;
-  color: #181a1b !important;
-  text-shadow: 0 1px 8px #fff8;
-}
+  .nav {
+    border-bottom: 1px solid rgba(0,255,212,0.25);
+  }
 
-/* Price Banner
--------------------------------------------------- */
-.price-banner {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 32px;
-  background: #111;
-  color: $primary;
-  border-radius: 14px;
-  padding: 20px 0;
-  margin: 24px 0 32px 0;
-  font-size: 22px;
-  font-weight: 700;
-  box-shadow: 0 2px 12px #6ee7c7aa;
-}
-.price-banner .price-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #181a1b;
-  border-radius: 10px;
-  padding: 12px 28px;
-  font-size: 20px;
-  font-weight: 800;
-  box-shadow: 0 1px 8px #6ee7c7aa;
-}
-.price-banner .label {
-  color: $primary;
-  font-weight: 800;
-  font-size: 18px;
-  margin-right: 6px;
-}
-.price-banner .value {
-  color: #fff;
-  font-weight: 800;
-  font-size: 24px;
-  text-shadow: $price-glow;
-}
+  .heading { color: #eaffff; }
 
-/* Misc
--------------------------------------------------- */
-footer {
-  div {
-    margin-top: 0.5rem;
-    font-size: 0.75rem;
-    display: inline-block;
-    font-weight: 400;
-    line-height: 1.155rem;
+  /* Inputs and text to be better visible on dark neon background */
+  input, textarea {
+    background: #23272a;
+    color: #eaffff;
+    border: 1px solid #2bffea;
+  }
 
-    a {
-      color: $primary;
-      &:hover {
-        color: $accent;
-      }
-      #heart {
-        height: 16px;
-        width: 16px;
-        path {
-          fill: #6ee7c7;
-        }
-      }
-    }
+  .label, .value, .heading {
+    text-shadow: 0 1px 6px rgba(0,255,212,0.4);
+  }
+
+  /* Minor adjustments for readability on neon theme */
+  .price-banner {
+    background: linear-gradient(90deg, #0b1020, #1a1020);
+  }
+
+  .modal-container, .modal-dialog, .modal-content {
+    background: rgba(0,0,0,0.6);
   }
 }

@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import { useNavigate } from 'react-router-dom';
 
-import { Stake } from 'components/Stake';
 import { Withdrawals } from 'components/Withdrawals';
 import { PriceBanner } from 'components/PriceBanner';
 
@@ -24,7 +23,6 @@ export const Dashboard = () => {
   return (
     <div className={styles.dashboard}>
       <PriceBanner />
-      <Stake />
       <Withdrawals />
     </div>
   );

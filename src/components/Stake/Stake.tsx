@@ -1,4 +1,3 @@
-{/* eslint-disable react-hooks/exhaustive-deps */}
 import { useEffect, useState } from "react";
 import { faPercent } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -19,7 +18,6 @@ import { Undelegate } from "./components/Undelegate";
 import { DashboardNewDelegator } from "../../pages/Dashboard/NewDelegatorBenefit";
 import { ColsAprTable } from "../ColsAprTable";
 import { RankingTable } from "./RankingTable";
-import axios from "axios";
 import { AnimatedDots } from "components/AnimatedDots";
 
 // League colors and icons for APR section
@@ -292,7 +290,7 @@ async function fetchLatestSimulationData(delegationContract: string) {
   let baseApr = 0, agencyLockedEgld = 0, egldPrice = 0, colsPrice = 0;
   try {
     // baseApr and agencyLockedEgld
-    const { data } = await axios.get(`https://api.multiversx.com/providers/${delegationContract}`);
+    const { data } = await fetch("https://api.multiversx.com/providers/" + delegationContract).then(res => res.json());
     if (data && typeof data.apr === "number") baseApr = data.apr;
     if (data && typeof data.locked === "string") {
       agencyLockedEgld = Number(data.locked) / 1e18;
@@ -301,14 +299,12 @@ async function fetchLatestSimulationData(delegationContract: string) {
   } catch {}
   try {
     // egldPrice
-    const { data } = await axios.get(`https://api.multiversx.com/economics`);
+    const { data } = await fetch("https://api.multiversx.com/economics").then(res => res.json());
     if (data && typeof data.price === "number") egldPrice = data.price;
   } catch {}
   try {
     // colsPrice
-    const { data } = await axios.get(
-      "https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7"
-    );
+    const { data } = await fetch("https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7").then(res => res.json());
     if (Array.isArray(data) && data.length > 0) {
       const last = data[data.length - 1];
       if (last && typeof last.value === "number") {
@@ -335,6 +331,7 @@ export const Stake = () => {
     colsPrice,
     agencyLockedEgld
   } = useColsAprContext();
+
   const [userApr, setUserApr] = useState<number | null>(null);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [isColsOnly, setIsColsOnly] = useState(false);
@@ -792,4 +789,4 @@ export const Stake = () => {
       )}
     </div>
   );
-}
+};

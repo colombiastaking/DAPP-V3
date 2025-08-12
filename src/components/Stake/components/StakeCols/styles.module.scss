@@ -22,7 +22,7 @@
   box-shadow: 0 2px 8px #6ee7c7aa;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: center; /* Center horizontally */
   transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 
   &:hover:not(.disabled) {
@@ -36,4 +36,12 @@
     color: rgba(255,255,255,0.5);
     background: #23272a !important;
   }
+}
+
+/* Center Withdraw COLS button wrapper */
+.withdrawWrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 16px;
 }

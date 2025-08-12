@@ -1,0 +1,119 @@
+.landing {
+  padding: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-bottom: 100px; /* Added padding to avoid bottom nav overlap */
+  box-sizing: border-box;
+}
+.headerCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(14, 22, 32, 0.9), rgba(18, 24, 48, 0.9));
+  color: #eaffff;
+  margin-bottom: 20px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.brandName {
+  font-weight: 800;
+  letter-spacing: .4px;
+  font-size: 20px;
+  color: #6ee7c7;
+}
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-left: auto;
+}
+.subTitle {
+  font-size: 14px;
+  color: #cbd5e1;
+  margin-left: 8px;
+}
+.unlockLink {
+  display: inline-block;
+  margin: 20px auto 0;
+  padding: 10px 16px;
+  background: #6ee7c7;
+  color: #111;
+  border-radius: 6px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.assetGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 18px 0 8px;
+  box-sizing: border-box;
+}
+.assetCard {
+  background: #181a1b;
+  border: 1px solid #2bffea;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  color: #eaffff;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+.assetLabel {
+  font-size: 14px;
+  color: #8bd6c0;
+}
+.assetValue {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 6px 0;
+}
+.assetUsd {
+  font-size: 14px;
+  color: #b8f5e7;
+}
+.totalValue {
+  font-size: 28px;
+  font-weight: 900;
+  color: #eaffff;
+  margin-top: 6px;
+}
+.hint {
+  font-size: 12px;
+  color: #9aa8b8;
+}
+
+/* --- MOBILE VIEW ADJUSTMENTS --- */
+@media (max-width: 767px) {
+  .assetGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .assetCard {
+    width: 100%;
+    min-width: auto;
+  }
+
+  /* Move Total Value below the other two */
+  .assetCard:nth-child(3) {
+    order: 3;
+  }
+
+  .assetCard:nth-child(1),
+  .assetCard:nth-child(2) {
+    order: 1;
+  }
+
+  /* Adjust hint text to wrap and fit */
+  .hint {
+    white-space: normal;
+    word-wrap: break-word;
+  }
+}

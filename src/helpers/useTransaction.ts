@@ -5,6 +5,7 @@ import {
   DelegationContractType,
   delegationContractData
 } from 'config';
+import { notifyTxCompleted } from 'utils/txEvents';
 
 interface TransactionParametersType {
   args: string;
@@ -33,9 +34,7 @@ const useTransaction = () => {
       const getGasLimit = (): number => {
         const nodeKeys = args.split('@').slice(1);
 
-        return delegable.data === 'addNodes' && args
-          ? delegable.gasLimit * (nodeKeys.length / 2)
-          : delegable.gasLimit;
+        return delegable.gasLimit * (nodeKeys.length / 2);
       };
 
       const transaction = {
@@ -45,9 +44,14 @@ const useTransaction = () => {
         gasLimit: getGasLimit()
       };
 
-      return await sendTransactions({
+      const result = await sendTransactions({
         transactions: [transaction]
       });
+
+      // Notify listeners that a transaction completed so APR table can refresh
+      notifyTxCompleted();
+
+      return result;
     }
   };
 

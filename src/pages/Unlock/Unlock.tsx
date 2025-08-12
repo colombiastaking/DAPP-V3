@@ -95,7 +95,7 @@ export const Unlock = () => {
 
   const redirectConditionally = () => {
     if (address) {
-      navigate('/dashboard');
+      navigate('/user');
     }
   };
 
