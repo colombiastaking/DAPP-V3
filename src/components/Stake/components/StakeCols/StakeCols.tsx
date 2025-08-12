@@ -14,19 +14,17 @@ import { network } from 'config';
 import styles from '../Delegate/styles.module.scss';
 import stakeColsStyles from './styles.module.scss';
 
-// --- NEW: Info Modal for 15-day lock ---
 import { Modal } from 'react-bootstrap';
 
 const COLS_TOKEN_ID = 'COLS-9d91b7';
 const COLS_TOKEN_ID_HEX = '434f4c532d396439316237';
 const STAKE_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const GAS_LIMIT = 15_000_000;
-const WITHDRAW_GAS_LIMIT = 20_000_000; // Used for Withdraw COLS button
+const WITHDRAW_GAS_LIMIT = 20_000_000;
 const STAKE_METHOD_HEX = '7374616b65'; // "stake" in hex
 const FIXED_HEX_ADDRESS = '00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787';
 
 function amountToHex(amount: string) {
-  // 18 decimals for COLS
   const value = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
   let hex = new BigNumber(value).toString(16);
   if (hex.length % 2 !== 0) hex = '0' + hex;
@@ -34,7 +32,6 @@ function amountToHex(amount: string) {
 }
 
 function denominateCols(raw: string) {
-  // 18 decimals for COLS
   if (!raw || raw === '0') return '0';
   let str = raw.padStart(19, '0');
   const intPart = str.slice(0, -18) || '0';
@@ -42,8 +39,7 @@ function denominateCols(raw: string) {
   return decPart ? `${intPart}.${decPart}` : intPart;
 }
 
-// --- NEW: Info Modal for 15-day lock ---
-function LockInfoModal({ show, onClose, onConfirm }: { show: boolean, onClose: () => void, onConfirm: () => void }) {
+function LockInfoModal({ show, onClose, onConfirm }: { show: boolean; onClose: () => void; onConfirm: () => void }) {
   return (
     <Modal show={show} onHide={onClose} centered animation={false}>
       <div style={{ padding: 32, textAlign: 'center', background: '#242526', borderRadius: 12 }}>
@@ -51,8 +47,8 @@ function LockInfoModal({ show, onClose, onConfirm }: { show: boolean, onClose: (
           <span role="img" aria-label="lock">🔒</span> 15-Day Lock Period
         </div>
         <div style={{ color: '#fff', fontSize: 16, marginBottom: 18 }}>
-          <b>Important:</b> When you stake COLS tokens, they will be <span style={{ color: '#ffe082' }}>locked for 15 days</span>.<br />
-          You will not be able to withdraw or transfer your staked COLS during this period.
+          <b>Important:</b> Please ensure your last stake transaction is older than 15 days.<br />
+          Otherwise, your COLS tokens are still locked and cannot be withdrawn.
         </div>
         <button
           style={{
@@ -64,11 +60,12 @@ function LockInfoModal({ show, onClose, onConfirm }: { show: boolean, onClose: (
             border: 'none',
             fontSize: 16,
             marginTop: 8,
-            boxShadow: '0 2px 8px #6ee7c7aa'
+            boxShadow: '0 2px 8px #6ee7c7aa',
+            cursor: 'pointer'
           }}
           onClick={onConfirm}
         >
-          I Understand, Continue
+          I Understand, Withdraw COLS
         </button>
       </div>
     </Modal>
@@ -82,11 +79,9 @@ export const StakeCols = () => {
   const [colsBalance, setColsBalance] = useState<string>('0');
   const [loading, setLoading] = useState<boolean>(true);
 
-  // --- NEW: Modal state for lock info ---
   const [showLockInfo, setShowLockInfo] = useState(false);
-  const [pendingStakeAction, setPendingStakeAction] = useState<null | (() => void)>(null);
+  const [withdrawPending, setWithdrawPending] = useState(false);
 
-  // Fetch COLS balance
   useEffect(() => {
     const fetchCols = async () => {
       setLoading(true);
@@ -107,39 +102,9 @@ export const StakeCols = () => {
     if (address) fetchCols();
   }, [address]);
 
-  const handleStakeSubmit = async (amount: string, onClose: () => void) => {
-    setError(null);
-    setShowLockInfo(true);
-    setPendingStakeAction(() => async () => {
-      try {
-        const amountHex = amountToHex(amount);
-        const data = [
-          'ESDTTransfer',
-          COLS_TOKEN_ID_HEX,
-          amountHex,
-          STAKE_METHOD_HEX,
-          FIXED_HEX_ADDRESS
-        ].join('@');
-
-        await sendTransactions({
-          transactions: [
-            {
-              value: '0',
-              data,
-              receiver: STAKE_CONTRACT,
-              gasLimit: GAS_LIMIT
-            }
-          ]
-        });
-        onClose();
-      } catch (e: any) {
-        setError(e?.message || 'Failed to send transaction');
-      }
-    });
-  };
-
-  // Withdraw handler using WITHDRAW_GAS_LIMIT
-  const handleWithdraw = async () => {
+  const handleWithdrawConfirmed = async () => {
+    setShowLockInfo(false);
+    setWithdrawPending(true);
     setError(null);
     try {
       await sendTransactions({
@@ -155,21 +120,47 @@ export const StakeCols = () => {
     } catch (e: any) {
       setError(e?.message || 'Failed to send transaction');
     }
+    setWithdrawPending(false);
+  };
+
+  const handleWithdrawClick = () => {
+    setShowLockInfo(true);
+  };
+
+  const handleStakeSubmit = async (amount: string, onClose: () => void) => {
+    setError(null);
+    try {
+      const amountHex = amountToHex(amount);
+      const data = [
+        'ESDTTransfer',
+        COLS_TOKEN_ID_HEX,
+        amountHex,
+        STAKE_METHOD_HEX,
+        FIXED_HEX_ADDRESS
+      ].join('@');
+
+      await sendTransactions({
+        transactions: [
+          {
+            value: '0',
+            data,
+            receiver: STAKE_CONTRACT,
+            gasLimit: GAS_LIMIT
+          }
+        ]
+      });
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || 'Failed to send transaction');
+    }
   };
 
   return (
     <div className={styles.wrapper}>
       <LockInfoModal
         show={showLockInfo}
-        onClose={() => {
-          setShowLockInfo(false);
-          setPendingStakeAction(null);
-        }}
-        onConfirm={() => {
-          setShowLockInfo(false);
-          if (pendingStakeAction) pendingStakeAction();
-          setPendingStakeAction(null);
-        }}
+        onClose={() => setShowLockInfo(false)}
+        onConfirm={handleWithdrawConfirmed}
       />
       <Action
         title="Stake COLS"
@@ -313,10 +304,10 @@ export const StakeCols = () => {
         <button
           type="button"
           className={classNames(stakeColsStyles.trigger, {
-            [stakeColsStyles.disabled]: pending
+            [stakeColsStyles.disabled]: pending || withdrawPending
           })}
-          onClick={handleWithdraw}
-          disabled={pending}
+          onClick={handleWithdrawClick}
+          disabled={pending || withdrawPending}
         >
           Withdraw COLS
         </button>

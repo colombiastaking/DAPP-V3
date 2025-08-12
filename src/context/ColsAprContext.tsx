@@ -19,8 +19,6 @@ export function ColsAprProvider({ children }: { children: any }) {
     return unsubscribe;
   }, [refresh]);
 
-  // Removed initial refresh on mount to avoid recalculation on tab switch
-
   return (
     <ColsAprContext.Provider value={{
       loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, refresh

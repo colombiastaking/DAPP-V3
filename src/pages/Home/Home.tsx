@@ -5,10 +5,20 @@ import styles from './styles.module.scss';
 import { AnimatedDots } from 'components/AnimatedDots';
 import { HelpIcon } from 'components/HelpIcon';
 import { ColsAprTable } from 'components/ColsAprTable';
+import { useEffect } from 'react';
+import { onTxCompleted } from 'utils/txEvents';
 
 export const Home = () => {
   const { address } = useGetAccountInfo();
-  const { stakers, loading, egldPrice, colsPrice, baseApr } = useColsAprContext();
+  const { stakers, loading, egldPrice, colsPrice, baseApr, refresh } = useColsAprContext();
+
+  // Refresh on transaction completed event to ensure UI updates
+  useEffect(() => {
+    const unsubscribe = onTxCompleted(() => {
+      refresh();
+    });
+    return unsubscribe;
+  }, [refresh]);
 
   if (!address) {
     return null;
