@@ -5,41 +5,6 @@ import { string } from 'yup';
 import { network, denomination } from 'config';
 import { denominated } from 'helpers/denominate';
 
-const undelegateValidator = (input: string) =>
-  string()
-    .required('Required')
-    .test('minimum', 'Value must be greater than zero.', (value = '0') =>
-      new BigNumber(parseAmount(value, denomination)).isGreaterThanOrEqualTo(1)
-    )
-    .test(
-      'remaining',
-      `Either undelegate the total amount or leave at least 1 ${network.egldLabel} staked.`,
-      (value = '0') => {
-        const requested = new BigNumber(parseAmount(value, denomination));
-        const minimum = new BigNumber(parseAmount('1', denomination));
-        const total = new BigNumber(input);
-
-        const oneLeft = total.minus(requested).isGreaterThanOrEqualTo(minimum);
-        const clearance = total.isEqualTo(value) || total.isEqualTo(requested);
-
-        return oneLeft || clearance;
-      }
-    )
-    .test(
-      'maximum',
-      `You need to set a value under ${denominated(input)} ${
-        network.egldLabel
-      }.`,
-      (value = '0') => {
-        const requested = new BigNumber(parseAmount(value, denomination));
-        const total = new BigNumber(input);
-        const maxed = total.isEqualTo(value);
-        const below = requested.isLessThanOrEqualTo(input);
-
-        return maxed || below;
-      }
-    );
-
 const delegateValidator = (input: string, limit: string) =>
   string()
     .required('Required')
@@ -48,13 +13,14 @@ const delegateValidator = (input: string, limit: string) =>
     )
     .test(
       'maximum',
-      `You need to set a value under ${denominated(input)} ${
-        network.egldLabel
-      }.`,
-      (value = '0') =>
-        new BigNumber(parseAmount(value, denomination)).isLessThanOrEqualTo(
-          input
-        )
+      function (value = '0') {
+        if (!input || new BigNumber(input).isLessThanOrEqualTo(0)) {
+          return this.createError({ message: `Invalid balance` });
+        }
+        // Allow tiny margin for floating point errors
+        const maxAllowed = new BigNumber(input).plus('0.000001');
+        return new BigNumber(parseAmount(value, denomination)).isLessThanOrEqualTo(maxAllowed);
+      }
     )
     .test(
       'uncapable',
@@ -62,9 +28,7 @@ const delegateValidator = (input: string, limit: string) =>
         limit
       )} ${network.egldLabel}`,
       (value = '0') =>
-        new BigNumber(parseAmount(value, denomination)).isLessThanOrEqualTo(
-          limit
-        )
+        new BigNumber(parseAmount(value, denomination)).isLessThanOrEqualTo(limit)
     );
 
-export { delegateValidator, undelegateValidator };
+export { delegateValidator };
