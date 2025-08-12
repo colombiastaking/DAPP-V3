@@ -3,7 +3,6 @@ import { faPowerOff } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import { logout } from '@multiversx/sdk-dapp/utils/logout';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
 import classNames from 'classnames';
 
@@ -53,12 +52,14 @@ export const Navbar = () => {
 
   return (
     <nav className={`${styles.nav} delegation-nav`}>
-      <Link to="/dashboard" className={styles.heading} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className={styles.heading} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'default' }}>
         <span className={styles.logo}>
           <MultiversX />
         </span>
-        <span className={styles.title} style={{ flexShrink: 0 }}>Colombia Staking Dashboard</span>
-      </Link>
+        <span className={styles.title} style={{ flexShrink: 0, userSelect: 'text' }}>
+          Colombia Staking Dashboard
+        </span>
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <span style={{ color: '#6ee7c7', fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap', userSelect: 'text' }}>
@@ -81,7 +82,7 @@ export const Navbar = () => {
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') button.onClick && button.onClick(); }}
           >
-            <span className={styles.icon} style={{ color: '#808ea3' }}>
+            <span className={styles.icon} style={{ color: '#6ee7c7' }}>
               {button.icon}
             </span>
             {button.label && <span>{button.label}</span>}
