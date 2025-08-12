@@ -1,0 +1,264 @@
+.stake {
+  margin-top: 60px;
+
+  @media (min-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  &.empty {
+    margin-top: 60px;
+    padding-bottom: 90px;
+  }
+
+  .assetsRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-bottom: 32px;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .assetsBox {
+    background: #181a1b;
+    border: 2px solid #4fd1c5;
+    border-radius: 12px;
+    padding: 24px 32px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0px 6px 24px rgba(0, 0, 0, 0.1);
+    margin-bottom: 0;
+    flex: 1 1 220px;
+    max-width: 350px;
+    color: #6ee7c7;
+    transition: box-shadow 0.2s;
+  }
+
+  /* --- APR Panel Special Styling --- */
+  .assetsBox:nth-child(2) {
+    background: linear-gradient(120deg, #6ee7c7 0%, #23f7dd 40%, #4f8cff 100%) !important;
+    border: 2px solid #23f7dd;
+    color: #181a1b !important;
+    box-shadow: 0 4px 32px #23f7dd55, 0 2px 24px #4f8cff33;
+    position: relative;
+    overflow: hidden;
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      pointer-events: none;
+      box-shadow: 0 0 32px 8px #6ee7c7cc inset, 0 0 0 0 #fff0;
+      opacity: 0.18;
+      z-index: 1;
+    }
+  }
+  .assetsBox:nth-child(2) .icon {
+    background: #fff;
+    border: 1.5px solid #23f7dd;
+    box-shadow: 0 2px 16px #6ee7c7cc;
+    z-index: 2;
+  }
+  .assetsBox:nth-child(2) .title,
+  .assetsBox:nth-child(2) .aprValue,
+  .assetsBox:nth-child(2) b {
+    color: #181a1b !important;
+    text-shadow: 0 1px 12px #fff8, 0 0 2px #23f7dd88;
+    z-index: 2;
+  }
+  .assetsBox:nth-child(2) .aprValue {
+    font-size: 26px;
+    font-weight: 900;
+    background: none;
+    color: #181a1b !important;
+    text-shadow: 0 2px 18px #fff8, 0 0 8px #23f7ddcc;
+    letter-spacing: 0.5px;
+    border-radius: 8px;
+    padding: 4px 18px;
+    margin-left: 8px;
+    margin-right: 8px;
+    box-shadow: 0 2px 16px #23f7dd44;
+    background: linear-gradient(90deg, #fff 0%, #e0f7fa 100%);
+    display: inline-block;
+    z-index: 2;
+  }
+
+  .icon {
+    background: black;
+    border: 1px solid #4fd1c5;
+    box-shadow: 0px 4px 12px #6ee7c7cc;
+    border-radius: 50%;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    width: 60px;
+    height: 60px;
+    position: relative;
+    margin-bottom: 12px;
+
+    & > svg {
+      width: 24px;
+      height: auto;
+    }
+  }
+
+  .subicon {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    justify-content: center;
+    display: flex;
+    align-items: center;
+    bottom: 0;
+    right: 0;
+
+    svg path {
+      fill: #6ee7c7;
+    }
+  }
+
+  .title {
+    color: #6ee7c7;
+    font-size: 18px;
+    margin-bottom: 10px;
+    line-height: 1;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  .activeAmountsRow {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 18px;
+    justify-content: center;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .activeAmount {
+    color: #6ee7c7;
+    font-size: 22px;
+    line-height: 1;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .activeLabel {
+    color: #4fd1c5;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 2px;
+    text-transform: lowercase;
+    letter-spacing: 0.5px;
+  }
+
+  .actionsRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .actionButtonWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+
+    .heading {
+      font-size: 32px;
+      line-height: 1;
+      color: #6ee7c7;
+      margin-bottom: 45px;
+    }
+
+    .message {
+      color: #a0aec0;
+      line-height: 1;
+      font-size: 18px;
+      margin: 30px 0;
+    }
+  }
+
+  .value {
+    color: #6ee7c7;
+    font-size: 24px;
+    line-height: 1;
+    margin-bottom: 30px;
+
+    @media (min-width: 576px) {
+      font-size: 32px;
+    }
+  }
+
+  /* --- Responsive Claimable Rewards Panel --- */
+  .panel {
+    margin-top: 32px;
+    background: #181a1b;
+    border: 2px solid #4fd1c5;
+    border-radius: 12px;
+    padding: 32px 24px 24px 24px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .icon {
+      margin: 0 auto 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      left: 0;
+      right: 0;
+    }
+
+    .title {
+      text-align: center;
+      margin-bottom: 18px;
+      color: #6ee7c7;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .value {
+      color: #6ee7c7;
+      font-size: 24px;
+      line-height: 1;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .actions {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 10px;
+    }
+  }
+}
