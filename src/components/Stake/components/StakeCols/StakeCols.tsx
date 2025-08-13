@@ -16,6 +16,8 @@ import stakeColsStyles from './styles.module.scss';
 
 import { Modal } from 'react-bootstrap';
 
+import { fetchClaimableColsAndLockTime } from 'helpers/fetchClaimableCols';
+
 const COLS_TOKEN_ID = 'COLS-9d91b7';
 const COLS_TOKEN_ID_HEX = '434f4c532d396439316237';
 const STAKE_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
@@ -82,6 +84,10 @@ export const StakeCols = () => {
   const [showLockInfo, setShowLockInfo] = useState(false);
   const [withdrawPending, setWithdrawPending] = useState(false);
 
+  // New lock time state
+  const [lockTimeRaw, setLockTimeRaw] = useState<number | null>(null);
+  const [lockTimeFormatted, setLockTimeFormatted] = useState<string>("");
+
   useEffect(() => {
     const fetchCols = async () => {
       setLoading(true);
@@ -99,8 +105,41 @@ export const StakeCols = () => {
       }
       setLoading(false);
     };
-    if (address) fetchCols();
+
+    const fetchLockTime = async () => {
+      if (!address) {
+        setLockTimeRaw(null);
+        setLockTimeFormatted('');
+        return;
+      }
+      try {
+        const { lockTime } = await fetchClaimableColsAndLockTime({
+          contract: STAKE_CONTRACT,
+          entity: 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0',
+          user: address,
+          providerUrl: network.gatewayAddress
+        });
+        setLockTimeRaw(lockTime);
+        setLockTimeFormatted(formatLockTime(lockTime));
+      } catch {
+        setLockTimeRaw(null);
+        setLockTimeFormatted('');
+      }
+    };
+
+    fetchCols();
+    fetchLockTime();
   }, [address]);
+
+  function formatLockTime(lockTimestamp: number) {
+    if (lockTimestamp === 0) return 'No lock';
+    const now = Math.floor(Date.now() / 1000);
+    const diff = lockTimestamp - now;
+    if (diff <= 0) return 'Unlocked';
+    const days = Math.floor(diff / (3600 * 24));
+    const hours = Math.floor((diff % (3600 * 24)) / 3600);
+    return `${days}d ${hours}h`;
+  }
 
   const handleWithdrawConfirmed = async () => {
     setShowLockInfo(false);
@@ -154,6 +193,9 @@ export const StakeCols = () => {
       setError(e?.message || 'Failed to send transaction');
     }
   };
+
+  // Button enabled only if lock time expired or no lock
+  const isWithdrawEnabled = lockTimeRaw !== null && lockTimeRaw <= Math.floor(Date.now() / 1000);
 
   return (
     <div className={styles.wrapper}>
@@ -220,8 +262,8 @@ export const StakeCols = () => {
                 errors,
                 values,
                 touched,
-                handleChange,
                 handleBlur,
+                handleChange,
                 handleSubmit,
                 setFieldValue
               }) => {
@@ -300,17 +342,25 @@ export const StakeCols = () => {
           </div>
         )}
       />
-      <div style={{ marginTop: 16, width: '100%', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ marginTop: 16, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <button
           type="button"
           className={classNames(stakeColsStyles.trigger, {
-            [stakeColsStyles.disabled]: pending || withdrawPending
+            [stakeColsStyles.disabled]: pending || !isWithdrawEnabled || withdrawPending
           })}
           onClick={handleWithdrawClick}
-          disabled={pending || withdrawPending}
+          disabled={pending || !isWithdrawEnabled || withdrawPending}
+          title={isWithdrawEnabled ? "Withdraw COLS" : `COLS locked. Remaining: ${lockTimeFormatted}`}
         >
           Withdraw COLS
         </button>
+        <div style={{ marginTop: 8, color: '#6ee7c7', fontSize: 14 }}>
+          {lockTimeRaw !== null && lockTimeRaw > Math.floor(Date.now() / 1000) ? (
+            <>Remaining Lock Time: {lockTimeFormatted}</>
+          ) : (
+            <>COLS tokens are unlocked and can be withdrawn</>
+          )}
+        </div>
       </div>
     </div>
   );

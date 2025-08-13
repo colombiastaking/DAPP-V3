@@ -4,7 +4,7 @@ import { useGetActiveTransactionsStatus } from "@multiversx/sdk-dapp/hooks/trans
 import classNames from "classnames";
 import { sendTransactions } from "@multiversx/sdk-dapp/services/transactions/sendTransactions";
 import { network } from "config";
-import { fetchClaimableCols } from "helpers/fetchClaimableCols";
+import { fetchClaimableColsAndLockTime } from "helpers/fetchClaimableCols";
 import { AnimatedDots } from "components/AnimatedDots";
 
 const CLAIM_COLS_CONTRACT = "erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0";
@@ -44,13 +44,13 @@ export function ClaimColsButton({ onClaimed }: { onClaimed: () => void }) {
           setLoading(false);
           return;
         }
-        const amount = await fetchClaimableCols({
+        const { claimable } = await fetchClaimableColsAndLockTime({
           contract: CLAIM_COLS_CONTRACT,
           entity: ENTITY_ADDRESS,
           user: address,
           providerUrl: network.gatewayAddress
         });
-        if (mounted) setClaimable(amount);
+        if (mounted) setClaimable(claimable);
       } catch (e: any) {
         if (mounted) setError("Failed to fetch claimable COLS");
       }

@@ -47,7 +47,7 @@ const ABI_JSON = {
   ]
 };
 
-export async function fetchClaimableCols({
+export async function fetchClaimableColsAndLockTime({
   contract,
   entity,
   user,
@@ -57,7 +57,7 @@ export async function fetchClaimableCols({
   entity: string;
   user: string;
   providerUrl: string;
-}): Promise<string> {
+}): Promise<{ claimable: string; lockTime: number }> {
   const abiRegistry = AbiRegistry.create(ABI_JSON as any);
   const parser = new ResultsParser();
 
@@ -76,7 +76,10 @@ export async function fetchClaimableCols({
   const endpointDef = abiRegistry.getEndpoint("getEarnerInfo");
   const { firstValue } = parser.parseQueryResponse(response, endpointDef);
 
-  if (!firstValue) return "0";
-  const rewardAmount = firstValue.valueOf().reward_amount;
-  return rewardAmount ? rewardAmount.toString() : "0";
+  if (!firstValue) return { claimable: "0", lockTime: 0 };
+  const value = firstValue.valueOf();
+  const rewardAmount = value.reward_amount ? value.reward_amount.toString() : "0";
+  const lockTime = value.stake_locked_until ? Number(value.stake_locked_until) : 0;
+
+  return { claimable: rewardAmount, lockTime };
 }

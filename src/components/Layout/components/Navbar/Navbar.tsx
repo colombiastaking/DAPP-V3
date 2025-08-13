@@ -40,6 +40,7 @@ export const Navbar = () => {
       }
       setLoading(false);
     };
+
     if (address) fetchCols();
   }, [address]);
 
