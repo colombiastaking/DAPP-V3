@@ -14,8 +14,6 @@ import { network } from 'config';
 import styles from '../Delegate/styles.module.scss';
 import stakeColsStyles from './styles.module.scss';
 
-import { Modal } from 'react-bootstrap';
-
 import { fetchClaimableColsAndLockTime } from 'helpers/fetchClaimableCols';
 
 const COLS_TOKEN_ID = 'COLS-9d91b7';
@@ -41,37 +39,14 @@ function denominateCols(raw: string) {
   return decPart ? `${intPart}.${decPart}` : intPart;
 }
 
-function LockInfoModal({ show, onClose, onConfirm }: { show: boolean; onClose: () => void; onConfirm: () => void }) {
-  return (
-    <Modal show={show} onHide={onClose} centered animation={false}>
-      <div style={{ padding: 32, textAlign: 'center', background: '#242526', borderRadius: 12 }}>
-        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 12, color: '#6ee7c7' }}>
-          <span role="img" aria-label="lock">🔒</span> 15-Day Lock Period
-        </div>
-        <div style={{ color: '#fff', fontSize: 16, marginBottom: 18 }}>
-          <b>Important:</b> Please ensure your last stake transaction is older than 15 days.<br />
-          Otherwise, your COLS tokens are still locked and cannot be withdrawn.
-        </div>
-        <button
-          style={{
-            background: '#6ee7c7',
-            color: '#181a1b',
-            fontWeight: 700,
-            borderRadius: 7,
-            padding: '12px 30px',
-            border: 'none',
-            fontSize: 16,
-            marginTop: 8,
-            boxShadow: '0 2px 8px #6ee7c7aa',
-            cursor: 'pointer'
-          }}
-          onClick={onConfirm}
-        >
-          I Understand, Withdraw COLS
-        </button>
-      </div>
-    </Modal>
-  );
+function formatLockTime(lockTimestamp: number) {
+  if (lockTimestamp === 0) return 'No lock';
+  const now = Math.floor(Date.now() / 1000);
+  const diff = lockTimestamp - now;
+  if (diff <= 0) return 'Unlocked';
+  const days = Math.floor(diff / (3600 * 24));
+  const hours = Math.floor((diff % (3600 * 24)) / 3600);
+  return `${days}d ${hours}h`;
 }
 
 export const StakeCols = () => {
@@ -81,7 +56,6 @@ export const StakeCols = () => {
   const [colsBalance, setColsBalance] = useState<string>('0');
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [showLockInfo, setShowLockInfo] = useState(false);
   const [withdrawPending, setWithdrawPending] = useState(false);
 
   // New lock time state
@@ -131,20 +105,9 @@ export const StakeCols = () => {
     fetchLockTime();
   }, [address]);
 
-  function formatLockTime(lockTimestamp: number) {
-    if (lockTimestamp === 0) return 'No lock';
-    const now = Math.floor(Date.now() / 1000);
-    const diff = lockTimestamp - now;
-    if (diff <= 0) return 'Unlocked';
-    const days = Math.floor(diff / (3600 * 24));
-    const hours = Math.floor((diff % (3600 * 24)) / 3600);
-    return `${days}d ${hours}h`;
-  }
-
-  const handleWithdrawConfirmed = async () => {
-    setShowLockInfo(false);
-    setWithdrawPending(true);
+  const handleWithdrawClick = async () => {
     setError(null);
+    setWithdrawPending(true);
     try {
       await sendTransactions({
         transactions: [
@@ -160,10 +123,6 @@ export const StakeCols = () => {
       setError(e?.message || 'Failed to send transaction');
     }
     setWithdrawPending(false);
-  };
-
-  const handleWithdrawClick = () => {
-    setShowLockInfo(true);
   };
 
   const handleStakeSubmit = async (amount: string, onClose: () => void) => {
@@ -199,11 +158,6 @@ export const StakeCols = () => {
 
   return (
     <div className={styles.wrapper}>
-      <LockInfoModal
-        show={showLockInfo}
-        onClose={() => setShowLockInfo(false)}
-        onConfirm={handleWithdrawConfirmed}
-      />
       <Action
         title="Stake COLS"
         description="Enter the amount of COLS tokens you want to stake."
