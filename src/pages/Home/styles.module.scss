@@ -94,11 +94,18 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    align-items: center; /* Center children horizontally */
+    padding-left: 12px; /* Add some horizontal padding */
+    padding-right: 12px;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .assetCard {
     width: 100%;
+    max-width: 320px; /* Limit max width for better centering */
     min-width: auto;
+    box-sizing: border-box;
   }
 
   /* Move Total Value below the other two */
