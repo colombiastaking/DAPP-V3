@@ -413,6 +413,22 @@ export const Migration = () => {
   return (
     <div className={styles.centered}>
       <div className={styles.benefitBox}>
+        <div style={{ marginBottom: 16, width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <h2
+            style={{
+              background: '#1976d2',
+              color: '#fff',
+              borderRadius: 8,
+              padding: '6px 12px',
+              display: 'inline-block',
+              fontWeight: 700,
+              userSelect: 'none'
+            }}
+          >
+            10 days Migration Benefit
+          </h2>
+        </div>
+
         <ContactClaimButton
           disabled={false}
           selectedProviders={selectedProviders}
@@ -428,9 +444,9 @@ export const Migration = () => {
           userAddress={address}
         />
         <h3 className={styles.sectionTitle} style={{ marginTop: 16 }}>
-          10 days Migration Benefit
+          To be eligible, you must stake COLS tokens equal to the sum of your current Colombia Staking eGLD delegation plus the eGLD amount you want to migrate from other providers.
           <HelpIcon text={
-            "To be eligible, you must stake COLS tokens equal to the sum of your current Colombia Staking eGLD delegation plus the eGLD amount you want to migrate from other providers.\n\nExample: If you have 1250 eGLD delegated at Colombia Staking and want to migrate 50 eGLD from other providers, you must stake at least 1300 COLS tokens.\n\nSelect one or more providers below to start the migration process."
+            "Example: If you have 1250 eGLD delegated at Colombia Staking and want to migrate 50 eGLD from other providers, you must stake at least 1300 COLS tokens.\n\nSelect one or more providers below to start the migration process."
           } />
         </h3>
         <div className={styles.section}>
@@ -536,7 +552,7 @@ export const Migration = () => {
               Step 2: Stake COLS
               <HelpIcon text="You must stake COLS tokens equal to your current Colombia Staking eGLD delegation plus the eGLD amount you want to migrate." />
             </div>
-            <div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
               <StakeCols />
             </div>
           </div>
