@@ -95,7 +95,7 @@ export function ClaimEgldButton({ onClaimed }: { onClaimed: () => void }) {
           padding: "2px 10px",
           fontSize: 15
         }}>
-          {claimable !== null ? claimable : "—"}
+          {claimable !== null ? Number(claimable).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : "—"}
         </span>
       )}
       <span role="img" aria-label="gift">🎁</span>

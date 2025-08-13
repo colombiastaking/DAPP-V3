@@ -12,16 +12,16 @@ const ENTITY_ADDRESS = "erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rs
 const CLAIM_COLS_DATA = "claimRewards@00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787";
 const CLAIM_COLS_GAS_LIMIT = 10_000_000;
 
-// Format to 2 decimals, with commas
+// Format to 4 decimals, with commas
 function denominateCols(raw: string) {
-  if (!raw || raw === "0") return "0.00";
+  if (!raw || raw === "0") return "0.0000";
   let str = raw.padStart(19, "0");
   const intPart = str.slice(0, -18) || "0";
   let decPart = str.slice(-18).replace(/0+$/, "");
   let result = decPart ? `${intPart}.${decPart}` : intPart;
-  // Format to 2 decimals
+  // Format to 4 decimals
   let num = Number(result);
-  let formatted = num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let formatted = num.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
   return formatted;
 }
 
