@@ -4,7 +4,6 @@ import axios from 'axios';
 import classNames from 'classnames';
 import { network } from 'config';
 import { useColsAprContext } from '../../context/ColsAprContext';
-import { useGlobalContext } from '../../context';
 import { Formik } from 'formik';
 import { object, string } from 'yup';
 import BigNumber from 'bignumber.js';
@@ -13,14 +12,7 @@ import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sen
 import { HelpIcon } from 'components/HelpIcon';
 import styles from './Migration.module.scss';
 
-import { MigrationStakeCols } from './MigrationStakeCols';
-
 function formatEgld(amount: string | number) {
-  const num = Number(amount);
-  if (isNaN(num)) return amount;
-  return (num / 1e18).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 });
-}
-function formatCols(amount: string | number) {
   const num = Number(amount);
   if (isNaN(num)) return amount;
   return (num / 1e18).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 });
@@ -335,14 +327,11 @@ function Withdrawal({
 
 export const Migration = () => {
   const { address } = useGetAccountInfo();
-  const { stakedCols, userActiveStake } = useGlobalContext();
   const [loading, setLoading] = useState(true);
   const [providerMap, setProviderMap] = useState<Record<string, string>>({});
   const [delegationList, setDelegationList] = useState<any[]>([]);
   const [providerDetails, setProviderDetails] = useState<any[]>([]);
   const [selectedContracts, setSelectedContracts] = useState<string[]>([]);
-  const [status, setStatus] = useState<'none'|'undelegating'|'eligible'|'completed'>('none');
-  const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
   const [undelegateModal, setUndelegateModal] = useState<{contract: string, providerName: string, maxAmount: string} | null>(null);
 
   const { baseApr, colsPrice, egldPrice } = useColsAprContext();
@@ -407,33 +396,18 @@ export const Migration = () => {
     setLoading(false);
   };
 
-  const fetchWithdrawals = async () => {
-    try {
-      const { data } = await axios.get(`https://api.multiversx.com/accounts/${address}/withdrawals`);
-      setPendingWithdrawals(data || []);
-    } catch {
-      setPendingWithdrawals([]);
-    }
-  };
-
   useEffect(() => {
     if (!address) return;
     fetchProviderListAndDelegation();
-    fetchWithdrawals();
   }, [address]);
 
   useEffect(() => {
     if (delegationList.length > 0) {
       buildProviderDetailsFromDelegationList();
-      fetchWithdrawals();
     } else {
       setProviderDetails([]);
     }
   }, [JSON.stringify(delegationList)]);
-
-  // Convert all amounts from wei to decimals for calculation
-  const stakedColsNum = new BigNumber(stakedCols?.data || '0').dividedBy(1e18);
-  const currentColombiaEgldNum = new BigNumber(userActiveStake?.data || '0').dividedBy(1e18);
 
   const selectedProviders = providerDetails
     .filter((d: any) => selectedContracts.includes(d.key))
@@ -452,42 +426,6 @@ export const Migration = () => {
     new BigNumber(0)
   );
 
-  // Calculate required COLS = currentColombiaEgld + totalEgldToMigrate - stakedCols
-  let requiredColsNum = currentColombiaEgldNum.plus(totalEgldToMigrateNum).minus(stakedColsNum);
-  if (requiredColsNum.isNegative()) requiredColsNum = new BigNumber(0);
-
-  const hasEnoughCols = stakedColsNum.gte(currentColombiaEgldNum.plus(totalEgldToMigrateNum));
-  const missingColsNum = hasEnoughCols ? new BigNumber(0) : requiredColsNum;
-
-  useEffect(() => {
-    if (selectedProviders.length === 0) { setStatus('none'); return; }
-    if (currentColombiaEgldNum.gt(0) && currentColombiaEgldNum.gte(totalEgldToMigrateNum)) {
-      setStatus('completed');
-    } else if (
-      hasEnoughCols &&
-      selectedProviders.every(
-        (sp) =>
-          sp.waiting ||
-          pendingWithdrawals.some(
-            (w) => w.contract === sp.contract && new BigNumber(w.userAmount).gt(0)
-          )
-      )
-    ) {
-      setStatus('eligible');
-    } else if (hasEnoughCols) {
-      setStatus('undelegating');
-    } else {
-      setStatus('none');
-    }
-  }, [
-    selectedProviders,
-    currentColombiaEgldNum.toString(),
-    stakedColsNum.toString(),
-    totalEgldToMigrateNum.toString(),
-    pendingWithdrawals,
-    hasEnoughCols
-  ]);
-
   const apr10d =
     baseApr && egldPrice && colsPrice && totalEgldToMigrateNum.gt(0)
       ? totalEgldToMigrateNum.multipliedBy(baseApr / 100).multipliedBy(10 / 365).multipliedBy(egldPrice).dividedBy(colsPrice).toFixed(3)
@@ -501,13 +439,13 @@ export const Migration = () => {
         <h3 className={styles.sectionTitle}>
           10 days Migration Benefit
           <HelpIcon text={
-            "If you move your eGLD from one or more other providers to Colombia Staking and stake the same amount of COLS, you can claim a 10-day APR reward in COLS.\n\nYou must have 1 COLS staked for every 1 eGLD you want to migrate, in addition to your current Colombia Staking delegation.\n\nExample: If you have 1250 eGLD and 1250 COLS staked at Colombia Staking, and want to migrate 50 eGLD from other providers, you must stake 50 additional COLS (total 1300 COLS) to be eligible."
+            "To be eligible, you must stake COLS tokens equal to the sum of your current Colombia Staking eGLD delegation plus the eGLD amount you want to migrate from other providers.\n\nExample: If you have 1250 eGLD delegated at Colombia Staking and want to migrate 50 eGLD from other providers, you must stake at least 1300 COLS tokens.\n\nSelect one or more providers below to start the migration process."
           } />
         </h3>
         <div className={styles.section}>
           <div className={styles.rowLabel}>
             Your eGLD Staked with Other Providers
-            <HelpIcon text="These are your current eGLD delegations with other providers. Select one or more to start the migration process. If you have eGLD in the waiting period (unbonding), it will also appear here." />
+            <HelpIcon text="These are your current eGLD delegations with other providers. Select one or more to start the migration process. eGLD in waiting period (unbonding) is also shown." />
           </div>
           {providerDetails.length === 0 && (
             <div>No eGLD staked or waiting with other providers.</div>
@@ -517,11 +455,6 @@ export const Migration = () => {
               const providerName = d.providerName;
               const key = d.key;
               const isSelected = selectedContracts.includes(key);
-              const requiredColsForThisNum = currentColombiaEgldNum.plus(
-                d.waiting ? new BigNumber(d.waitingAmount).dividedBy(1e18) : new BigNumber(d.userActiveStake).dividedBy(1e18)
-              );
-              const hasEnoughColsForThis = stakedColsNum.gte(requiredColsForThisNum);
-              const missingColsForThisNum = hasEnoughColsForThis ? new BigNumber(0) : requiredColsForThisNum.minus(stakedColsNum);
               return (
                 <div key={key} style={{ width: "100%" }}>
                   <button
@@ -565,7 +498,8 @@ export const Migration = () => {
                         >
                           View
                         </a>
-                        {!d.waiting && hasEnoughColsForThis && (
+                        {/* Always allow undelegate */}
+                        {!d.waiting && (
                           <button
                             className={styles.undelegateBtn}
                             type="button"
@@ -585,18 +519,9 @@ export const Migration = () => {
                           text={
                             d.waiting
                               ? "This eGLD is in the waiting period (unbonding) and will be available to withdraw soon."
-                              : hasEnoughColsForThis
-                              ? "Click to undelegate from this provider."
-                              : "You need to stake enough COLS before you can undelegate from this provider. (You need at least your current Colombia eGLD + this provider's eGLD in COLS staked.)"
+                              : "You can undelegate from this provider."
                           }
                         />
-                        {!hasEnoughColsForThis && !d.waiting && (
-                          <div className={styles.missingCols}>
-                            <span>
-                              <b>Missing COLS:</b> {formatCols(missingColsForThisNum.toString())}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     )}
                   </button>
@@ -614,77 +539,42 @@ export const Migration = () => {
             })}
           </div>
         </div>
-        <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
-          <b>Your eGLD Delegated at Colombia Staking:</b> {currentColombiaEgldNum.toFixed(3)} EGLD
-        </div>
-        {selectedProviders.length > 0 && (
+        {selectedContracts.length > 0 && (
           <div className={styles.section}>
             <div className={styles.rowLabel}>
               Step 2: Stake COLS
-              <HelpIcon text="You must have 1 COLS staked for every 1 eGLD you want to migrate, in addition to your current Colombia Staking delegation. The required COLS is: (your current Colombia eGLD + total eGLD to migrate) minus your currently staked COLS." />
+              <HelpIcon text="You must stake COLS tokens equal to your current Colombia Staking eGLD delegation plus the eGLD amount you want to migrate." />
             </div>
             <div>
-              <label>
-                Required COLS to stake:&nbsp;
-                <input
-                  type="number"
-                  min={0}
-                  value={requiredColsNum.toNumber()}
-                  readOnly
-                  style={{ width: 100 }}
-                />{' '}
-                COLS
-              </label>
-              <HelpIcon
-                text={
-                  hasEnoughCols
-                    ? 'You have enough COLS staked to be eligible for the 10 days benefit.'
-                    : 'You need to stake more COLS to be eligible. Stake at least as many COLS as your current Colombia eGLD plus the eGLD you want to migrate, minus your currently staked COLS.'
-                }
-              />
-            </div>
-            {!hasEnoughCols && (
-              <div className={styles.missingCols}>
-                <span>
-                  <b>Missing COLS:</b> {formatCols(missingColsNum.toString())}
-                </span>
-                <MigrationStakeCols
-                  requiredCols={missingColsNum.toNumber()}
-                  onStaked={() => {
-                    fetchProviderListAndDelegation();
-                  }}
-                />
-                <HelpIcon text="Stake COLS tokens here. You must have at least the required amount staked before you can claim the reward or undelegate from the other provider." />
-              </div>
-            )}
-            {hasEnoughCols && (
-              <div
-                style={{
-                  color: '#6ee7c7',
-                  fontWeight: 600,
-                  marginTop: 8
+              <button
+                className={styles.stakeBtn}
+                onClick={() => {
+                  const amount = prompt('Enter amount of COLS to stake:', '1');
+                  if (amount !== null) {
+                    const num = parseInt(amount, 10);
+                    if (!isNaN(num) && num > 0) {
+                      alert(`You entered to stake ${num} COLS tokens. Please use the Stake tab to stake tokens.`);
+                    } else {
+                      alert('Please enter a valid positive integer amount.');
+                    }
+                  }
                 }}
               >
-                You have enough COLS staked to migrate the selected eGLD.
-              </div>
-            )}
+                Stake COLS Tokens
+              </button>
+              <HelpIcon text="Enter the amount of COLS tokens you want to stake. This is a neutral prompt; please use the Stake tab to perform staking." />
+            </div>
             <div style={{ marginTop: 12 }}>
               <b>10-day APR Reward (in COLS):</b> {apr10d}
               <HelpIcon text="This is the amount of COLS you will receive as a reward for moving your eGLD and staking COLS." />
             </div>
             <div style={{ marginTop: 12 }}>
-              <b>Status:</b>{' '}
-              {status === 'none' && 'Select provider(s) and stake COLS'}
-              {status === 'undelegating' && 'Waiting for undelegation...'}
-              {status === 'eligible' &&
-                'Eligible! You can now claim your reward.'}
-              {status === 'completed' &&
-                'Completed! You will receive your reward soon.'}
-              <HelpIcon text="You can only claim the reward after you have staked the required COLS and completed the undelegation from your previous provider(s)." />
+              <b>Status:</b> Select provider(s) and stake COLS
+              <HelpIcon text="Claim Contact button is always available. Please ensure you have staked enough COLS tokens as per eligibility condition." />
             </div>
             <div style={{ marginTop: 18 }}>
               <ContactClaimButton
-                disabled={!(status === 'eligible')}
+                disabled={false}
                 selectedProviders={selectedProviders}
                 totalEgld={totalEgldToMigrateNum.toNumber()}
                 userAddress={address}
