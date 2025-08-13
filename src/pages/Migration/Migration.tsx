@@ -13,6 +13,8 @@ import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sen
 import { HelpIcon } from 'components/HelpIcon';
 import styles from './Migration.module.scss';
 
+import { MigrationStakeCols } from './MigrationStakeCols';
+
 function formatEgld(amount: string | number) {
   const num = Number(amount);
   if (isNaN(num)) return amount;
@@ -333,12 +335,11 @@ function Withdrawal({
 
 export const Migration = () => {
   const { address } = useGetAccountInfo();
-  const { stakedCols } = useGlobalContext();
+  const { stakedCols, userActiveStake } = useGlobalContext();
   const [loading, setLoading] = useState(true);
   const [providerMap, setProviderMap] = useState<Record<string, string>>({});
   const [delegationList, setDelegationList] = useState<any[]>([]);
   const [providerDetails, setProviderDetails] = useState<any[]>([]);
-  const [colombiaStaked, setColombiaStaked] = useState('0');
   const [selectedContracts, setSelectedContracts] = useState<string[]>([]);
   const [status, setStatus] = useState<'none'|'undelegating'|'eligible'|'completed'>('none');
   const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
@@ -406,16 +407,11 @@ export const Migration = () => {
     setLoading(false);
   };
 
-  const fetchColombiaAndWithdrawals = async () => {
+  const fetchWithdrawals = async () => {
     try {
-      const [colRes, wdRes] = await Promise.all([
-        axios.get(`https://api.multiversx.com/accounts/${address}/delegation/${network.delegationContract}`),
-        axios.get(`https://api.multiversx.com/accounts/${address}/withdrawals`)
-      ]);
-      setColombiaStaked(colRes.data?.userActiveStake || '0');
-      setPendingWithdrawals(wdRes.data || []);
+      const { data } = await axios.get(`https://api.multiversx.com/accounts/${address}/withdrawals`);
+      setPendingWithdrawals(data || []);
     } catch {
-      setColombiaStaked('0');
       setPendingWithdrawals([]);
     }
   };
@@ -423,18 +419,21 @@ export const Migration = () => {
   useEffect(() => {
     if (!address) return;
     fetchProviderListAndDelegation();
+    fetchWithdrawals();
   }, [address]);
 
   useEffect(() => {
     if (delegationList.length > 0) {
       buildProviderDetailsFromDelegationList();
-      fetchColombiaAndWithdrawals();
+      fetchWithdrawals();
     } else {
       setProviderDetails([]);
     }
   }, [JSON.stringify(delegationList)]);
 
-  const totalColsStaked = Number(stakedCols?.data || 0);
+  // Convert all amounts from wei to decimals for calculation
+  const stakedColsNum = new BigNumber(stakedCols?.data || '0').dividedBy(1e18);
+  const currentColombiaEgldNum = new BigNumber(userActiveStake?.data || '0').dividedBy(1e18);
 
   const selectedProviders = providerDetails
     .filter((d: any) => selectedContracts.includes(d.key))
@@ -443,23 +442,26 @@ export const Migration = () => {
       name: d.providerName
     }));
 
-  const totalEgldToMigrate = selectedProviders.reduce(
+  const totalEgldToMigrateNum = selectedProviders.reduce(
     (sum, d) =>
-      sum +
-      (d.waiting
-        ? Number(d.waitingAmount)
-        : Number(d.userActiveStake)),
-    0
+      sum.plus(
+        d.waiting
+          ? new BigNumber(d.waitingAmount).dividedBy(1e18)
+          : new BigNumber(d.userActiveStake).dividedBy(1e18)
+      ),
+    new BigNumber(0)
   );
 
-  const currentColombiaEgld = Number(colombiaStaked);
-  const requiredCols = currentColombiaEgld + totalEgldToMigrate;
-  const hasEnoughCols = totalColsStaked >= requiredCols;
-  const missingCols = hasEnoughCols ? 0 : requiredCols - totalColsStaked;
+  // Calculate required COLS = currentColombiaEgld + totalEgldToMigrate - stakedCols
+  let requiredColsNum = currentColombiaEgldNum.plus(totalEgldToMigrateNum).minus(stakedColsNum);
+  if (requiredColsNum.isNegative()) requiredColsNum = new BigNumber(0);
+
+  const hasEnoughCols = stakedColsNum.gte(currentColombiaEgldNum.plus(totalEgldToMigrateNum));
+  const missingColsNum = hasEnoughCols ? new BigNumber(0) : requiredColsNum;
 
   useEffect(() => {
     if (selectedProviders.length === 0) { setStatus('none'); return; }
-    if (currentColombiaEgld > 0 && currentColombiaEgld >= totalEgldToMigrate) {
+    if (currentColombiaEgldNum.gt(0) && currentColombiaEgldNum.gte(totalEgldToMigrateNum)) {
       setStatus('completed');
     } else if (
       hasEnoughCols &&
@@ -467,7 +469,7 @@ export const Migration = () => {
         (sp) =>
           sp.waiting ||
           pendingWithdrawals.some(
-            (w) => w.contract === sp.contract && Number(w.userAmount) > 0
+            (w) => w.contract === sp.contract && new BigNumber(w.userAmount).gt(0)
           )
       )
     ) {
@@ -479,22 +481,16 @@ export const Migration = () => {
     }
   }, [
     selectedProviders,
-    currentColombiaEgld,
-    totalColsStaked,
-    totalEgldToMigrate,
+    currentColombiaEgldNum.toString(),
+    stakedColsNum.toString(),
+    totalEgldToMigrateNum.toString(),
     pendingWithdrawals,
     hasEnoughCols
   ]);
 
   const apr10d =
-    baseApr && egldPrice && colsPrice && totalEgldToMigrate
-      ? (
-          (totalEgldToMigrate / 1e18) *
-          (baseApr / 100) *
-          (10 / 365) *
-          egldPrice /
-          colsPrice
-        ).toFixed(3)
+    baseApr && egldPrice && colsPrice && totalEgldToMigrateNum.gt(0)
+      ? totalEgldToMigrateNum.multipliedBy(baseApr / 100).multipliedBy(10 / 365).multipliedBy(egldPrice).dividedBy(colsPrice).toFixed(3)
       : '0';
 
   if (loading) return <div className={styles.centered}><div className={styles.loading}>Loading...</div></div>;
@@ -521,13 +517,11 @@ export const Migration = () => {
               const providerName = d.providerName;
               const key = d.key;
               const isSelected = selectedContracts.includes(key);
-              const requiredColsForThis =
-                currentColombiaEgld +
-                (d.waiting ? Number(d.waitingAmount) : Number(d.userActiveStake));
-              const hasEnoughColsForThis = totalColsStaked >= requiredColsForThis;
-              const missingColsForThis = hasEnoughColsForThis
-                ? 0
-                : requiredColsForThis - totalColsStaked;
+              const requiredColsForThisNum = currentColombiaEgldNum.plus(
+                d.waiting ? new BigNumber(d.waitingAmount).dividedBy(1e18) : new BigNumber(d.userActiveStake).dividedBy(1e18)
+              );
+              const hasEnoughColsForThis = stakedColsNum.gte(requiredColsForThisNum);
+              const missingColsForThisNum = hasEnoughColsForThis ? new BigNumber(0) : requiredColsForThisNum.minus(stakedColsNum);
               return (
                 <div key={key} style={{ width: "100%" }}>
                   <button
@@ -599,7 +593,7 @@ export const Migration = () => {
                         {!hasEnoughColsForThis && !d.waiting && (
                           <div className={styles.missingCols}>
                             <span>
-                              <b>Missing COLS:</b> {formatCols(missingColsForThis)}
+                              <b>Missing COLS:</b> {formatCols(missingColsForThisNum.toString())}
                             </span>
                           </div>
                         )}
@@ -620,11 +614,14 @@ export const Migration = () => {
             })}
           </div>
         </div>
+        <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
+          <b>Your eGLD Delegated at Colombia Staking:</b> {currentColombiaEgldNum.toFixed(3)} EGLD
+        </div>
         {selectedProviders.length > 0 && (
           <div className={styles.section}>
             <div className={styles.rowLabel}>
               Step 2: Stake COLS
-              <HelpIcon text="You must have 1 COLS staked for every 1 eGLD you want to migrate, in addition to your current Colombia Staking delegation. The required COLS is: (your current Colombia eGLD + total eGLD to migrate)." />
+              <HelpIcon text="You must have 1 COLS staked for every 1 eGLD you want to migrate, in addition to your current Colombia Staking delegation. The required COLS is: (your current Colombia eGLD + total eGLD to migrate) minus your currently staked COLS." />
             </div>
             <div>
               <label>
@@ -632,7 +629,7 @@ export const Migration = () => {
                 <input
                   type="number"
                   min={0}
-                  value={Number(requiredCols) / 1e18}
+                  value={requiredColsNum.toNumber()}
                   readOnly
                   style={{ width: 100 }}
                 />{' '}
@@ -642,27 +639,21 @@ export const Migration = () => {
                 text={
                   hasEnoughCols
                     ? 'You have enough COLS staked to be eligible for the 10 days benefit.'
-                    : 'You need to stake more COLS to be eligible. Stake at least as many COLS as your current Colombia eGLD plus the eGLD you want to migrate.'
+                    : 'You need to stake more COLS to be eligible. Stake at least as many COLS as your current Colombia eGLD plus the eGLD you want to migrate, minus your currently staked COLS.'
                 }
               />
             </div>
             {!hasEnoughCols && (
               <div className={styles.missingCols}>
                 <span>
-                  <b>Missing COLS:</b> {formatCols(missingCols)}
+                  <b>Missing COLS:</b> {formatCols(missingColsNum.toString())}
                 </span>
-                <button
-                  className={styles.stakeBtn}
-                  onClick={() =>
-                    window.open(
-                      'https://app.multiversx.com/tokens/COLS-9d91b7',
-                      '_blank'
-                    )
-                  }
-                  disabled={hasEnoughCols}
-                >
-                  Stake {formatCols(missingCols > 0 ? missingCols : requiredCols)} COLS
-                </button>
+                <MigrationStakeCols
+                  requiredCols={missingColsNum.toNumber()}
+                  onStaked={() => {
+                    fetchProviderListAndDelegation();
+                  }}
+                />
                 <HelpIcon text="Stake COLS tokens here. You must have at least the required amount staked before you can claim the reward or undelegate from the other provider." />
               </div>
             )}
@@ -695,7 +686,7 @@ export const Migration = () => {
               <ContactClaimButton
                 disabled={!(status === 'eligible')}
                 selectedProviders={selectedProviders}
-                totalEgld={totalEgldToMigrate}
+                totalEgld={totalEgldToMigrateNum.toNumber()}
                 userAddress={address}
               />
             </div>
