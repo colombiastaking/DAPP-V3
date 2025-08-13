@@ -3,7 +3,6 @@ import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAcco
 import axios from 'axios';
 import classNames from 'classnames';
 import { network } from 'config';
-import { useColsAprContext } from '../../context/ColsAprContext';
 import { Formik } from 'formik';
 import { object, string } from 'yup';
 import BigNumber from 'bignumber.js';
@@ -11,6 +10,8 @@ import { Modal } from 'react-bootstrap';
 import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sendTransactions';
 import { HelpIcon } from 'components/HelpIcon';
 import styles from './Migration.module.scss';
+
+import { StakeCols } from 'components/Stake/components/StakeCols';
 
 function formatEgld(amount: string | number) {
   const num = Number(amount);
@@ -36,7 +37,7 @@ function ContactClaimButton({ disabled, selectedProviders, totalEgld, userAddres
     setTimeout(() => setCopied(false), 1200);
   };
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div style={{ position: 'relative', display: 'inline-block', marginBottom: 16 }}>
       <button
         className={styles.claimBtn}
         disabled={disabled}
@@ -53,7 +54,7 @@ function ContactClaimButton({ disabled, selectedProviders, totalEgld, userAddres
               <a href="https://t.me/ColombiaStaking" target="_blank" rel="noopener noreferrer">
                 <span role="img" aria-label="telegram">💬</span> Telegram
               </a>
-              <button className={styles.copyBtn} onClick={handleCopy} style={{marginLeft:8}}>
+              <button className={styles.copyBtn} onClick={handleCopy} style={{ marginLeft: 8 }}>
                 {copied ? "Copied!" : "Copy Message"}
               </button>
             </li>
@@ -61,7 +62,7 @@ function ContactClaimButton({ disabled, selectedProviders, totalEgld, userAddres
               <a href="https://x.com/ColombiaStaking" target="_blank" rel="noopener noreferrer">
                 <span role="img" aria-label="x">𝕏</span> X
               </a>
-              <button className={styles.copyBtn} onClick={handleCopy} style={{marginLeft:8}}>
+              <button className={styles.copyBtn} onClick={handleCopy} style={{ marginLeft: 8 }}>
                 {copied ? "Copied!" : "Copy Message"}
               </button>
             </li>
@@ -327,17 +328,13 @@ function Withdrawal({
 
 export const Migration = () => {
   const { address } = useGetAccountInfo();
-  const [loading, setLoading] = useState(true);
   const [providerMap, setProviderMap] = useState<Record<string, string>>({});
   const [delegationList, setDelegationList] = useState<any[]>([]);
   const [providerDetails, setProviderDetails] = useState<any[]>([]);
   const [selectedContracts, setSelectedContracts] = useState<string[]>([]);
   const [undelegateModal, setUndelegateModal] = useState<{contract: string, providerName: string, maxAmount: string} | null>(null);
 
-  const { baseApr, colsPrice, egldPrice } = useColsAprContext();
-
   const fetchProviderListAndDelegation = async () => {
-    setLoading(true);
     try {
       const [provRes, delRes] = await Promise.all([
         axios.get('https://api.multiversx.com/providers?type=staking'),
@@ -353,11 +350,9 @@ export const Migration = () => {
     } catch {
       setDelegationList([]);
     }
-    setLoading(false);
   };
 
   const buildProviderDetailsFromDelegationList = () => {
-    setLoading(true);
     try {
       const providers: any[] = [];
       (delegationList || []).forEach((d: any) => {
@@ -393,7 +388,6 @@ export const Migration = () => {
     } catch {
       setProviderDetails([]);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -416,27 +410,24 @@ export const Migration = () => {
       name: d.providerName
     }));
 
-  const totalEgldToMigrateNum = selectedProviders.reduce(
-    (sum, d) =>
-      sum.plus(
-        d.waiting
-          ? new BigNumber(d.waitingAmount).dividedBy(1e18)
-          : new BigNumber(d.userActiveStake).dividedBy(1e18)
-      ),
-    new BigNumber(0)
-  );
-
-  const apr10d =
-    baseApr && egldPrice && colsPrice && totalEgldToMigrateNum.gt(0)
-      ? totalEgldToMigrateNum.multipliedBy(baseApr / 100).multipliedBy(10 / 365).multipliedBy(egldPrice).dividedBy(colsPrice).toFixed(3)
-      : '0';
-
-  if (loading) return <div className={styles.centered}><div className={styles.loading}>Loading...</div></div>;
-
   return (
     <div className={styles.centered}>
       <div className={styles.benefitBox}>
-        <h3 className={styles.sectionTitle}>
+        <ContactClaimButton
+          disabled={false}
+          selectedProviders={selectedProviders}
+          totalEgld={selectedProviders.reduce(
+            (sum, d) =>
+              sum.plus(
+                d.waiting
+                  ? new BigNumber(d.waitingAmount).dividedBy(1e18)
+                  : new BigNumber(d.userActiveStake).dividedBy(1e18)
+              ),
+            new BigNumber(0)
+          ).toNumber()}
+          userAddress={address}
+        />
+        <h3 className={styles.sectionTitle} style={{ marginTop: 16 }}>
           10 days Migration Benefit
           <HelpIcon text={
             "To be eligible, you must stake COLS tokens equal to the sum of your current Colombia Staking eGLD delegation plus the eGLD amount you want to migrate from other providers.\n\nExample: If you have 1250 eGLD delegated at Colombia Staking and want to migrate 50 eGLD from other providers, you must stake at least 1300 COLS tokens.\n\nSelect one or more providers below to start the migration process."
@@ -546,39 +537,7 @@ export const Migration = () => {
               <HelpIcon text="You must stake COLS tokens equal to your current Colombia Staking eGLD delegation plus the eGLD amount you want to migrate." />
             </div>
             <div>
-              <button
-                className={styles.stakeBtn}
-                onClick={() => {
-                  const amount = prompt('Enter amount of COLS to stake:', '1');
-                  if (amount !== null) {
-                    const num = parseInt(amount, 10);
-                    if (!isNaN(num) && num > 0) {
-                      alert(`You entered to stake ${num} COLS tokens. Please use the Stake tab to stake tokens.`);
-                    } else {
-                      alert('Please enter a valid positive integer amount.');
-                    }
-                  }
-                }}
-              >
-                Stake COLS Tokens
-              </button>
-              <HelpIcon text="Enter the amount of COLS tokens you want to stake. This is a neutral prompt; please use the Stake tab to perform staking." />
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <b>10-day APR Reward (in COLS):</b> {apr10d}
-              <HelpIcon text="This is the amount of COLS you will receive as a reward for moving your eGLD and staking COLS." />
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <b>Status:</b> Select provider(s) and stake COLS
-              <HelpIcon text="Claim Contact button is always available. Please ensure you have staked enough COLS tokens as per eligibility condition." />
-            </div>
-            <div style={{ marginTop: 18 }}>
-              <ContactClaimButton
-                disabled={false}
-                selectedProviders={selectedProviders}
-                totalEgld={totalEgldToMigrateNum.toNumber()}
-                userAddress={address}
-              />
+              <StakeCols />
             </div>
           </div>
         )}
