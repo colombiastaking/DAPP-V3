@@ -37,6 +37,10 @@ const useStakeData = () => {
   const { contractDetails, userClaimableRewards, totalActiveStake } =
     useGlobalContext();
 
+  const GAS_LIMIT_UNDELEGATE = 12000000;
+  const GAS_LIMIT_CLAIM_REWARDS = 2000000;
+  const GAS_LIMIT_REDELEGATE = 12000000;
+
   const onDelegate =
     (callback: ActionCallbackType) =>
     async (data: DelegationPayloadType): Promise<void> => {
@@ -44,7 +48,8 @@ const useStakeData = () => {
         await sendTransaction({
           value: data.amount,
           type: 'delegate',
-          args: ''
+          args: '',
+          gasLimit: GAS_LIMIT_UNDELEGATE // Using 12M as delegate gas limit (same as undelegate)
         });
 
         setTimeout(callback, 250);
@@ -60,7 +65,8 @@ const useStakeData = () => {
         await sendTransaction({
           value: '0',
           type: 'unDelegate',
-          args: nominateValToHex(data.amount.toString())
+          args: nominateValToHex(data.amount.toString()),
+          gasLimit: GAS_LIMIT_UNDELEGATE
         });
 
         setTimeout(callback, 250);
@@ -75,7 +81,8 @@ const useStakeData = () => {
         await sendTransaction({
           value: '0',
           type: 'reDelegateRewards',
-          args: ''
+          args: '',
+          gasLimit: GAS_LIMIT_REDELEGATE
         });
 
         setTimeout(callback, 250);
@@ -90,7 +97,8 @@ const useStakeData = () => {
         await sendTransaction({
           value: '0',
           type: 'claimRewards',
-          args: ''
+          args: '',
+          gasLimit: GAS_LIMIT_CLAIM_REWARDS
         });
 
         setTimeout(callback, 250);

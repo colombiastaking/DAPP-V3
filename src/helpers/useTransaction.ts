@@ -11,13 +11,15 @@ interface TransactionParametersType {
   args: string;
   value: string;
   type: string;
+  gasLimit?: number; // Added optional gasLimit property here
 }
 
 const useTransaction = () => {
   const sendTransaction = async ({
     args,
     value,
-    type
+    type,
+    gasLimit
   }: TransactionParametersType) => {
     const address = new Address(network.delegationContract);
     const contract = new SmartContract({ address });
@@ -32,6 +34,9 @@ const useTransaction = () => {
         args === '' ? delegable.data : `${delegable.data}${args}`;
 
       const getGasLimit = (): number => {
+        if (gasLimit !== undefined) {
+          return gasLimit;
+        }
         const nodeKeys = args.split('@').slice(1);
 
         return delegable.gasLimit * (nodeKeys.length / 2);
