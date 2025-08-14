@@ -302,14 +302,14 @@ export function useColsApr({ trigger }: { trigger: any }) {
     // Iteratively adjust APRmax to match the sum of COLS-DIST
     const aprMin = 0.3; // CHANGED FROM 0.02 TO 0.3
     let aprMax = 15;
-    let step = 0.1;
+    let step = 0.01;
     let bestAprMax = aprMax;
     let bestDiff = Infinity;
-    let maxIter = 200;
+    let maxIter = 1500;
     let iter = 0;
     let lastSum = 0;
     while (iter < maxIter) {
-      if (aprMax > 25) aprMax = 25;
+      if (aprMax > 50) aprMax = 50;
       if (aprMax < aprMin) aprMax = aprMin;
       const sum = calcAprBonusTableSum({
         stakers: table.map(r => ({ ...r })), // fresh copy
@@ -319,7 +319,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         aprMin
       });
       const diff = Math.abs(sum - targetAvgAprBonus);
-      if (diff < 1) {
+      if (diff < 0.01) {  // Changed threshold from 1 to 0.1 here
         bestAprMax = aprMax;
         break;
       }
@@ -333,8 +333,8 @@ export function useColsApr({ trigger }: { trigger: any }) {
       } else {
         aprMax -= step;
       }
-      // Cap aprMax at 25
-      if (aprMax > 25) aprMax = 25;
+      // Cap aprMax at 50
+      if (aprMax > 50) aprMax = 50;
       if (aprMax < aprMin) aprMax = aprMin;
       // If direction changed, reduce step for finer search
       if ((lastSum < targetAvgAprBonus && sum > targetAvgAprBonus) ||
