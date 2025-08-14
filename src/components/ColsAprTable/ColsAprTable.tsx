@@ -7,7 +7,7 @@ const TARGET_USER = 'erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8
 
 export function ColsAprTable() {
   const { address } = useGetAccountInfo();
-  const { loading, stakers, egldPrice, colsPrice } = useColsAprContext();
+  const { loading, stakers, egldPrice, colsPrice, targetAvgAprBonus } = useColsAprContext();
   const [copied, setCopied] = useState(false);
 
   // Only show table if the logged-in user is the target user
@@ -69,10 +69,18 @@ export function ColsAprTable() {
             fontWeight: 600,
             fontSize: 15,
             cursor: 'pointer',
-            transition: 'background 0.2s'
+            transition: 'background 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
           }}
         >
           {copied ? 'Copied!' : 'Copy'}
+          {address === TARGET_USER && (
+            <span style={{ marginLeft: 12, fontWeight: 700, fontSize: 15, color: '#ffe082' }}>
+              targetAvgAprBonus: {targetAvgAprBonus.toFixed(6)}
+            </span>
+          )}
         </button>
       </h3>
       <pre style={{

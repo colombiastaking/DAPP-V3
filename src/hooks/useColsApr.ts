@@ -131,6 +131,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
   const [baseApr, setBaseApr] = useState<number>(0);
   const [agencyLockedEgld, setAgencyLockedEgld] = useState<number>(0);
   const [aprMax, setAprMax] = useState<number>(15);
+  const [targetAvgAprBonus, setTargetAvgAprBonus] = useState<number>(0);
 
   // Get agency service fee from global context
   const { contractDetails } = useGlobalContext();
@@ -296,6 +297,8 @@ export function useColsApr({ trigger }: { trigger: any }) {
         egldPrice / fetchedColsPrice
       ) / 365;
 
+    setTargetAvgAprBonus(targetAvgAprBonus);
+
     // Iteratively adjust APRmax to match the sum of COLS-DIST
     const aprMin = 0.3; // CHANGED FROM 0.02 TO 0.3
     let aprMax = 15;
@@ -449,5 +452,5 @@ export function useColsApr({ trigger }: { trigger: any }) {
     // eslint-disable-next-line
   }, [trigger, contractDetails]);
 
-  return { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, aprMax, recalc };
+  return { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, aprMax, targetAvgAprBonus, recalc };
 }
