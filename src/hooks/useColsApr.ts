@@ -14,7 +14,8 @@ import { useGlobalContext } from 'context';
 const PEERME_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const PEERME_ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
 
-const AGENCY_BUYBACK = 0.3;
+// --- CONSTANTS ---
+const AGENCY_BUYBACK = 0.3; 
 const DAO_DISTRIBUTION_RATIO = 0.333;
 const BONUS_BUYBACK_FACTOR = 0.66;
 
@@ -31,7 +32,7 @@ export interface ColsStakerRow {
   aprColsOnly?: number | null;
 }
 
-// --- Helper functions ---
+// --- API fetches ---
 async function fetchColsPriceFromApi() {
   try {
     const { data } = await axios.get(
@@ -39,41 +40,39 @@ async function fetchColsPriceFromApi() {
     );
     if (Array.isArray(data) && data.length > 0) {
       const last = data[data.length - 1];
-      if (last && typeof last.value === 'number') {
-        return Math.round(last.value * 1000) / 1000;
-      }
+      if (last && typeof last.value === 'number') return Math.round(last.value * 1000) / 1000;
     }
     return 0;
   } catch { return 0; }
 }
 
-async function fetchDelegationInfo() {
+async function fetchBaseAprFromApi() {
   try {
-    const provider = new ProxyNetworkProvider(network.gatewayAddress);
-    const query = new Query({
-      address: new Address(network.delegationContract),
-      func: new ContractFunction('getDelegationInfo'), // returns base APR and locked eGLD
-    });
-    const data = await provider.queryContract(query);
-    const parts = data.getReturnDataParts();
+    const { data } = await axios.get(
+      `https://api.multiversx.com/providers/${network.delegationContract}`
+    );
+    return data?.apr || 0;
+  } catch { return 0; }
+}
 
-    const baseApr = parts[0] ? Number(decodeBigNumber(parts[0])) / 1e2 : 0;
-    const lockedEgld = parts[1] ? Number(decodeBigNumber(parts[1])) / 1e18 : 0;
-    return { baseApr, lockedEgld };
-  } catch {
-    return { baseApr: 0, lockedEgld: 0 };
-  }
+async function fetchAgencyLockedEgld() {
+  try {
+    const { data } = await axios.get(
+      `https://api.multiversx.com/providers/${network.delegationContract}`
+    );
+    if (data?.locked) return Math.round((Number(data.locked) / 1e18) * 10000) / 10000;
+    return 0;
+  } catch { return 0; }
 }
 
 async function fetchEgldPrice() {
   try {
     const { data } = await axios.get(`${network.apiAddress}/economics`);
     return Number(data.price);
-  } catch {
-    return 0;
-  }
+  } catch { return 0; }
 }
 
+// --- COLS-only APR ---
 function calculateColsOnlyApr({
   sumColsStaked,
   baseApr,
@@ -110,6 +109,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   const { contractDetails } = useGlobalContext();
 
+  // --- Fetch COLS stakers ---
   const fetchColsStakers = useCallback(async () => {
     const provider = new ProxyNetworkProvider(network.gatewayAddress);
     const query = new Query({
@@ -128,26 +128,26 @@ export function useColsApr({ trigger }: { trigger: any }) {
     return result;
   }, []);
 
+  // --- Recalc function ---
   const recalc = useCallback(async () => {
     setLoading(true);
     const provider = new ProxyNetworkProvider(network.gatewayAddress);
 
-    // --- Parallelized fetches ---
-    const [colsStakers, fetchedEgldPrice, fetchedColsPrice, delegationInfo] = await Promise.all([
+    // 1. Parallel fetch: stakers, prices, base APR, locked eGLD
+    const [colsStakers, fetchedEgldPrice, fetchedColsPrice, fetchedBaseApr, lockedEgld] = await Promise.all([
       fetchColsStakers(),
       fetchEgldPrice(),
       fetchColsPriceFromApi(),
-      fetchDelegationInfo()
+      fetchBaseAprFromApi(),
+      fetchAgencyLockedEgld()
     ]);
-
-    const { baseApr: fetchedBaseApr, lockedEgld } = delegationInfo;
 
     setEgldPrice(fetchedEgldPrice);
     setColsPrice(fetchedColsPrice);
     setBaseApr(fetchedBaseApr);
     setAgencyLockedEgld(lockedEgld);
 
-    // Fetch eGLD staked per user in parallel
+    // 2. Fetch eGLD staked in parallel
     const addresses = colsStakers.map(s => s.address);
     const egldStakedMap: Record<string, number> = {};
     await Promise.all(addresses.map(async (addr) => {
@@ -163,14 +163,14 @@ export function useColsApr({ trigger }: { trigger: any }) {
       } catch { egldStakedMap[addr] = 0; }
     }));
 
-    // --- Service fee ---
+    // 3. Service fee
     let serviceFee = 0.1;
     if (contractDetails?.data?.serviceFee) {
       const feeNum = parseFloat(contractDetails.data.serviceFee.replace('%','').trim());
       if (!isNaN(feeNum)) serviceFee = feeNum / 100;
     }
 
-    // --- Build table ---
+    // 4. Build table
     const table: ColsStakerRow[] = colsStakers.map(s => ({
       address: s.address,
       colsStaked: s.colsStaked,
@@ -184,11 +184,11 @@ export function useColsApr({ trigger }: { trigger: any }) {
       aprColsOnly: null
     }));
 
-    // --- Compute targetAvgAprBonus ---
+    // 5. Compute targetAvgAprBonus
     const targetAvg = (lockedEgld * fetchedBaseApr / (1-serviceFee)/100 * serviceFee * AGENCY_BUYBACK * BONUS_BUYBACK_FACTOR * fetchedEgldPrice / fetchedColsPrice) / 365;
     setTargetAvgAprBonus(targetAvg);
 
-    // --- Binary search APRmax ---
+    // 6. Binary search aprMax
     const aprMin = 0.3;
     let left = aprMin, right = 50;
     let bestAprMax = 15;
@@ -221,7 +221,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
     }
     setAprMax(bestAprMax);
 
-    // --- Compute ratios, normalized, aprBonus ---
+    // 7. Compute ratios, normalized, aprBonus
     const validRatios = table.filter(r=>r.egldStaked>0 && r.colsStaked>0).map(r=>{
       r.ratio=(r.colsStaked*fetchedColsPrice)/(r.egldStaked*fetchedEgldPrice);
       return r.ratio!;
@@ -234,7 +234,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
       r.aprBonus = r.normalized!==null? aprMin+(bestAprMax-aprMin)*Math.sqrt(r.normalized):null;
     });
 
-    // --- DAO ---
+    // 8. DAO
     const sumCols = table.reduce((sum,r)=>sum+(r.colsStaked||0),0);
     const baseAprCorrected = fetchedBaseApr/(1-serviceFee)/100;
     table.forEach(r=>{
@@ -243,7 +243,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
       } else r.dao=null;
     });
 
-    // --- COLS-only APR ---
+    // 9. COLS-only APR
     table.forEach(r=>{
       if(r.colsStaked>0){
         r.aprColsOnly = calculateColsOnlyApr({
@@ -257,14 +257,14 @@ export function useColsApr({ trigger }: { trigger: any }) {
       } else r.aprColsOnly=null;
     });
 
-    // --- Total APR ---
+    // 10. Total APR
     table.forEach(r=>{
       if(r.egldStaked>0) r.aprTotal = fetchedBaseApr + (r.aprBonus||0) + (r.dao||0);
       else if(r.colsStaked>0) r.aprTotal = r.aprColsOnly??fetchedBaseApr;
       else r.aprTotal = fetchedBaseApr;
     });
 
-    // --- Ranking ---
+    // 11. Ranking
     const sorted = [...table].sort((a,b)=> (b.aprTotal||0)-(a.aprTotal||0));
     const rankMap = new Map(sorted.map((r,i)=>[r.address,i+1]));
     table.forEach(r=>r.rank=rankMap.get(r.address)??null);
@@ -273,6 +273,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
     setLoading(false);
   }, [fetchColsStakers, fetchEgldPrice, contractDetails]);
 
+  // Recalc on trigger
   useEffect(()=>{ recalc(); }, [trigger, contractDetails]);
 
   return { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, aprMax, targetAvgAprBonus, recalc };
