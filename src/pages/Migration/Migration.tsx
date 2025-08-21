@@ -337,8 +337,8 @@ export const Migration = () => {
   const fetchProviderListAndDelegation = async () => {
     try {
       const [provRes, delRes] = await Promise.all([
-        axios.get('https://api.multiversx.com/providers?type=staking'),
-        axios.get(`https://api.multiversx.com/accounts/${address}/delegation`)
+        axios.get('https://staking.colombia-staking.com/mvx-api/providers?type=staking'),
+        axios.get(`https://staking.colombia-staking.com/mvx-api/accounts/${address}/delegation`)
       ]);
       const map: Record<string, string> = {};
       for (const p of provRes.data || []) {

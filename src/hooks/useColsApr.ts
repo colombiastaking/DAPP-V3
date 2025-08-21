@@ -49,7 +49,7 @@ async function fetchColsPriceFromApi() {
 async function fetchBaseAprFromApi() {
   try {
     const { data } = await axios.get(
-      `https://api.multiversx.com/providers/${network.delegationContract}`
+      `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}`
     );
     return data?.apr || 0;
   } catch { return 0; }
@@ -58,7 +58,7 @@ async function fetchBaseAprFromApi() {
 async function fetchAgencyLockedEgld() {
   try {
     const { data } = await axios.get(
-      `https://api.multiversx.com/providers/${network.delegationContract}`
+      `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}`
     );
     if (data?.locked) return Math.round((Number(data.locked) / 1e18) * 10000) / 10000;
     return 0;
@@ -129,7 +129,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
   }, []);
 
   // --- Helper: fetch stake with retry ---
-  async function fetchStakeWithRetry(addr: string, retries = 3, delay = 1500): Promise<number> {
+  async function fetchStakeWithRetry(addr: string, retries = 5, delay = 1500): Promise<number> {
     const provider = new ProxyNetworkProvider(network.gatewayAddress);
     for (let i = 0; i < retries; i++) {
       try {
