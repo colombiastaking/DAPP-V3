@@ -128,10 +128,31 @@ export function useColsApr({ trigger }: { trigger: any }) {
     return result;
   }, []);
 
+  // --- Helper: fetch stake with retry ---
+  async function fetchStakeWithRetry(addr: string, retries = 3, delay = 1500): Promise<number> {
+    const provider = new ProxyNetworkProvider(network.gatewayAddress);
+    for (let i = 0; i < retries; i++) {
+      try {
+        const query = new Query({
+          address: new Address(network.delegationContract),
+          func: new ContractFunction('getUserActiveStake'),
+          args: [new AddressValue(new Address(addr))]
+        });
+        const data = await provider.queryContract(query);
+        const [stake] = data.getReturnDataParts();
+        return stake ? Number(decodeBigNumber(stake).toFixed()) / 1e18 : 0;
+      } catch (err) {
+        if (i < retries - 1) {
+          await new Promise(res => setTimeout(res, delay));
+        }
+      }
+    }
+    return 0; // fallback after retries
+  }
+
   // --- Recalc function ---
   const recalc = useCallback(async () => {
     setLoading(true);
-    const provider = new ProxyNetworkProvider(network.gatewayAddress);
 
     // 1. Parallel fetch: stakers, prices, base APR, locked eGLD
     const [colsStakers, fetchedEgldPrice, fetchedColsPrice, fetchedBaseApr, lockedEgld] = await Promise.all([
@@ -147,21 +168,15 @@ export function useColsApr({ trigger }: { trigger: any }) {
     setBaseApr(fetchedBaseApr);
     setAgencyLockedEgld(lockedEgld);
 
-    // 2. Fetch eGLD staked in parallel
+    // 2. Fetch eGLD staked with retry logic
     const addresses = colsStakers.map(s => s.address);
     const egldStakedMap: Record<string, number> = {};
-    await Promise.all(addresses.map(async (addr) => {
-      try {
-        const query = new Query({
-          address: new Address(network.delegationContract),
-          func: new ContractFunction('getUserActiveStake'),
-          args: [new AddressValue(new Address(addr))]
-        });
-        const data = await provider.queryContract(query);
-        const [stake] = data.getReturnDataParts();
-        egldStakedMap[addr] = stake ? Number(decodeBigNumber(stake).toFixed()) / 1e18 : 0;
-      } catch { egldStakedMap[addr] = 0; }
-    }));
+    const results = await Promise.allSettled(addresses.map(addr => fetchStakeWithRetry(addr)));
+    results.forEach((res, idx) => {
+      const addr = addresses[idx];
+      if (res.status === 'fulfilled') egldStakedMap[addr] = res.value;
+      else egldStakedMap[addr] = 0;
+    });
 
     // 3. Service fee
     let serviceFee = 0.1;

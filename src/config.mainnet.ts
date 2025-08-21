@@ -48,7 +48,7 @@ export const network: NetworkType = {
   name: 'Mainnet',
   egldLabel: 'EGLD',
   walletAddress: 'https://wallet.multiversx.com/dapp/init',
-  apiAddress: 'https://api.multiversx.com',
+  apiAddress: 'https://staking.colombia-staking.com/mvx-api',
   gatewayAddress: 'https://staking.colombia-staking.com/gateway',
   explorerAddress: 'https://explorer.multiversx.com',
   delegationContract:
