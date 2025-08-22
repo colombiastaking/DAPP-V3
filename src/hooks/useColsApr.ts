@@ -18,7 +18,7 @@ const PEERME_ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l9
 const ELASTIC_URL = 'https://staking.colombia-staking.com/mvx-es/_sql';
 const AGENCY_CONTRACT = network.delegationContract;
 
-// --- CONSTANTS (unchanged) ---
+// --- CONSTANTS ---
 const AGENCY_BUYBACK = 0.3;
 const DAO_DISTRIBUTION_RATIO = 0.333;
 const BONUS_BUYBACK_FACTOR = 0.66;
@@ -36,23 +36,25 @@ export interface ColsStakerRow {
   aprColsOnly?: number | null;
 }
 
-// --- API fetches (unchanged) ---
+// --- Fetch COLS price from new API ---
 async function fetchColsPriceFromApi() {
   try {
     const { data } = await axios.get(
-      'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7'
+      'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7'
     );
-    if (Array.isArray(data) && data.length > 0) {
-      const last = data[data.length - 1];
-      if (last && typeof last.value === 'number')
-        return Math.round(last.value * 1000) / 1000;
+
+    if (Array.isArray(data) && data.length > 0 && typeof data[0].price === 'number') {
+      return Math.round(data[0].price * 1000) / 1000; // round to 3 decimals
     }
+
     return 0;
-  } catch {
+  } catch (err) {
+    console.error('Failed to fetch COLS price:', err);
     return 0;
   }
 }
 
+// --- Other API fetches ---
 async function fetchBaseAprFromApi() {
   try {
     const { data } = await axios.get(
@@ -90,7 +92,6 @@ async function fetchEgldPrice() {
 async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
   const map: Record<string, number> = {};
   try {
-    // First query
     let res = await axios.post(ELASTIC_URL, {
       query: `
         SELECT address, activeStakeNum 
@@ -100,16 +101,14 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
       fetch_size: 500
     });
 
-    // Process first batch
     if (res.data?.rows?.length) {
       res.data.rows.forEach((row: any[]) => {
         let stake = Number(row[1]) || 0;
-        if (stake > 1e12) stake = stake / 1e18; // normalize
+        if (stake > 1e12) stake = stake / 1e18;
         map[row[0]] = stake;
       });
     }
 
-    // Handle cursor pagination
     let cursor = res.data.cursor;
     while (cursor) {
       const curRes = await axios.post(ELASTIC_URL, { cursor });
@@ -129,7 +128,7 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
   }
 }
 
-// --- COLS-only APR (unchanged) ---
+// --- COLS-only APR calculation ---
 function calculateColsOnlyApr({
   sumColsStaked,
   baseApr,
@@ -173,7 +172,6 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   const { contractDetails } = useGlobalContext();
 
-  // --- Fetch COLS stakers (PeerMe) ---
   const fetchColsStakers = useCallback(async () => {
     const provider = new ProxyNetworkProvider(network.gatewayAddress);
     const query = new Query({
@@ -192,7 +190,6 @@ export function useColsApr({ trigger }: { trigger: any }) {
     return result;
   }, []);
 
-  // --- Recalc ---
   const recalc = useCallback(async () => {
     setLoading(true);
 
