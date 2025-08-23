@@ -4,11 +4,15 @@ import { Undelegate } from 'components/Stake/components/Undelegate';
 import { ClaimEgldButton } from 'components/Stake/ClaimEgldButton';
 import { Withdrawals } from 'components/Withdrawals';
 import useStakeData from 'components/Stake/hooks';
+import useGlobalData from '../../hooks/useGlobalData';
 import styles from './Delegation.module.scss';
 
 export const Delegation = () => {
   const { address } = useGetAccountInfo();
   const { onRedelegate } = useStakeData();
+
+  // Import and call useGlobalData to fetch userActiveStake and other critical data
+  useGlobalData();
 
   if (!address) {
     return (

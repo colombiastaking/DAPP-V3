@@ -7,14 +7,27 @@ import { object, string } from 'yup';
 import { Action, Submit } from 'components/Action';
 import useStakeData, { ActionCallbackType } from 'components/Stake/hooks';
 import { network } from 'config';
+import { useGlobalContext } from 'context';
 
 import styles from './styles.module.scss';
 
 export const Undelegate = () => {
   const { onUndelegate } = useStakeData();
   const { pending } = useGetActiveTransactionsStatus();
+  const { userActiveStake } = useGlobalContext();
 
-  // Validation schema: only require positive number, no max limit
+  // Use delegated eGLD amount from global context (string in smallest unit)
+  // Same method as User main tab
+  const delegatedRaw = userActiveStake.data || '0';
+  let delegatedEgld = 0;
+  try {
+    const num = Number(delegatedRaw);
+    delegatedEgld = !isNaN(num) && num > 0 ? num / 1e18 : 0;
+  } catch {
+    delegatedEgld = 0;
+  }
+
+  // Validation schema: require positive number, no max limit
   const validationSchema = object().shape({
     amount: string()
       .required('Required')
@@ -61,6 +74,11 @@ export const Undelegate = () => {
                   handleChange(event);
                 };
 
+                const onMaxClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+                  event.preventDefault();
+                  setFieldValue('amount', delegatedEgld.toFixed(6));
+                };
+
                 return (
                   <form onSubmit={handleSubmit}>
                     <div className={styles.field}>
@@ -80,7 +98,28 @@ export const Undelegate = () => {
                             [styles.invalid]: errors.amount && touched.amount
                           })}
                         />
-                        {/* Max button disabled or hidden since no max limit */}
+                        <button
+                          type='button'
+                          onClick={onMaxClick}
+                          className={styles.maxButton}
+                          style={{
+                            position: 'absolute',
+                            right: 8,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: '#303234',
+                            color: '#fff',
+                            borderRadius: 6,
+                            border: 'none',
+                            padding: '6px 12px',
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                            fontSize: 14
+                          }}
+                          disabled={pending || delegatedEgld === 0}
+                        >
+                          Max
+                        </button>
                       </div>
 
                       {errors.amount && touched.amount && (
