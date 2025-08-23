@@ -14,7 +14,7 @@ export const Undelegate = () => {
   const { onUndelegate } = useStakeData();
   const { pending } = useGetActiveTransactionsStatus();
 
-  // Validation schema: only require positive number, no balance or limit checks
+  // Validation schema: only require positive number, no max limit
   const validationSchema = object().shape({
     amount: string()
       .required('Required')
@@ -65,7 +65,7 @@ export const Undelegate = () => {
                   <form onSubmit={handleSubmit}>
                     <div className={styles.field}>
                       <label htmlFor='amount'>{network.egldLabel} Amount</label>
-                      <div className={styles.group}>
+                      <div className={styles.group} style={{ position: 'relative' }}>
                         <input
                           type='number'
                           name='amount'
@@ -80,6 +80,7 @@ export const Undelegate = () => {
                             [styles.invalid]: errors.amount && touched.amount
                           })}
                         />
+                        {/* Max button disabled or hidden since no max limit */}
                       </div>
 
                       {errors.amount && touched.amount && (
