@@ -2,6 +2,7 @@ import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAcco
 import { Delegate } from 'components/Stake/components/Delegate';
 import { Undelegate } from 'components/Stake/components/Undelegate';
 import { ClaimEgldButton } from 'components/Stake/ClaimEgldButton';
+import { Withdrawals } from 'components/Withdrawals';
 import useStakeData from 'components/Stake/hooks';
 import styles from './Delegation.module.scss';
 
@@ -41,6 +42,9 @@ export const Delegation = () => {
           Redelegate eGLD
         </button>
         <Undelegate />
+      </div>
+      <div style={{ marginTop: 24 }}>
+        <Withdrawals />
       </div>
     </div>
   );
