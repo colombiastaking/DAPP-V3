@@ -46,6 +46,9 @@ export const delegationManagerContract =
 const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
 const SECONDARY_API = 'https://api.multiversx.com';
 
+const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gateway';
+const SECONDARY_GATEWAY = 'https://gateway.multiversx.com';
+
 // default network object
 export const network: NetworkType = {
   id: 'mainnet',
@@ -53,7 +56,7 @@ export const network: NetworkType = {
   egldLabel: 'EGLD',
   walletAddress: 'https://wallet.multiversx.com/dapp/init',
   apiAddress: PRIMARY_API, // will be updated dynamically
-  gatewayAddress: 'https://staking.colombia-staking.com/gateway',
+  gatewayAddress: PRIMARY_GATEWAY, // will be updated dynamically
   explorerAddress: 'https://explorer.multiversx.com',
   delegationContract:
     'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'
@@ -102,16 +105,39 @@ async function checkApiHealth(url: string): Promise<boolean> {
   }
 }
 
-// initialize network API on app startup
-export async function initNetworkApi(): Promise<void> {
-  const primaryOk = await checkApiHealth(PRIMARY_API);
+// Robust Gateway health check
+async function checkGatewayHealth(url: string): Promise<boolean> {
+  try {
+    // Simple GET to root or health endpoint
+    const res = await fetch(url, { method: 'HEAD' });
+    if (res.ok) return true;
+    // fallback: try GET root
+    const res2 = await fetch(url);
+    return res2.ok;
+  } catch (err) {
+    console.warn(`Gateway check error for ${url}:`, err);
+    return false;
+  }
+}
 
-  if (primaryOk) {
+// initialize network API and gateway on app startup
+export async function initNetworkApi(): Promise<void> {
+  const primaryApiOk = await checkApiHealth(PRIMARY_API);
+  if (primaryApiOk) {
     network.apiAddress = PRIMARY_API;
     console.log(`Using primary API: ${PRIMARY_API}`);
   } else {
     network.apiAddress = SECONDARY_API;
     console.log(`Primary API failed, falling back to secondary API: ${SECONDARY_API}`);
+  }
+
+  const primaryGatewayOk = await checkGatewayHealth(PRIMARY_GATEWAY);
+  if (primaryGatewayOk) {
+    network.gatewayAddress = PRIMARY_GATEWAY;
+    console.log(`Using primary Gateway: ${PRIMARY_GATEWAY}`);
+  } else {
+    network.gatewayAddress = SECONDARY_GATEWAY;
+    console.log(`Primary Gateway failed, falling back to secondary Gateway: ${SECONDARY_GATEWAY}`);
   }
 }
 
