@@ -1,4 +1,3 @@
-// src/hooks/useColsApr.ts
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
@@ -36,21 +35,46 @@ export interface ColsStakerRow {
   aprColsOnly?: number | null;
 }
 
-// --- Fetch COLS price from new API ---
+// --- Fetch COLS price with backup API ---
 async function fetchColsPriceFromApi() {
   try {
     const { data } = await axios.get(
+      'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7'
+    );
+    if (Array.isArray(data) && data.length > 0) {
+      const last = data[data.length - 1];
+      if (last && typeof last.value === 'number')
+        return Math.round(last.value * 1000) / 1000;
+    }
+    // fallback to backup API if primary returns no valid data
+    const { data: backupData } = await axios.get(
       'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7'
     );
-
-    if (Array.isArray(data) && data.length > 0 && typeof data[0].price === 'number') {
-      return Math.round(data[0].price * 1000) / 1000; // round to 3 decimals
+    if (
+      Array.isArray(backupData) &&
+      backupData.length > 0 &&
+      typeof backupData[0].price === 'number'
+    ) {
+      return Math.round(backupData[0].price * 1000) / 1000;
     }
-
     return 0;
-  } catch (err) {
-    console.error('Failed to fetch COLS price:', err);
-    return 0;
+  } catch {
+    // fallback to backup API if primary API call fails
+    try {
+      const { data: backupData } = await axios.get(
+        'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7'
+      );
+      if (
+        Array.isArray(backupData) &&
+        backupData.length > 0 &&
+        typeof backupData[0].price === 'number'
+      ) {
+        return Math.round(backupData[0].price * 1000) / 1000;
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
   }
 }
 
