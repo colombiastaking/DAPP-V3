@@ -43,107 +43,95 @@ export const stakingContract =
 export const delegationManagerContract =
   'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqylllslmq6y6';
 
+const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
+const SECONDARY_API = 'https://api.multiversx.com';
+
+// default network object
 export const network: NetworkType = {
   id: 'mainnet',
   name: 'Mainnet',
   egldLabel: 'EGLD',
   walletAddress: 'https://wallet.multiversx.com/dapp/init',
-  apiAddress: 'https://staking.colombia-staking.com/mvx-api',
+  apiAddress: PRIMARY_API, // will be updated dynamically
   gatewayAddress: 'https://staking.colombia-staking.com/gateway',
   explorerAddress: 'https://explorer.multiversx.com',
   delegationContract:
     'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'
 };
 
-export const delegationContractData: DelegationContractType[] = [
-  {
-    name: 'createNewDelegationContract',
-    gasLimit: 6000000,
-    data: 'createNewDelegationContract@'
-  },
-  {
-    name: 'setAutomaticActivation',
-    gasLimit: 6000000,
-    data: 'setAutomaticActivation@'
-  },
-  {
-    name: 'setMetaData',
-    gasLimit: 6000000,
-    data: 'setMetaData@'
-  },
-  {
-    name: 'setReDelegateCapActivation',
-    gasLimit: 6000000,
-    data: 'setCheckCapOnReDelegateRewards@'
-  },
-  {
-    name: 'changeServiceFee',
-    gasLimit: 6000000,
-    data: 'changeServiceFee@'
-  },
-  {
-    name: 'modifyTotalDelegationCap',
-    gasLimit: 6000000,
-    data: 'modifyTotalDelegationCap@'
-  },
-  {
-    name: 'addNodes',
-    gasLimit: 12000000,
-    data: 'addNodes'
-  },
-  {
-    name: 'removeNodes',
-    gasLimit: 12000000,
-    data: 'removeNodes@'
-  },
-  {
-    name: 'stakeNodes',
-    gasLimit: 12000000,
-    data: 'stakeNodes@'
-  },
-  {
-    name: 'reStakeUnStakedNodes',
-    gasLimit: 120000000,
-    data: 'reStakeUnStakedNodes@'
-  },
-  {
-    name: 'unStakeNodes',
-    gasLimit: 12000000,
-    data: 'unStakeNodes@'
-  },
-  {
-    name: 'unBondNodes',
-    gasLimit: 12000000,
-    data: 'unBondNodes@'
-  },
-  {
-    name: 'unJailNodes',
-    gasLimit: 12000000,
-    data: 'unJailNodes@'
-  },
-  {
-    name: 'delegate',
-    gasLimit: 12000000,
-    data: 'delegate'
-  },
-  {
-    name: 'unDelegate',
-    gasLimit: 12000000,
-    data: 'unDelegate@'
-  },
-  {
-    name: 'withdraw',
-    gasLimit: 12000000,
-    data: 'withdraw'
-  },
-  {
-    name: 'claimRewards',
-    gasLimit: 6000000,
-    data: 'claimRewards'
-  },
-  {
-    name: 'reDelegateRewards',
-    gasLimit: 12000000,
-    data: 'reDelegateRewards'
+// Robust API health check
+async function checkApiHealth(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${url}/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7`
+    );
+
+    if (!res.ok) {
+      console.warn(`API check failed: ${url} returned status ${res.status}`);
+      return false;
+    }
+
+    const data = await res.json();
+
+    if (!Array.isArray(data)) {
+      console.warn(`API check failed: ${url} returned non-array data`);
+      return false;
+    }
+
+    if (data.length === 0) {
+      console.warn(`API check failed: ${url} returned empty array`);
+      return false;
+    }
+
+    const price = data[0].price;
+
+    if (typeof price !== 'number') {
+      console.warn(`API check failed: ${url} returned price of type ${typeof price}`);
+      return false;
+    }
+
+    if (price <= 0) {
+      console.warn(`API check failed: ${url} returned invalid price ${price}`);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.warn(`API check error for ${url}:`, err);
+    return false;
   }
+}
+
+// initialize network API on app startup
+export async function initNetworkApi(): Promise<void> {
+  const primaryOk = await checkApiHealth(PRIMARY_API);
+
+  if (primaryOk) {
+    network.apiAddress = PRIMARY_API;
+    console.log(`Using primary API: ${PRIMARY_API}`);
+  } else {
+    network.apiAddress = SECONDARY_API;
+    console.log(`Primary API failed, falling back to secondary API: ${SECONDARY_API}`);
+  }
+}
+
+export const delegationContractData: DelegationContractType[] = [
+  { name: 'createNewDelegationContract', gasLimit: 6000000, data: 'createNewDelegationContract@' },
+  { name: 'setAutomaticActivation', gasLimit: 6000000, data: 'setAutomaticActivation@' },
+  { name: 'setMetaData', gasLimit: 6000000, data: 'setMetaData@' },
+  { name: 'setReDelegateCapActivation', gasLimit: 6000000, data: 'setCheckCapOnReDelegateRewards@' },
+  { name: 'changeServiceFee', gasLimit: 6000000, data: 'changeServiceFee@' },
+  { name: 'modifyTotalDelegationCap', gasLimit: 6000000, data: 'modifyTotalDelegationCap@' },
+  { name: 'addNodes', gasLimit: 12000000, data: 'addNodes' },
+  { name: 'removeNodes', gasLimit: 12000000, data: 'removeNodes@' },
+  { name: 'stakeNodes', gasLimit: 12000000, data: 'stakeNodes@' },
+  { name: 'reStakeUnStakedNodes', gasLimit: 120000000, data: 'reStakeUnStakedNodes@' },
+  { name: 'unStakeNodes', gasLimit: 12000000, data: 'unStakeNodes@' },
+  { name: 'unBondNodes', gasLimit: 12000000, data: 'unBondNodes@' },
+  { name: 'unJailNodes', gasLimit: 12000000, data: 'unJailNodes@' },
+  { name: 'delegate', gasLimit: 12000000, data: 'delegate' },
+  { name: 'unDelegate', gasLimit: 12000000, data: 'unDelegate@' },
+  { name: 'withdraw', gasLimit: 12000000, data: 'withdraw' },
+  { name: 'claimRewards', gasLimit: 6000000, data: 'claimRewards' },
+  { name: 'reDelegateRewards', gasLimit: 12000000, data: 'reDelegateRewards' }
 ];
