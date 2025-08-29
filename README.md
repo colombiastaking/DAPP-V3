@@ -125,7 +125,7 @@ Leagues are visually represented in the DApp.
 | `DAO_DISTRIBUTION_RATIO` | 0.333 | 33.3% of buybacks to DAO rewards |
 | `BONUS_BUYBACK_FACTOR` | 0.66 | Used in bonus average APR targeting |
 | `APRmin` | 0.3% | Minimum COLS bonus APR |
-| `APRmax` | Up to 25% | Dynamically adjusted |
+| `APRmax` | Up to 50% | Dynamically adjusted |
 
 ---
 
