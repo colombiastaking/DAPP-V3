@@ -19,7 +19,7 @@ const ELASTIC_URL = 'https://staking.colombia-staking.com/mvx-es/_sql';
 const AGENCY_CONTRACT = network.delegationContract;
 
 // --- CONSTANTS ---
-const AGENCY_BUYBACK = 0.3;
+const AGENCY_BUYBACK = 0.35;
 const DAO_DISTRIBUTION_RATIO = 0.333;
 const BONUS_BUYBACK_FACTOR = 0.66;
 
@@ -304,7 +304,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         });
       }
 
-      let serviceFee = 0.1;
+      let serviceFee = 0.12;
       if (contractDetails?.data?.serviceFee) {
         const feeNum = parseFloat(
           contractDetails.data.serviceFee.replace('%', '').trim()
@@ -338,7 +338,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         365;
       setTargetAvgAprBonus(targetAvg);
 
-      const aprMin = 0.3;
+      const aprMin = 0.4;
       let left = aprMin,
         right = 50;
       let bestAprMax = 15;
