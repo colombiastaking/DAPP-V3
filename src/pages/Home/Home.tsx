@@ -5,7 +5,7 @@ import styles from './styles.module.scss';
 import { AnimatedDots } from 'components/AnimatedDots';
 import { HelpIcon } from 'components/HelpIcon';
 import { ColsAprTable } from 'components/ColsAprTable';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { onTxCompleted } from 'utils/txEvents';
 
 export const Home = () => {
@@ -13,12 +13,14 @@ export const Home = () => {
   const { stakers, loading, egldPrice, colsPrice, baseApr, refresh } = useColsAprContext();
 
   // Refresh on transaction completed event to ensure UI updates
-  useEffect(() => {
-    const unsubscribe = onTxCompleted(() => {
-      refresh();
-    });
-    return unsubscribe;
+  const onTxCompleteHandler = useCallback(() => {
+    refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const unsubscribe = onTxCompleted(onTxCompleteHandler);
+    return unsubscribe;
+  }, [onTxCompleteHandler]);
 
   if (!address) {
     return null;
