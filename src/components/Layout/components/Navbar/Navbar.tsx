@@ -6,7 +6,7 @@ import { logout } from '@multiversx/sdk-dapp/utils/logout';
 import axios from 'axios';
 import classNames from 'classnames';
 
-import { MultiversX } from 'assets/MultiversX';
+import NewLogo from 'assets/NewLogo';
 import { network } from 'config';
 import { denominated } from 'helpers/denominate';
 
@@ -55,7 +55,7 @@ export const Navbar = () => {
     <nav className={`${styles.nav} delegation-nav`}>
       <div className={styles.heading} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'default' }}>
         <span className={styles.logo}>
-          <MultiversX />
+          <NewLogo width={32} height={32} />
         </span>
         <span className={styles.title} style={{ flexShrink: 0, userSelect: 'text' }}>
           Colombia Staking Dashboard
