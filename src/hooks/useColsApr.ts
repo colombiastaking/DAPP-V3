@@ -140,10 +140,11 @@ async function fetchEgldPrice() {
   }
 }
 
-// --- Elasticsearch SQL + cursor fetch ---
+// --- Elasticsearch SQL + cursor fetch with timing health check ---
 async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
   const map: Record<string, number> = {};
   try {
+    const start = performance.now();
     let res = await axios.post(ELASTIC_URL, {
       query: `
         SELECT address, activeStakeNum 
@@ -152,6 +153,12 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
       `,
       fetch_size: 500
     });
+    const duration = performance.now() - start;
+
+    if (duration > 3000) {
+      console.warn(`Elasticsearch query took too long: ${duration.toFixed(2)}ms, falling back to contract queries`);
+      throw new Error('Elasticsearch query timeout');
+    }
 
     if (res.data?.rows?.length) {
       res.data.rows.forEach((row: any[]) => {
@@ -159,6 +166,9 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
         if (stake > 1e12) stake = stake / 1e18;
         map[row[0]] = stake;
       });
+    } else {
+      console.warn('Elasticsearch query returned no rows, falling back to contract queries');
+      throw new Error('No data from Elasticsearch');
     }
 
     let cursor = res.data.cursor;
@@ -175,7 +185,7 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
     }
     return map;
   } catch (err) {
-    console.error('Elasticsearch fetch failed', err);
+    console.error('Elasticsearch fetch failed or slow, fallback to contract queries', err);
     return {};
   }
 }
@@ -473,7 +483,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   useEffect(() => {
     recalc();
-  }, [trigger, contractDetails, recalc]);
+  }, [trigger, recalc]);
 
   return {
     loading,
