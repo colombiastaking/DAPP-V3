@@ -25,9 +25,9 @@ function simulateAprAndRank({
   serviceFee: number;
   agencyLockedEgld: number;
 }) {
-  const APRmin = 0.3;
+  const APRmin = 0.4;
   let APRmax = 15;
-  const AGENCY_BUYBACK = 0.3;
+  const AGENCY_BUYBACK = 0.35;
   const DAO_DISTRIBUTION_RATIO = 0.333;
   const BONUS_BUYBACK_FACTOR = 0.66;
 
@@ -66,7 +66,7 @@ function simulateAprAndRank({
       egldPrice / colsPrice
     ) / 365;
 
-  let step = 0.1;
+  let step = 0.01;
   let bestAprMax = APRmax;
   let bestDiff = Infinity;
   let maxIter = 200;
@@ -112,7 +112,7 @@ function simulateAprAndRank({
   }
 
   while (iter < maxIter) {
-    if (APRmax > 25) APRmax = 25;
+    if (APRmax > 25) APRmax = 50;
     if (APRmax < APRmin) APRmax = APRmin;
     const sum = calcAprBonusTableSum({
       stakers: newStakers.map(r => ({ ...r })),
@@ -122,7 +122,7 @@ function simulateAprAndRank({
       aprMin: APRmin
     });
     const diff = Math.abs(sum - targetAvgAprBonus);
-    if (diff < 1) {
+    if (diff < 0.01) {
       bestAprMax = APRmax;
       break;
     }
@@ -296,7 +296,7 @@ export const Simulation = () => {
       colsPrice,
       egldPrice,
       baseApr,
-      serviceFee: 0.1,
+      serviceFee: 0.12,
       agencyLockedEgld
     });
     setSimResult(result);
