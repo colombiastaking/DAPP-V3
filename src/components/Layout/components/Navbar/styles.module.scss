@@ -6,13 +6,17 @@
 
   .logo {
     margin-right: 15px;
-    padding: 12px;
-    background-color: black;
-    border-radius: 16px;
+    padding: 0; /* Removed padding to remove black frame */
+    background-color: transparent; /* Remove black background */
+    border-radius: 0; /* Remove border radius */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     svg {
       height: auto;
-      width: 32px;
+      width: 64px; /* keep doubled size */
+      display: block;
     }
   }
 

@@ -1,8 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { faPowerOff } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
-import { logout } from '@multiversx/sdk-dapp/utils/logout';
 import axios from 'axios';
 import classNames from 'classnames';
 
@@ -47,15 +44,14 @@ export const Navbar = () => {
   const formattedBalance = Number(denominated(account?.balance ?? '0')).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const formattedColsBalance = Number(colsBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const buttons: { icon: ReactNode; label: string; onClick?: () => void }[] = [
-    { icon: <FontAwesomeIcon icon={faPowerOff} />, label: '', onClick: () => logout(`${window.location.origin}/unlock`) }
-  ];
+  // Removed the disconnect button from buttons array
+  const buttons: { icon: ReactNode; label: string; onClick?: () => void }[] = [];
 
   return (
     <nav className={`${styles.nav} delegation-nav`}>
       <div className={styles.heading} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'default' }}>
         <span className={styles.logo}>
-          <NewLogo width={32} height={32} />
+          <NewLogo width={64} height={64} />
         </span>
         <span className={styles.title} style={{ flexShrink: 0, userSelect: 'text' }}>
           Colombia Staking Dashboard
