@@ -55,12 +55,13 @@ export const Withdrawal = (props: UndelegateStakeListType) => {
       .format(format);
   };
 
-  const onWithdraw = async (): Promise<void> => {
+  const handleWithdraw = async () => {
     try {
       await sendTransaction({
         args: '',
         type: 'withdraw',
-        value: '0'
+        value: '0',
+        gasLimit: 12050000
       });
     } catch (error) {
       console.error(error);
@@ -103,8 +104,8 @@ export const Withdrawal = (props: UndelegateStakeListType) => {
     };
   };
 
-  useEffect(handleCounter, []);
-  useEffect(fetchFiat, []);
+  useEffect(handleCounter, [timeLeft]);
+  useEffect(fetchFiat, [value]);
 
   return (
     <div className={`${styles.withdrawal} withdrawal`}>
@@ -130,10 +131,12 @@ export const Withdrawal = (props: UndelegateStakeListType) => {
         )}
 
         <button
-          onClick={onWithdraw}
+          onClick={handleWithdraw}
           className={classNames(styles.withdraw, {
             [styles.disabled]: counter > 0 || pending
           })}
+          aria-label="Withdraw"
+          title="Withdraw"
         >
           <FontAwesomeIcon icon={faMinus} /> <span>Withdraw</span>
         </button>
