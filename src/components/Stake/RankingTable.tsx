@@ -2,6 +2,7 @@ import { useColsAprContext } from "../../context/ColsAprContext";
 import { useGetAccountInfo } from "@multiversx/sdk-dapp/hooks/account/useGetAccountInfo";
 import { useEffect, useState } from "react";
 
+// Types
 type StakerRow = {
   address: string;
   aprTotal: number | null | undefined;
@@ -16,7 +17,7 @@ type ToNextType = {
   icon: string;
 } | null;
 
-// Define animal leagues with % ranges
+// Animal leagues with rank % ranges
 const ANIMAL_LEAGUES = [
   { name: "Leviathan", icon: "🐉", color: "#9c27b0", range: [0, 1] },   // top 1%
   { name: "Whale", icon: "🐋", color: "#2196f3", range: [1, 5] },       // 1–5%
@@ -54,6 +55,7 @@ export function RankingTable() {
 
   if (loading || !Array.isArray(stakers) || stakers.length === 0) return null;
 
+  // Sort stakers by APR
   const sorted: StakerRow[] = [...stakers].sort(
     (a, b) => (b.aprTotal ?? 0) - (a.aprTotal ?? 0)
   );
@@ -62,6 +64,7 @@ export function RankingTable() {
 
   const top5 = sorted.slice(0, 5);
 
+  // User row
   const userIdx = sorted.findIndex((s) => s.address === address);
   const user = userIdx !== -1 ? sorted[userIdx] : null;
 
@@ -95,6 +98,7 @@ export function RankingTable() {
     }
   }
 
+  // Render a table row
   function renderRow(s: StakerRow, highlight = false) {
     const league = getLeague(s.rank!, total);
     const isUser = s.address === address;
@@ -137,6 +141,7 @@ export function RankingTable() {
     );
   }
 
+  // Render table header
   function renderHeader() {
     return (
       <tr style={{ background: "#23272a", color: "#ffe082" }}>
@@ -147,11 +152,12 @@ export function RankingTable() {
     );
   }
 
+  // Render user ranking card
   function renderUserCard() {
     if (!user) return null;
     const league = getLeague(user.rank!, total);
 
-    // Progress calculation
+    // Progress to next league
     let progress = 100;
     if (
       toNext &&
@@ -161,14 +167,15 @@ export function RankingTable() {
       progress = Math.min(100, (user.aprTotal / toNext.apr) * 100);
     }
 
-    // Build tweet
+    // Build X post
     const tweetText = toNext
       ? `I’m ranked #${user.rank} in the ${league.icon} ${league.name} League with ${user.aprTotal?.toFixed(
           2
-        )}% APR at @ColombiaStaking 🚀\nNext stop: ${toNext.icon} ${toNext.leagueName} 🏆\nStake with me 👉 https://colombiastaking.com`
+        )}% APR at @ColombiaStaking 🚀\nNext stop: ${toNext.icon} ${toNext.leagueName} 🏆\nStake with me 👉 https://staking.colombia-staking.com`
       : `I’m in the top ${league.icon} ${league.name} League at @ColombiaStaking with ${user.aprTotal?.toFixed(
           2
         )}% APR 🚀\nStake with me 👉 https://staking.colombia-staking.com`;
+
     const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(
       tweetText
     )}`;
@@ -219,7 +226,7 @@ export function RankingTable() {
           APR: {user.aprTotal?.toFixed(2) ?? "—"}%
         </div>
 
-        {/* Progress */}
+        {/* Progress bar */}
         {toNext && (
           <div style={{ marginTop: 4 }}>
             <div style={{ fontSize: 12, marginBottom: 6, color: "#aaa" }}>
@@ -270,6 +277,7 @@ export function RankingTable() {
     );
   }
 
+  // Build final table rows
   const filteredUserRows = userRows.filter(
     (r) => !top5.some((t) => t.address === r.address)
   );
