@@ -2,21 +2,6 @@ import { useColsAprContext } from "../../context/ColsAprContext";
 import { useGetAccountInfo } from "@multiversx/sdk-dapp/hooks/account/useGetAccountInfo";
 import { useEffect, useState } from "react";
 
-// League colors and icons
-const LEAGUES = [
-  { name: "Gold", color: "#FFD700", icon: "🥇" },
-  { name: "Silver", color: "#C0C0C0", icon: "🥈" },
-  { name: "Bronze", color: "#CD7F32", icon: "🥉" }
-];
-
-// League assignment
-function getLeague(rank: number, total: number) {
-  const perLeague = Math.ceil(total / 3);
-  if (rank <= perLeague) return 0; // Gold
-  if (rank <= perLeague * 2) return 1; // Silver
-  return 2; // Bronze
-}
-
 type StakerRow = {
   address: string;
   aprTotal: number | null | undefined;
@@ -27,13 +12,34 @@ type ToNextType = {
   rank: number;
   apr: number | null | undefined;
   address: string;
+  leagueName: string;
+  icon: string;
 } | null;
+
+// Define animal leagues with % ranges
+const ANIMAL_LEAGUES = [
+  { name: "Leviathan", icon: "🐉", color: "#9c27b0", range: [0, 1] },   // top 1%
+  { name: "Whale", icon: "🐋", color: "#2196f3", range: [1, 5] },       // 1–5%
+  { name: "Shark", icon: "🦈", color: "#03a9f4", range: [5, 15] },      // 5–15%
+  { name: "Dolphin", icon: "🐬", color: "#00bcd4", range: [15, 30] },   // 15–30%
+  { name: "Pufferfish", icon: "🐡", color: "#4caf50", range: [30, 50] },// 30–50%
+  { name: "Fish", icon: "🐟", color: "#8bc34a", range: [50, 70] },      // 50–70%
+  { name: "Crab", icon: "🦀", color: "#ff9800", range: [70, 90] },      // 70–90%
+  { name: "Shrimp", icon: "🦐", color: "#f44336", range: [90, 100] },   // bottom 10%
+];
+
+// Get league by percentile
+function getLeague(rank: number, total: number) {
+  const percentile = (rank / total) * 100;
+  return ANIMAL_LEAGUES.find(
+    (l) => percentile > l.range[0] && percentile <= l.range[1]
+  ) || ANIMAL_LEAGUES[ANIMAL_LEAGUES.length - 1]; // default Shrimp
+}
 
 export function RankingTable() {
   const { stakers, loading } = useColsAprContext();
   const { address } = useGetAccountInfo();
 
-  // Responsive: detect mobile
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     function handleResize() {
@@ -46,27 +52,17 @@ export function RankingTable() {
 
   if (loading || !Array.isArray(stakers) || stakers.length === 0) return null;
 
-  // Sort by APR descending, assign rank
-  const sorted: StakerRow[] = [...stakers].sort((a, b) => (b.aprTotal ?? 0) - (a.aprTotal ?? 0));
+  const sorted: StakerRow[] = [...stakers].sort(
+    (a, b) => (b.aprTotal ?? 0) - (a.aprTotal ?? 0)
+  );
   const total = sorted.length;
   sorted.forEach((s, i) => (s.rank = i + 1));
 
-  // Leagues
-  const perLeague = Math.ceil(total / 3);
-  const leagueRanges: [number, number][] = [
-    [1, perLeague],
-    [perLeague + 1, perLeague * 2],
-    [perLeague * 2 + 1, total]
-  ];
-
-  // Top 5
   const top5 = sorted.slice(0, 5);
 
-  // Find user
   const userIdx = sorted.findIndex((s) => s.address === address);
   const user = userIdx !== -1 ? sorted[userIdx] : null;
 
-  // User - 5 before, +5 after (centered on user)
   let userRows: StakerRow[] = [];
   if (user) {
     const start = Math.max(0, userIdx - 5);
@@ -74,52 +70,30 @@ export function RankingTable() {
     userRows = sorted.slice(start, end);
   }
 
-  // Next league info
-  let nextLeague: string | null = null;
+  // Find next league target
   let toNext: ToNextType = null;
   if (user) {
-    const userLeague = getLeague(user.rank!, total);
-    if (userLeague < 2) {
-      const nextLeagueIdx = userLeague;
-      const nextLeagueName = LEAGUES[nextLeagueIdx].name;
-      const nextLeagueEnd = leagueRanges[nextLeagueIdx][1];
-      const thresholdRank = nextLeagueEnd;
+    const currentLeague = getLeague(user.rank!, total);
+    const currentIdx = ANIMAL_LEAGUES.findIndex((l) => l.name === currentLeague.name);
+    if (currentIdx > 0) {
+      const nextLeague = ANIMAL_LEAGUES[currentIdx - 1];
+      const thresholdRank = Math.ceil((nextLeague.range[1] / 100) * total);
       const thresholdUser = sorted[thresholdRank - 1];
-      if (thresholdUser && user.rank! > thresholdRank) {
+      if (thresholdUser) {
         toNext = {
-          rank: thresholdRank,
+          rank: thresholdUser.rank!,
           apr: thresholdUser.aprTotal,
-          address: thresholdUser.address
+          address: thresholdUser.address,
+          leagueName: nextLeague.name,
+          icon: nextLeague.icon
         };
-        nextLeague = nextLeagueName;
-      } else if (userLeague === 1) {
-        const goldEnd = leagueRanges[0][1];
-        const goldUser = sorted[goldEnd - 1];
-        toNext = {
-          rank: goldEnd,
-          apr: goldUser.aprTotal,
-          address: goldUser.address
-        };
-        nextLeague = "Gold";
       }
     }
   }
 
-  // Table row rendering (NO address column)
   function renderRow(s: StakerRow, highlight = false) {
-    const leagueIdx = getLeague(s.rank!, total);
-    const league = LEAGUES[leagueIdx];
+    const league = getLeague(s.rank!, total);
     const isUser = s.address === address;
-
-    const rankColor =
-      isUser && league.name === "Gold"
-        ? "#181a1b"
-        : league.color;
-
-    const rankTextShadow =
-      isUser && league.name === "Gold"
-        ? "0 1px 2px #fff, 0 0 2px #FFD700"
-        : undefined;
 
     return (
       <tr
@@ -131,9 +105,7 @@ export function RankingTable() {
             ? "#23272a"
             : "#181a1b",
           border: isUser ? `2.5px solid ${league.color}` : undefined,
-          boxShadow: isUser
-            ? `0 0 16px 2px ${league.color}88`
-            : undefined,
+          boxShadow: isUser ? `0 0 16px 2px ${league.color}88` : undefined,
           color: isUser ? "#181a1b" : "#fff",
           fontWeight: isUser ? 900 : 500,
           fontSize: isUser ? 17 : 15,
@@ -142,15 +114,7 @@ export function RankingTable() {
       >
         <td style={{ textAlign: "center", fontWeight: 700 }}>
           {league.icon}{" "}
-          <span
-            style={{
-              color: rankColor,
-              fontWeight: 900,
-              textShadow: rankTextShadow
-            }}
-          >
-            #{s.rank}
-          </span>
+          <span style={{ color: league.color, fontWeight: 900 }}>#{s.rank}</span>
         </td>
         <td style={{ textAlign: "center", fontWeight: 700 }}>
           {typeof s.aprTotal === "number" && !isNaN(s.aprTotal)
@@ -158,27 +122,15 @@ export function RankingTable() {
             : "—"}
         </td>
         <td style={{ textAlign: "center", fontWeight: 700 }}>
-          <span
-            style={{
-              color: league.color,
-              fontWeight: 900,
-              fontSize: 15,
-              letterSpacing: 0.5
-            }}
-          >
+          <span style={{ color: league.color, fontWeight: 900 }}>
             {league.name}
-            {isUser && (
-              <span style={{ marginLeft: 6, color: "#1976d2" }}>
-                (You)
-              </span>
-            )}
+            {isUser && <span style={{ marginLeft: 6, color: "#1976d2" }}>(You)</span>}
           </span>
         </td>
       </tr>
     );
   }
 
-  // Table header (NO address column)
   function renderHeader() {
     return (
       <tr style={{ background: "#23272a", color: "#ffe082" }}>
@@ -189,17 +141,16 @@ export function RankingTable() {
     );
   }
 
-  // League legend
   function renderLegend() {
     return (
-      <div style={{ display: "flex", gap: 18, margin: "10px 0 0 0" }}>
-        {LEAGUES.map((l) => (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, margin: "10px 0" }}>
+        {ANIMAL_LEAGUES.map((l) => (
           <span
             key={l.name}
             style={{
               color: l.color,
               fontWeight: 900,
-              fontSize: 15,
+              fontSize: 14,
               display: "flex",
               alignItems: "center",
               gap: 4
@@ -212,9 +163,8 @@ export function RankingTable() {
     );
   }
 
-  // Next league info
   function renderNextLeague() {
-    if (!nextLeague || !toNext) return null;
+    if (!toNext) return null;
     return (
       <div
         style={{
@@ -226,34 +176,64 @@ export function RankingTable() {
           fontWeight: 600,
           fontSize: 15,
           display: "flex",
-          alignItems: "center",
-          gap: 10,
-          boxShadow: `0 2px 12px ${LEAGUES.find(l => l.name === nextLeague)?.color}55`
+          flexDirection: "column",
+          gap: 6,
+          boxShadow: `0 2px 12px ${toNext ? "#6ee7c7" : "#23272a"}55`
         }}
       >
         <span>
-          <b>Next League:</b>{" "}
-          <span style={{ color: LEAGUES.find(l => l.name === nextLeague)?.color, fontWeight: 900 }}>
-            {nextLeague}
-          </span>
+          🚀 You’re currently on the way to{" "}
+          <b style={{ color: toNext?.icon ? "#ffe082" : "#fff" }}>
+            {toNext.icon} {toNext.leagueName}
+          </b>
         </span>
         <span>
-          <b>Reach at least:</b>{" "}
-          <span style={{ color: "#ffe082", fontWeight: 900 }}>
-            {toNext.apr !== null && toNext.apr !== undefined ? Number(toNext.apr).toFixed(2) + "%" : "—"}
-          </span>
-          {" "}APR (Rank #{toNext.rank})
+          Reach at least <b>{Number(toNext.apr).toFixed(2)}%</b> APR (Rank #{toNext.rank}) to level
+          up!
         </span>
       </div>
     );
   }
 
-  // Show: top 5, divider, user-5~user+5 (if user exists), no duplicates
-  let tableRows: JSX.Element[] = [];
-  const filteredUserRows = userRows.filter(r => !top5.some(t => t.address === r.address));
-  tableRows = [
+  function renderShareButton() {
+    if (!user) return null;
+    const league = getLeague(user.rank!, total);
+    const shareText = `I'm ${league.icon} ${league.name} rank #${user.rank} with APR ${
+      user.aprTotal?.toFixed(2) ?? "—"
+    }% at Colombia Staking 🏆. Join the challenge and climb the leagues!`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+
+    return (
+      <div style={{ textAlign: "center", marginTop: 16 }}>
+        <a
+          href={twitterUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-block",
+            padding: "10px 16px",
+            background: "#1DA1F2",
+            color: "#fff",
+            borderRadius: 8,
+            fontWeight: 700,
+            textDecoration: "none",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+          }}
+        >
+          📢 Share my Rank
+        </a>
+      </div>
+    );
+  }
+
+  const filteredUserRows = userRows.filter(
+    (r) => !top5.some((t) => t.address === r.address)
+  );
+  const tableRows: JSX.Element[] = [
     ...top5.map((s) => renderRow(s, false)),
-    <tr key="divider"><td colSpan={3} style={{ height: 10, background: "none" }}></td></tr>,
+    <tr key="divider">
+      <td colSpan={3} style={{ height: 10, background: "none" }}></td>
+    </tr>,
     ...(filteredUserRows.length > 0 ? filteredUserRows.map((s) => renderRow(s, false)) : [])
   ];
 
@@ -294,11 +274,7 @@ export function RankingTable() {
       >
         Top 5 Stakers · Your Position · Leagues
       </div>
-      <div style={{
-        overflowX: "auto",
-        WebkitOverflowScrolling: "touch",
-        width: "100%"
-      }}>
+      <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", width: "100%" }}>
         <table
           style={{
             width: isMobile ? 480 : "100%",
@@ -309,13 +285,12 @@ export function RankingTable() {
           }}
         >
           <thead>{renderHeader()}</thead>
-          <tbody>
-            {tableRows}
-          </tbody>
+          <tbody>{tableRows}</tbody>
         </table>
       </div>
       {renderLegend()}
       {renderNextLeague()}
+      {renderShareButton()}
     </div>
   );
 }
