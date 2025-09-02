@@ -31,9 +31,11 @@ const ANIMAL_LEAGUES = [
 // Get league by percentile
 function getLeague(rank: number, total: number) {
   const percentile = (rank / total) * 100;
-  return ANIMAL_LEAGUES.find(
-    (l) => percentile > l.range[0] && percentile <= l.range[1]
-  ) || ANIMAL_LEAGUES[ANIMAL_LEAGUES.length - 1]; // default Shrimp
+  return (
+    ANIMAL_LEAGUES.find(
+      (l) => percentile > l.range[0] && percentile <= l.range[1]
+    ) || ANIMAL_LEAGUES[ANIMAL_LEAGUES.length - 1] // default Shrimp
+  );
 }
 
 export function RankingTable() {
@@ -74,7 +76,9 @@ export function RankingTable() {
   let toNext: ToNextType = null;
   if (user) {
     const currentLeague = getLeague(user.rank!, total);
-    const currentIdx = ANIMAL_LEAGUES.findIndex((l) => l.name === currentLeague.name);
+    const currentIdx = ANIMAL_LEAGUES.findIndex(
+      (l) => l.name === currentLeague.name
+    );
     if (currentIdx > 0) {
       const nextLeague = ANIMAL_LEAGUES[currentIdx - 1];
       const thresholdRank = Math.ceil((nextLeague.range[1] / 100) * total);
@@ -85,7 +89,7 @@ export function RankingTable() {
           apr: thresholdUser.aprTotal,
           address: thresholdUser.address,
           leagueName: nextLeague.name,
-          icon: nextLeague.icon
+          icon: nextLeague.icon,
         };
       }
     }
@@ -109,7 +113,7 @@ export function RankingTable() {
           color: isUser ? "#181a1b" : "#fff",
           fontWeight: isUser ? 900 : 500,
           fontSize: isUser ? 17 : 15,
-          borderRadius: isUser ? 8 : 0
+          borderRadius: isUser ? 8 : 0,
         }}
       >
         <td style={{ textAlign: "center", fontWeight: 700 }}>
@@ -124,7 +128,9 @@ export function RankingTable() {
         <td style={{ textAlign: "center", fontWeight: 700 }}>
           <span style={{ color: league.color, fontWeight: 900 }}>
             {league.name}
-            {isUser && <span style={{ marginLeft: 6, color: "#1976d2" }}>(You)</span>}
+            {isUser && (
+              <span style={{ marginLeft: 6, color: "#1976d2" }}>(You)</span>
+            )}
           </span>
         </td>
       </tr>
@@ -141,86 +147,124 @@ export function RankingTable() {
     );
   }
 
-  function renderLegend() {
-    return (
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, margin: "10px 0" }}>
-        {ANIMAL_LEAGUES.map((l) => (
-          <span
-            key={l.name}
-            style={{
-              color: l.color,
-              fontWeight: 900,
-              fontSize: 14,
-              display: "flex",
-              alignItems: "center",
-              gap: 4
-            }}
-          >
-            {l.icon} {l.name}
-          </span>
-        ))}
-      </div>
-    );
-  }
+  function renderUserCard() {
+    if (!user) return null;
+    const league = getLeague(user.rank!, total);
 
-  function renderNextLeague() {
-    if (!toNext) return null;
+    // Progress calculation
+    let progress = 100;
+    if (
+      toNext &&
+      typeof user.aprTotal === "number" &&
+      typeof toNext.apr === "number"
+    ) {
+      progress = Math.min(100, (user.aprTotal / toNext.apr) * 100);
+    }
+
+    // Build tweet
+    const tweetText = toNext
+      ? `I’m ranked #${user.rank} in the ${league.icon} ${league.name} League with ${user.aprTotal?.toFixed(
+          2
+        )}% APR at @ColombiaStaking 🚀\nNext stop: ${toNext.icon} ${toNext.leagueName} 🏆\nStake with me 👉 https://colombiastaking.com`
+      : `I’m in the top ${league.icon} ${league.name} League at @ColombiaStaking with ${user.aprTotal?.toFixed(
+          2
+        )}% APR 🚀\nStake with me 👉 https://staking.colombia-staking.com`;
+    const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(
+      tweetText
+    )}`;
+
     return (
       <div
         style={{
-          margin: "18px 0 0 0",
-          background: "#23272a",
-          borderRadius: 8,
-          padding: "12px 18px",
-          color: "#fff",
-          fontWeight: 600,
-          fontSize: 15,
+          marginBottom: 16,
+          background: "#1e1f22",
+          borderRadius: 10,
+          padding: "16px 18px",
+          color: "#e5e5e5",
           display: "flex",
           flexDirection: "column",
-          gap: 6,
-          boxShadow: `0 2px 12px ${toNext ? "#6ee7c7" : "#23272a"}55`
+          gap: 10,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+          border: `1px solid ${league.color}55`,
         }}
       >
-        <span>
-          🚀 You’re currently on the way to{" "}
-          <b style={{ color: toNext?.icon ? "#ffe082" : "#fff" }}>
-            {toNext.icon} {toNext.leagueName}
-          </b>
-        </span>
-        <span>
-          Reach at least <b>{Number(toNext.apr).toFixed(2)}%</b> APR (Rank #{toNext.rank}) to level
-          up!
-        </span>
-      </div>
-    );
-  }
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ fontSize: 16, fontWeight: 700, color: league.color }}>
+            {league.icon} {league.name}
+          </div>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: 14,
+              padding: "2px 8px",
+              borderRadius: 6,
+              background: "#2a2d31",
+              border: `1px solid ${league.color}55`,
+              color: "#fff",
+            }}
+          >
+            Rank #{user.rank}
+          </div>
+        </div>
 
-  function renderShareButton() {
-    if (!user) return null;
-    const league = getLeague(user.rank!, total);
-    const shareText = `I'm ${league.icon} ${league.name} rank #${user.rank} with APR ${
-      user.aprTotal?.toFixed(2) ?? "—"
-    }% at Colombia Staking 🏆. Join the challenge and climb the leagues!`;
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+        {/* APR */}
+        <div style={{ fontWeight: 600, fontSize: 14 }}>
+          APR: {user.aprTotal?.toFixed(2) ?? "—"}%
+        </div>
 
-    return (
-      <div style={{ textAlign: "center", marginTop: 16 }}>
+        {/* Progress */}
+        {toNext && (
+          <div style={{ marginTop: 4 }}>
+            <div style={{ fontSize: 12, marginBottom: 6, color: "#aaa" }}>
+              Progress to {toNext.icon} {toNext.leagueName} (
+              {toNext.apr?.toFixed(2)}% APR)
+            </div>
+            <div
+              style={{
+                height: 8,
+                borderRadius: 4,
+                background: "#2f3136",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${progress}%`,
+                  height: "100%",
+                  background: league.color,
+                  transition: "width 0.4s ease",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Share button */}
         <a
-          href={twitterUrl}
+          href={tweetUrl}
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            display: "inline-block",
-            padding: "10px 16px",
-            background: "#1DA1F2",
+            marginTop: 12,
+            alignSelf: "flex-start",
+            background: league.color,
             color: "#fff",
-            borderRadius: 8,
-            fontWeight: 700,
+            fontSize: 13,
+            fontWeight: 600,
+            padding: "6px 10px",
+            borderRadius: 6,
+            textAlign: "center",
             textDecoration: "none",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
           }}
         >
-          📢 Share my Rank
+          Share on X
         </a>
       </div>
     );
@@ -234,7 +278,9 @@ export function RankingTable() {
     <tr key="divider">
       <td colSpan={3} style={{ height: 10, background: "none" }}></td>
     </tr>,
-    ...(filteredUserRows.length > 0 ? filteredUserRows.map((s) => renderRow(s, false)) : [])
+    ...(filteredUserRows.length > 0
+      ? filteredUserRows.map((s) => renderRow(s, false))
+      : []),
   ];
 
   return (
@@ -248,49 +294,33 @@ export function RankingTable() {
         maxWidth: 700,
         marginLeft: "auto",
         marginRight: "auto",
-        border: "2.5px solid #23272a"
+        border: "2.5px solid #23272a",
       }}
     >
+      {/* User card */}
+      {renderUserCard()}
+
+      {/* Table */}
       <div
         style={{
-          fontWeight: 900,
-          fontSize: 20,
-          color: "#ffe082",
-          marginBottom: 8,
-          textAlign: "center",
-          letterSpacing: 0.5
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
+          width: "100%",
         }}
       >
-        🏆 Ranking Table
-      </div>
-      <div
-        style={{
-          color: "#fff",
-          fontWeight: 600,
-          fontSize: 15,
-          textAlign: "center",
-          marginBottom: 10
-        }}
-      >
-        Top 5 Stakers · Your Position · Leagues
-      </div>
-      <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", width: "100%" }}>
         <table
           style={{
             width: isMobile ? 480 : "100%",
             minWidth: 360,
             borderCollapse: "separate",
             borderSpacing: 0,
-            background: "none"
+            background: "none",
           }}
         >
           <thead>{renderHeader()}</thead>
           <tbody>{tableRows}</tbody>
         </table>
       </div>
-      {renderLegend()}
-      {renderNextLeague()}
-      {renderShareButton()}
     </div>
   );
 }
