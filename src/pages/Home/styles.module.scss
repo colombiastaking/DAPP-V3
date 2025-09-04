@@ -13,7 +13,7 @@
   border-radius: 12px;
   background: linear-gradient(90deg, rgba(14, 22, 32, 0.9), rgba(18, 24, 48, 0.9));
   color: #eaffff;
-  margin-bottom: 20px;
+  margin-bottom: 8px; /* Reduced from 20px */
 }
 .brand {
   display: inline-flex;
@@ -50,7 +50,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  margin: 18px 0 8px;
+  margin: 8px 0 8px; /* Reduced top margin from 18px to 8px */
   box-sizing: border-box;
 }
 .assetCard {
