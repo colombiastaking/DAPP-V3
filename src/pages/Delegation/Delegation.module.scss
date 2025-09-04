@@ -18,7 +18,7 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start; /* Align buttons to left */
   width: 100%;
 }
 
@@ -40,9 +40,24 @@
   gap: 8px;
   width: 100%;
   max-width: 350px;
+  min-width: 180px; /* Ensure minimum width for uniformity */
+  box-sizing: border-box;
 }
 
 .buttonWrapper > button:hover,
 .buttonWrapper > div.trigger:hover:not(.disabled) {
   box-shadow: 0 4px 16px #4f8cffcc;
+}
+
+/* Mobile adjustments */
+@media (max-width: 575px) {
+  .buttonWrapper {
+    justify-content: flex-start;
+  }
+
+  .buttonWrapper > button,
+  .buttonWrapper > div.trigger {
+    max-width: 100%;
+    min-width: auto;
+  }
 }

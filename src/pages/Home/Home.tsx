@@ -12,7 +12,7 @@ export const Home = () => {
   const { address } = useGetAccountInfo();
   const { stakers, loading, egldPrice, colsPrice, baseApr, refresh } = useColsAprContext();
 
-  // Refresh on transaction completed event to ensure UI updates
+  // Refresh on any blockchain transaction completed event
   const onTxCompleteHandler = useCallback(() => {
     refresh();
   }, [refresh]);
@@ -26,9 +26,7 @@ export const Home = () => {
     return null;
   }
 
-  const userRow = address && Array.isArray(stakers)
-    ? stakers.find((s: any) => s.address === address)
-    : null;
+  const userRow = stakers.find((s: any) => s.address === address) ?? null;
 
   const egldDelegated = userRow?.egldStaked ?? 0;
   const colsStaked = userRow?.colsStaked ?? 0;
@@ -41,10 +39,8 @@ export const Home = () => {
 
   const totalStakers = stakers.length;
 
-  // Blue color for Total APR emphasis (same as user rank badge)
   const aprColor = '#1976d2';
 
-  // Help text for Total APR clarifying eGLD vs COLS basis
   const totalAprHelpText = `Total APR represents your annual percentage rate based on your staking status:
 - If you have eGLD delegated, the Total APR applies to your eGLD delegation.
 - If you have no eGLD delegated, the Total APR applies to your COLS token stake.
