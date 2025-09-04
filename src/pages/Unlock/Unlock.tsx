@@ -136,6 +136,18 @@ export const Unlock = () => {
             </connect.component>
           ))}
         </div>
+        <div style={{ marginTop: 32, textAlign: 'center', color: '#6ee7c7', fontWeight: 600, fontSize: 16, maxWidth: 400 }}>
+          Don't have a MultiversX wallet yet?&nbsp;
+          <a
+            href="https://xportal.app.link/referral?code=00kcpys24e"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#4f8cff', textDecoration: 'underline', fontWeight: 700 }}
+          >
+            Get the Xportal Wallet here
+          </a>
+          &nbsp;and start staking today!
+        </div>
       </div>
     </div>
   );
