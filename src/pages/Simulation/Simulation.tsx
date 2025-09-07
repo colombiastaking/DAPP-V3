@@ -25,9 +25,9 @@ function simulateAprAndRank({
   serviceFee: number;
   agencyLockedEgld: number;
 }) {
-  const APRmin = 0.4;
+  const APRmin = 0.3;
   let APRmax = 15;
-  const AGENCY_BUYBACK = 0.35;
+  const AGENCY_BUYBACK = 0.30;
   const DAO_DISTRIBUTION_RATIO = 0.333;
   const BONUS_BUYBACK_FACTOR = 0.66;
 
