@@ -171,10 +171,10 @@ export function RankingTable() {
     const tweetText = toNext
       ? `I’m ranked #${user.rank} in the ${league.icon} ${league.name} League with ${user.aprTotal?.toFixed(
           2
-        )}% APR at @ColombiaStaking 🚀\nNext stop: ${toNext.icon} ${toNext.leagueName} 🏆\nStake with me 👉 https://staking.colombia-staking.com`
+        )}% APR at @ColombiaStaking 🚀\nNext stop: ${toNext.icon} ${toNext.leagueName} 🏆\nStake with me 👉 https://staking.colombia-staking.com/lock`
       : `I’m in the top ${league.icon} ${league.name} League at @ColombiaStaking with ${user.aprTotal?.toFixed(
           2
-        )}% APR 🚀\nStake with me 👉 https://staking.colombia-staking.com`;
+        )}% APR 🚀\nStake with me 👉 https://staking.colombia-staking.com/lock`;
 
     const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(
       tweetText
