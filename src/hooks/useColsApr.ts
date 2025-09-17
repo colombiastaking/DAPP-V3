@@ -1,4 +1,3 @@
-// src/hooks/useColsApr.ts
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
@@ -12,18 +11,18 @@ import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import { network } from 'config';
 import { useGlobalContext } from 'context';
 
-const PEERME_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
-const PEERME_ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
+const PEERME_COLS_CONTRACT =
+  'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
+const PEERME_ENTITY_ADDRESS =
+  'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
 
 const ELASTIC_URL = 'https://staking.colombia-staking.com/mvx-es/_sql';
 const AGENCY_CONTRACT = network.delegationContract;
 
-// --- CONSTANTS ---
 const AGENCY_BUYBACK = 0.30;
 const DAO_DISTRIBUTION_RATIO = 0.333;
 const BONUS_BUYBACK_FACTOR = 0.66;
 
-// --- Backup URLs for provider data ---
 const PRIMARY_PROVIDER_API = `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}`;
 const BACKUP_PROVIDER_API = `https://api.multiversx.com/providers/${network.delegationContract}`;
 
@@ -40,95 +39,86 @@ export interface ColsStakerRow {
   aprColsOnly?: number | null;
 }
 
-// --- Fetch COLS price with backup API ---
-async function fetchColsPriceFromApi() {
-  try {
-    const { data } = await axios.get(
-      'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7'
-    );
-    if (Array.isArray(data) && data.length > 0) {
-      const last = data[data.length - 1];
-      if (last && typeof last.value === 'number')
-        return Math.round(last.value * 1000) / 1000;
-    }
-    // fallback to backup API if primary returns no valid data
-    const { data: backupData } = await axios.get(
-      'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7'
-    );
-    if (
-      Array.isArray(backupData) &&
-      backupData.length > 0 &&
-      typeof backupData[0].price === 'number'
-    ) {
-      return Math.round(backupData[0].price * 1000) / 1000;
-    }
-    return 0;
-  } catch {
+/** --- Generic fetch with retry and backup --- */
+async function fetchWithBackup<T = any>(
+  primaryUrl: string,
+  backupUrl: string,
+  retries = 2,
+  delayMs = 2000
+): Promise<T | null> {
+  for (let i = 0; i < retries; i++) {
     try {
-      const { data: backupData } = await axios.get(
-        'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7'
-      );
-      if (
-        Array.isArray(backupData) &&
-        backupData.length > 0 &&
-        typeof backupData[0].price === 'number'
-      ) {
-        return Math.round(backupData[0].price * 1000) / 1000;
+      const { data } = await axios.get<T | any>(primaryUrl);
+
+      // detect rate limit in body
+      if (data && typeof data === 'object' && 'error' in data) {
+        const errStr = String((data as any).error).toLowerCase();
+        if (errStr.includes('rate limit')) {
+          if (i < retries - 1) {
+            await new Promise(res => setTimeout(res, delayMs));
+            continue;
+          }
+          break; // fallback
+        }
       }
-      return 0;
-    } catch {
-      return 0;
+      return data;
+    } catch (err) {
+      // axios throws on 429 etc
+      if (i < retries - 1) {
+        await new Promise(res => setTimeout(res, delayMs));
+        continue;
+      }
+      break;
     }
+  }
+  try {
+    const { data: backupData } = await axios.get<T | any>(backupUrl);
+    return backupData;
+  } catch (err) {
+    console.error('Both primary and backup API failed', err);
+    return null;
   }
 }
 
-// --- Other API fetches with backup ---
+/** --- Fetch COLS price with backup API --- */
+async function fetchColsPriceFromApi() {
+  const primary =
+    'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7';
+  const backup =
+    'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7';
 
-async function fetchBaseAprFromApi() {
-  try {
-    const { data } = await axios.get(PRIMARY_PROVIDER_API);
-    if (data && typeof data.apr === 'number') {
-      return data.apr;
-    }
-    // fallback to backup API if primary returns no valid apr
-    const { data: backupData } = await axios.get(BACKUP_PROVIDER_API);
-    if (backupData && typeof backupData.apr === 'number') {
-      return backupData.apr;
-    }
-    return 0;
-  } catch {
-    try {
-      const { data: backupData } = await axios.get(BACKUP_PROVIDER_API);
-      if (backupData && typeof backupData.apr === 'number') {
-        return backupData.apr;
-      }
-      return 0;
-    } catch {
-      return 0;
+  const data = await fetchWithBackup<any[]>(primary, backup);
+  if (!data) return 0;
+
+  if (Array.isArray(data) && data.length > 0) {
+    const last = data[data.length - 1];
+    if (last && typeof last.value === 'number') {
+      return Math.round(last.value * 1000) / 1000;
     }
   }
+  if (Array.isArray(data) && typeof data[0]?.price === 'number') {
+    return Math.round(data[0].price * 1000) / 1000;
+  }
+  return 0;
+}
+
+async function fetchBaseAprFromApi() {
+  const data = await fetchWithBackup<any>(
+    PRIMARY_PROVIDER_API,
+    BACKUP_PROVIDER_API
+  );
+  return data && typeof data.apr === 'number' ? data.apr : 0;
 }
 
 async function fetchAgencyLockedEgld() {
-  try {
-    const { data } = await axios.get(PRIMARY_PROVIDER_API);
-    if (data?.locked)
-      return Math.round((Number(data.locked) / 1e18) * 10000) / 10000;
-    // fallback to backup API if primary returns no locked
-    const { data: backupData } = await axios.get(BACKUP_PROVIDER_API);
-    if (backupData?.locked)
-      return Math.round((Number(backupData.locked) / 1e18) * 10000) / 10000;
-    return 0;
-  } catch {
-    try {
-      const { data: backupData } = await axios.get(BACKUP_PROVIDER_API);
-      if (backupData?.locked)
-        return Math.round((Number(backupData.locked) / 1e18) * 10000) / 10000;
-      return 0;
-    } catch {
-      return 0;
-    }
+  const data = await fetchWithBackup<any>(
+    PRIMARY_PROVIDER_API,
+    BACKUP_PROVIDER_API
+  );
+  if (data?.locked) {
+    return Math.round((Number(data.locked) / 1e18) * 10000) / 10000;
   }
+  return 0;
 }
 
 async function fetchEgldPrice() {
@@ -140,7 +130,6 @@ async function fetchEgldPrice() {
   }
 }
 
-// --- Elasticsearch SQL + cursor fetch with timing health check ---
 async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
   const map: Record<string, number> = {};
   try {
@@ -154,9 +143,8 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
       fetch_size: 500
     });
     const duration = performance.now() - start;
-
     if (duration > 3000) {
-      console.warn(`Elasticsearch query took too long: ${duration.toFixed(2)}ms, falling back to contract queries`);
+      console.warn(`Elasticsearch slow (${duration.toFixed(2)}ms)`);
       throw new Error('Elasticsearch query timeout');
     }
 
@@ -166,10 +154,7 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
         if (stake > 1e12) stake = stake / 1e18;
         map[row[0]] = stake;
       });
-    } else {
-      console.warn('Elasticsearch query returned no rows, falling back to contract queries');
-      throw new Error('No data from Elasticsearch');
-    }
+    } else throw new Error('No data from ES');
 
     let cursor = res.data.cursor;
     while (cursor) {
@@ -185,13 +170,12 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
     }
     return map;
   } catch (err) {
-    console.error('Elasticsearch fetch failed or slow, fallback to contract queries', err);
+    console.error('ES fetch failed', err);
     return {};
   }
 }
 
-// --- Helper: fetch stake with retry (backup to ES) ---
-async function fetchStakeWithRetry(addr: string, retries = 5, delay = 1500): Promise<number> {
+async function fetchStakeWithRetry(addr: string, retries = 5, delay = 1500) {
   const provider = new ProxyNetworkProvider(network.gatewayAddress);
   for (let i = 0; i < retries; i++) {
     try {
@@ -203,16 +187,13 @@ async function fetchStakeWithRetry(addr: string, retries = 5, delay = 1500): Pro
       const data = await provider.queryContract(query);
       const [stake] = data.getReturnDataParts();
       return stake ? Number(decodeBigNumber(stake).toFixed()) / 1e18 : 0;
-    } catch (err) {
-      if (i < retries - 1) {
-        await new Promise(res => setTimeout(res, delay));
-      }
+    } catch {
+      if (i < retries - 1) await new Promise(res => setTimeout(res, delay));
     }
   }
-  return 0; // fallback after retries
+  return 0;
 }
 
-// --- COLS-only APR calculation ---
 function calculateColsOnlyApr({
   sumColsStaked,
   baseApr,
@@ -243,7 +224,6 @@ function calculateColsOnlyApr({
   return (numerator / denominator) * 100;
 }
 
-// --- Hook ---
 export function useColsApr({ trigger }: { trigger: any }) {
   const [loading, setLoading] = useState(true);
   const [stakers, setStakers] = useState<ColsStakerRow[]>([]);
@@ -276,7 +256,6 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   const recalc = useCallback(async () => {
     setLoading(true);
-
     try {
       const [
         colsStakers,
@@ -299,18 +278,17 @@ export function useColsApr({ trigger }: { trigger: any }) {
       setBaseApr(fetchedBaseApr);
       setAgencyLockedEgld(lockedEgld);
 
-      // Try ES first, fallback to contract queries if ES fails or empty
       let egldStakedMap: Record<string, number> = {};
       if (Object.keys(egldStakedMapFromES).length > 0) {
         egldStakedMap = egldStakedMapFromES;
       } else {
-        // Fallback: fetch each address stake with retry
         const addresses = colsStakers.map(s => s.address);
-        const results = await Promise.allSettled(addresses.map(addr => fetchStakeWithRetry(addr)));
+        const results = await Promise.allSettled(
+          addresses.map(addr => fetchStakeWithRetry(addr))
+        );
         results.forEach((res, idx) => {
           const addr = addresses[idx];
-          if (res.status === 'fulfilled') egldStakedMap[addr] = res.value;
-          else egldStakedMap[addr] = 0;
+          egldStakedMap[addr] = res.status === 'fulfilled' ? res.value : 0;
         });
       }
 
@@ -349,16 +327,12 @@ export function useColsApr({ trigger }: { trigger: any }) {
       setTargetAvgAprBonus(targetAvg);
 
       const aprMin = 0.3;
-      let left = aprMin,
-        right = 50;
-      let bestAprMax = 15;
-
+      let left = aprMin, right = 50, bestAprMax = 15;
       const calcSum = (aprMax: number) => {
         const filtered = table.filter(r => r.colsStaked > 0 && r.egldStaked > 0);
         if (!filtered.length) return 0;
 
-        let minRatio = Infinity,
-          maxRatio = -Infinity;
+        let minRatio = Infinity, maxRatio = -Infinity;
         filtered.forEach(r => {
           r.ratio =
             (r.colsStaked * fetchedColsPrice) /
@@ -392,12 +366,8 @@ export function useColsApr({ trigger }: { trigger: any }) {
       for (let iter = 0; iter < 30; iter++) {
         const mid = (left + right) / 2;
         const sum = calcSum(mid);
-        if (Math.abs(sum - targetAvg) < 0.01) {
-          bestAprMax = mid;
-          break;
-        }
-        if (sum < targetAvg) left = mid;
-        else right = mid;
+        if (Math.abs(sum - targetAvg) < 0.01) { bestAprMax = mid; break; }
+        if (sum < targetAvg) left = mid; else right = mid;
         bestAprMax = mid;
       }
       setAprMax(bestAprMax);
@@ -475,7 +445,6 @@ export function useColsApr({ trigger }: { trigger: any }) {
     } catch (err) {
       console.error('useColsApr recalculation failed', err);
       setStakers([]);
-      setLoading(false);
     } finally {
       setLoading(false);
     }
