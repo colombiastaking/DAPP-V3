@@ -10,6 +10,7 @@ import {
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import { network } from 'config';
 import { useGlobalContext } from 'context';
+import { fetchWithBackup } from '../utils/resilientApi';
 
 const PEERME_COLS_CONTRACT =
   'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
@@ -39,46 +40,8 @@ export interface ColsStakerRow {
   aprColsOnly?: number | null;
 }
 
-/** --- Generic fetch with retry and backup --- */
-async function fetchWithBackup<T = any>(
-  primaryUrl: string,
-  backupUrl: string,
-  retries = 2,
-  delayMs = 2000
-): Promise<T | null> {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const { data } = await axios.get<T | any>(primaryUrl);
-
-      // detect rate limit in body
-      if (data && typeof data === 'object' && 'error' in data) {
-        const errStr = String((data as any).error).toLowerCase();
-        if (errStr.includes('rate limit')) {
-          if (i < retries - 1) {
-            await new Promise(res => setTimeout(res, delayMs));
-            continue;
-          }
-          break; // fallback
-        }
-      }
-      return data;
-    } catch (err) {
-      // axios throws on 429 etc
-      if (i < retries - 1) {
-        await new Promise(res => setTimeout(res, delayMs));
-        continue;
-      }
-      break;
-    }
-  }
-  try {
-    const { data: backupData } = await axios.get<T | any>(backupUrl);
-    return backupData;
-  } catch (err) {
-    console.error('Both primary and backup API failed', err);
-    return null;
-  }
-}
+// helper
+const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 /** --- Fetch COLS price with backup API --- */
 async function fetchColsPriceFromApi() {
@@ -87,7 +50,7 @@ async function fetchColsPriceFromApi() {
   const backup =
     'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7';
 
-  const data = await fetchWithBackup<any[]>(primary, backup);
+  const data = await fetchWithBackup<any>(primary, backup);
   if (!data) return 0;
 
   if (Array.isArray(data) && data.length > 0) {
@@ -175,7 +138,7 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
   }
 }
 
-async function fetchStakeWithRetry(addr: string, retries = 5, delay = 1500) {
+async function fetchStakeWithRetry(addr: string, retries = 5, delayMs = 1500) {
   const provider = new ProxyNetworkProvider(network.gatewayAddress);
   for (let i = 0; i < retries; i++) {
     try {
@@ -188,7 +151,7 @@ async function fetchStakeWithRetry(addr: string, retries = 5, delay = 1500) {
       const [stake] = data.getReturnDataParts();
       return stake ? Number(decodeBigNumber(stake).toFixed()) / 1e18 : 0;
     } catch {
-      if (i < retries - 1) await new Promise(res => setTimeout(res, delay));
+      await wait(delayMs * (i + 1));
     }
   }
   return 0;
