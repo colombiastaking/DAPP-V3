@@ -35,7 +35,7 @@ function getLeague(rank: number, total: number) {
   return (
     ANIMAL_LEAGUES.find(
       (l) => percentile > l.range[0] && percentile <= l.range[1]
-    ) || ANIMAL_LEAGUES[ANIMAL_LEAGUES.length - 1] // default Shrimp
+    ) || ANIMAL_LEAGUES[ANIMAL_LEAGUES.length - 1]
   );
 }
 
@@ -98,10 +98,33 @@ export function RankingTable() {
     }
   }
 
+  // Generate keyframes for each league
+  const keyframesStyles = ANIMAL_LEAGUES.map(
+    (l) => `
+      @keyframes glow${l.name} {
+        0% {
+          box-shadow: 0 0 4px ${l.color}44;
+        }
+        100% {
+          box-shadow: 0 0 16px ${l.color}aa;
+        }
+      }
+    `
+  ).join("\n");
+
+  // Medal for top 3
+  function getMedal(rank: number) {
+    if (rank === 1) return "🥇";
+    if (rank === 2) return "🥈";
+    if (rank === 3) return "🥉";
+    return null;
+  }
+
   // Render a table row
   function renderRow(s: StakerRow, highlight = false) {
     const league = getLeague(s.rank!, total);
     const isUser = s.address === address;
+    const medal = getMedal(s.rank!);
 
     return (
       <tr
@@ -110,28 +133,51 @@ export function RankingTable() {
           background: isUser
             ? "linear-gradient(90deg, #ffe082 0%, #fffde4 100%)"
             : highlight
-            ? "#23272a"
+            ? "#202225"
             : "#181a1b",
-          border: isUser ? `2.5px solid ${league.color}` : undefined,
-          boxShadow: isUser ? `0 0 16px 2px ${league.color}88` : undefined,
+          border: isUser ? `2.5px solid ${league.color}` : "1px solid #2f3136",
+          boxShadow: isUser ? `0 0 16px 2px ${league.color}88` : "none",
           color: isUser ? "#181a1b" : "#fff",
           fontWeight: isUser ? 900 : 500,
-          fontSize: isUser ? 17 : 15,
+          fontSize: isUser ? (isMobile ? 15 : 17) : (isMobile ? 13 : 15),
           borderRadius: isUser ? 8 : 0,
+          transition: "all 0.25s ease",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget.style.background = isUser
+            ? "linear-gradient(90deg, #ffecb3 0%, #fffde7 100%)"
+            : "#23272a");
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget.style.background = isUser
+            ? "linear-gradient(90deg, #ffe082 0%, #fffde4 100%)"
+            : "#181a1b");
         }}
       >
-        <td style={{ textAlign: "center", fontWeight: 700 }}>
-          {league.icon}{" "}
+        <td style={{ textAlign: "center", fontWeight: 700, width: isMobile ? "30%" : "25%", padding: isMobile ? "6px 2px" : "8px 4px" }}>
+          {medal ? medal : league.icon}{" "}
           <span style={{ color: league.color, fontWeight: 900 }}>#{s.rank}</span>
         </td>
-        <td style={{ textAlign: "center", fontWeight: 700 }}>
+        <td style={{ textAlign: "center", fontWeight: 700, width: isMobile ? "30%" : "30%", padding: isMobile ? "6px 2px" : "8px 4px" }}>
           {typeof s.aprTotal === "number" && !isNaN(s.aprTotal)
             ? Number(s.aprTotal).toFixed(2) + "%"
             : "—"}
         </td>
-        <td style={{ textAlign: "center", fontWeight: 700 }}>
-          <span style={{ color: league.color, fontWeight: 900 }}>
-            {league.name}
+        <td style={{ textAlign: "center", fontWeight: 700, width: isMobile ? "40%" : "45%", padding: isMobile ? "6px 2px" : "8px 4px" }}>
+          <span
+            style={{
+              background: `linear-gradient(135deg, ${league.color}99, ${league.color})`,
+              padding: isMobile ? "3px 6px" : "4px 8px",
+              borderRadius: 20,
+              color: "#fff",
+              fontWeight: 800,
+              boxShadow: `0 0 8px ${league.color}66`,
+              animation: `glow${league.name} 2s ease-in-out infinite alternate`,
+              display: "inline-block",
+              fontSize: isMobile ? 12 : 14,
+            }}
+          >
+            {league.icon} {league.name}
             {isUser && (
               <span style={{ marginLeft: 6, color: "#1976d2" }}>(You)</span>
             )}
@@ -145,9 +191,9 @@ export function RankingTable() {
   function renderHeader() {
     return (
       <tr style={{ background: "#23272a", color: "#ffe082" }}>
-        <th style={{ textAlign: "center", fontWeight: 900 }}>Rank</th>
-        <th style={{ textAlign: "center", fontWeight: 900 }}>Total APR</th>
-        <th style={{ textAlign: "center", fontWeight: 900 }}>League</th>
+        <th style={{ textAlign: "center", fontWeight: 900, width: isMobile ? "30%" : "25%", padding: isMobile ? "6px 2px" : "8px 4px", fontSize: isMobile ? 14 : 16 }}>Rank</th>
+        <th style={{ textAlign: "center", fontWeight: 900, width: isMobile ? "30%" : "30%", padding: isMobile ? "6px 2px" : "8px 4px", fontSize: isMobile ? 14 : 16 }}>Total APR</th>
+        <th style={{ textAlign: "center", fontWeight: 900, width: isMobile ? "40%" : "45%", padding: isMobile ? "6px 2px" : "8px 4px", fontSize: isMobile ? 14 : 16 }}>League</th>
       </tr>
     );
   }
@@ -183,16 +229,16 @@ export function RankingTable() {
     return (
       <div
         style={{
-          marginBottom: 16,
+          marginBottom: 20,
           background: "#1e1f22",
-          borderRadius: 10,
-          padding: "16px 18px",
+          borderRadius: 12,
+          padding: "18px 20px",
           color: "#e5e5e5",
           display: "flex",
           flexDirection: "column",
           gap: 10,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
-          border: `1px solid ${league.color}55`,
+          boxShadow: `0 4px 12px ${league.color}55`,
+          border: `1.5px solid ${league.color}77`,
         }}
       >
         {/* Header */}
@@ -203,15 +249,26 @@ export function RankingTable() {
             alignItems: "center",
           }}
         >
-          <div style={{ fontSize: 16, fontWeight: 700, color: league.color }}>
+          <span
+            style={{
+              background: `linear-gradient(135deg, ${league.color}99, ${league.color})`,
+              padding: isMobile ? "5px 12px" : "6px 14px",
+              borderRadius: 20,
+              color: "#fff",
+              fontWeight: 800,
+              boxShadow: `0 0 8px ${league.color}66`,
+              animation: `glow${league.name} 2s ease-in-out infinite alternate`,
+              fontSize: isMobile ? 14 : 16,
+            }}
+          >
             {league.icon} {league.name}
-          </div>
+          </span>
           <div
             style={{
               fontWeight: 700,
-              fontSize: 14,
-              padding: "2px 8px",
-              borderRadius: 6,
+              fontSize: isMobile ? 12 : 14,
+              padding: isMobile ? "2px 8px" : "2px 10px",
+              borderRadius: 8,
               background: "#2a2d31",
               border: `1px solid ${league.color}55`,
               color: "#fff",
@@ -222,21 +279,21 @@ export function RankingTable() {
         </div>
 
         {/* APR */}
-        <div style={{ fontWeight: 600, fontSize: 14 }}>
+        <div style={{ fontWeight: 600, fontSize: isMobile ? 12 : 14 }}>
           APR: {user.aprTotal?.toFixed(2) ?? "—"}%
         </div>
 
         {/* Progress bar */}
         {toNext && (
-          <div style={{ marginTop: 4 }}>
-            <div style={{ fontSize: 12, marginBottom: 6, color: "#aaa" }}>
+          <div style={{ marginTop: 6 }}>
+            <div style={{ fontSize: isMobile ? 11 : 12, marginBottom: 6, color: "#aaa" }}>
               Progress to {toNext.icon} {toNext.leagueName} (
               {toNext.apr?.toFixed(2)}% APR)
             </div>
             <div
               style={{
-                height: 8,
-                borderRadius: 4,
+                height: 10,
+                borderRadius: 6,
                 background: "#2f3136",
                 overflow: "hidden",
               }}
@@ -245,8 +302,8 @@ export function RankingTable() {
                 style={{
                   width: `${progress}%`,
                   height: "100%",
-                  background: league.color,
-                  transition: "width 0.4s ease",
+                  background: `linear-gradient(90deg, ${league.color}, #fff)`,
+                  transition: "width 0.6s ease",
                 }}
               />
             </div>
@@ -259,16 +316,17 @@ export function RankingTable() {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            marginTop: 12,
+            marginTop: 14,
             alignSelf: "flex-start",
-            background: league.color,
+            background: `linear-gradient(135deg, ${league.color}, #6ee7c7)`,
             color: "#fff",
-            fontSize: 13,
+            fontSize: isMobile ? 12 : 13,
             fontWeight: 600,
-            padding: "6px 10px",
-            borderRadius: 6,
+            padding: isMobile ? "6px 10px" : "7px 12px",
+            borderRadius: 8,
             textAlign: "center",
             textDecoration: "none",
+            boxShadow: `0 2px 8px ${league.color}66`,
           }}
         >
           Share on X
@@ -294,17 +352,17 @@ export function RankingTable() {
   return (
     <div
       style={{
-        margin: "32px 0 0 0",
+        margin: "32px auto 0 auto",
         background: "#181a1b",
         borderRadius: 14,
         boxShadow: "0 2px 16px #6ee7c7aa",
-        padding: "24px 10px 18px 10px",
-        maxWidth: 700,
-        marginLeft: "auto",
-        marginRight: "auto",
-        border: "2.5px solid #23272a",
+        padding: isMobile ? "20px 10px" : "24px 12px 20px 12px",
+        maxWidth: 720,
+        border: "2px solid #23272a",
       }}
     >
+      <style>{keyframesStyles}</style>
+
       {/* User card */}
       {renderUserCard()}
 
@@ -318,8 +376,8 @@ export function RankingTable() {
       >
         <table
           style={{
-            width: isMobile ? 480 : "100%",
-            minWidth: 360,
+            width: "100%",
+            minWidth: isMobile ? 300 : 320,
             borderCollapse: "separate",
             borderSpacing: 0,
             background: "none",
