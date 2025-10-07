@@ -37,7 +37,7 @@ normalized = (ratio - minRatio) / (maxRatio - minRatio)
 ```math
 APR_BONUS = APRmin + (APRmax - APRmin) × √normalized
 ```
-- `APRmin` typically = 0.4%
+- `APRmin` typically = 0.3%
 - `APRmax` is dynamically adjusted
 
 #### Step 4: Dynamic APRmax Targeting
@@ -121,10 +121,10 @@ Leagues are visually represented in the DApp.
 
 | Parameter | Value | Description |
 |----------|-------|-------------|
-| `AGENCY_BUYBACK` | 0.35 | 35% of agency rewards used for buybacks |
+| `AGENCY_BUYBACK` | 0.30 | 30% of agency rewards used for buybacks |
 | `DAO_DISTRIBUTION_RATIO` | 0.333 | 33.3% of buybacks to DAO rewards |
 | `BONUS_BUYBACK_FACTOR` | 0.66 | Used in bonus average APR targeting |
-| `APRmin` | 0.4% | Minimum COLS bonus APR |
+| `APRmin` | 0.3% | Minimum COLS bonus APR |
 | `APRmax` | Up to 50% | Dynamically adjusted |
 
 ---
