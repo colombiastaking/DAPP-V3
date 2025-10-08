@@ -296,7 +296,7 @@ export const Simulation = () => {
       colsPrice,
       egldPrice,
       baseApr,
-      serviceFee: 0.12,
+      serviceFee: 0.10,
       agencyLockedEgld
     });
     setSimResult(result);
