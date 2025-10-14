@@ -66,12 +66,11 @@ function simulateAprAndRank({
       egldPrice / colsPrice
     ) / 365;
 
-  let step = 0.01;
+  // --- Binary Search version replacing stepwise iteration ---
+  let left = APRmin;
+  let right = 50;
   let bestAprMax = APRmax;
-  let bestDiff = Infinity;
-  let maxIter = 200;
   let iter = 0;
-  let lastSum = 0;
 
   function calcAprBonusTableSum({
     stakers,
@@ -111,37 +110,32 @@ function simulateAprAndRank({
     return sum;
   }
 
-  while (iter < maxIter) {
-    if (APRmax > 25) APRmax = 50;
-    if (APRmax < APRmin) APRmax = APRmin;
+  // ---- Binary search implementation ----
+  while (iter < 200) {
+    const mid = (left + right) / 2;
     const sum = calcAprBonusTableSum({
       stakers: newStakers.map(r => ({ ...r })),
       egldPrice,
       colsPrice,
-      aprMax: APRmax,
+      aprMax: mid,
       aprMin: APRmin
     });
-    const diff = Math.abs(sum - targetAvgAprBonus);
-    if (diff < 0.01) {
-      bestAprMax = APRmax;
+    const diff = sum - targetAvgAprBonus;
+
+    if (Math.abs(diff) < 0.01) {
+      bestAprMax = mid;
       break;
     }
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      bestAprMax = APRmax;
-    }
-    if (sum < targetAvgAprBonus) {
-      APRmax += step;
+
+    if (diff > 0) {
+      right = mid;
     } else {
-      APRmax -= step;
+      left = mid;
     }
-    if ((lastSum < targetAvgAprBonus && sum > targetAvgAprBonus) ||
-        (lastSum > targetAvgAprBonus && sum < targetAvgAprBonus)) {
-      step = Math.max(0.01, step / 2);
-    }
-    lastSum = sum;
+    bestAprMax = mid;
     iter++;
   }
+  // --- End binary search replacement ---
 
   for (const row of newStakers) {
     if (row.egldStaked > 0 && colsPrice > 0 && egldPrice > 0) {
