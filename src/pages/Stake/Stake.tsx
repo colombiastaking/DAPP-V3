@@ -1,6 +1,7 @@
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import { ClaimColsButton } from 'components/Stake/ClaimColsButton';
 import { StakeCols } from 'components/Stake/components/StakeCols';
+import { BuyCols } from 'components/Stake/components/BuyCols';
 import styles from './styles.module.scss';
 
 export const Stake = () => {
@@ -16,6 +17,7 @@ export const Stake = () => {
         <StakeCols />
         <ClaimColsButton onClaimed={() => {}} />
       </div>
+      <BuyCols />
     </div>
   );
 };
