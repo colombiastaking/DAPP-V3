@@ -93,6 +93,7 @@ async function fetchEgldPrice() {
   }
 }
 
+/** --- ElasticSearch fetch (main API) --- */
 async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
   const map: Record<string, number> = {};
   try {
@@ -138,6 +139,7 @@ async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
   }
 }
 
+/** --- One-by-one fetch (used only by backup API) --- */
 async function fetchStakeWithRetry(addr: string, retries = 5, delayMs = 1500) {
   const provider = new ProxyNetworkProvider(network.gatewayAddress);
   for (let i = 0; i < retries; i++) {
@@ -155,6 +157,17 @@ async function fetchStakeWithRetry(addr: string, retries = 5, delayMs = 1500) {
     }
   }
   return 0;
+}
+
+/** --- Backup API map fetch --- */
+async function fetchEgldStakedMapFromBackup(addresses: string[]): Promise<Record<string, number>> {
+  const map: Record<string, number> = {};
+  const results = await Promise.allSettled(addresses.map(addr => fetchStakeWithRetry(addr)));
+  results.forEach((res, idx) => {
+    const addr = addresses[idx];
+    map[addr] = res.status === 'fulfilled' ? res.value : 0;
+  });
+  return map;
 }
 
 function calculateColsOnlyApr({
@@ -225,15 +238,13 @@ export function useColsApr({ trigger }: { trigger: any }) {
         fetchedEgldPrice,
         fetchedColsPrice,
         fetchedBaseApr,
-        lockedEgld,
-        egldStakedMapFromES
+        lockedEgld
       ] = await Promise.all([
         fetchColsStakers(),
         fetchEgldPrice(),
         fetchColsPriceFromApi(),
         fetchBaseAprFromApi(),
-        fetchAgencyLockedEgld(),
-        fetchEgldStakedMapFromES()
+        fetchAgencyLockedEgld()
       ]);
 
       setEgldPrice(fetchedEgldPrice);
@@ -241,18 +252,15 @@ export function useColsApr({ trigger }: { trigger: any }) {
       setBaseApr(fetchedBaseApr);
       setAgencyLockedEgld(lockedEgld);
 
+      // Try ElasticSearch (main API)
       let egldStakedMap: Record<string, number> = {};
-      if (Object.keys(egldStakedMapFromES).length > 0) {
-        egldStakedMap = egldStakedMapFromES;
-      } else {
+      try {
+        egldStakedMap = await fetchEgldStakedMapFromES();
+        if (!Object.keys(egldStakedMap).length) throw new Error('Empty ES data');
+      } catch (err) {
+        console.warn('ElasticSearch failed, switching to backup API...');
         const addresses = colsStakers.map(s => s.address);
-        const results = await Promise.allSettled(
-          addresses.map(addr => fetchStakeWithRetry(addr))
-        );
-        results.forEach((res, idx) => {
-          const addr = addresses[idx];
-          egldStakedMap[addr] = res.status === 'fulfilled' ? res.value : 0;
-        });
+        egldStakedMap = await fetchEgldStakedMapFromBackup(addresses);
       }
 
       let serviceFee = 0.10;
@@ -263,6 +271,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         if (!isNaN(feeNum)) serviceFee = feeNum / 100;
       }
 
+      /** --- Continue with the same APR logic --- */
       const table: ColsStakerRow[] = colsStakers.map(s => ({
         address: s.address,
         colsStaked: s.colsStaked,
