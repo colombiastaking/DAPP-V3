@@ -1,37 +1,28 @@
-import axios from 'axios';
+import { fetchWithBackup } from '../utils/resilientApi';
 
 interface GetLatestTransactionsType {
   apiAddress: string;
-  address: string;
-  contractAddress: string;
-  timeout: number;
-  page?: number;
-  url?: string;
+  // Removed unused parameters
 }
+
+const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
+const BACKUP_API = 'https://api.multiversx.com';
 
 const fetchTransactions = (url: string) =>
   async function getTransactions({
-    apiAddress,
-    address,
-    contractAddress,
-    timeout
+    apiAddress
   }: GetLatestTransactionsType) {
+    const primaryUrl = `${apiAddress}${url}`;
+    const backupUrl = primaryUrl.replace(PRIMARY_API, BACKUP_API);
+
     try {
-      const { data } = await axios.get(`${apiAddress}${url}`, {
-        params: {
-          sender: address,
-          receiver: contractAddress,
-          condition: 'must',
-          size: 25
-        },
-        timeout
-      });
+      const data = await fetchWithBackup(primaryUrl, backupUrl, 3, 2000);
 
       return {
         data: data,
-        success: data !== undefined
+        success: data !== undefined && data !== null
       };
-    } catch (err) {
+    } catch {
       return {
         success: false
       };
