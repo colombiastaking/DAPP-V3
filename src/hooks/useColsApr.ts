@@ -17,8 +17,6 @@ const PEERME_COLS_CONTRACT =
 const PEERME_ENTITY_ADDRESS =
   'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
 
-const ELASTIC_URL = 'https://staking.colombia-staking.com/mvx-es/_sql';
-const AGENCY_CONTRACT = network.delegationContract;
 
 const AGENCY_BUYBACK = 0.30;
 const DAO_DISTRIBUTION_RATIO = 0.333;
@@ -40,7 +38,7 @@ export interface ColsStakerRow {
   aprColsOnly?: number | null;
 }
 
-// helper
+// wait helper
 const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 /** --- Fetch COLS price with backup API --- */
@@ -66,18 +64,12 @@ async function fetchColsPriceFromApi() {
 }
 
 async function fetchBaseAprFromApi() {
-  const data = await fetchWithBackup<any>(
-    PRIMARY_PROVIDER_API,
-    BACKUP_PROVIDER_API
-  );
+  const data = await fetchWithBackup<any>(PRIMARY_PROVIDER_API, BACKUP_PROVIDER_API);
   return data && typeof data.apr === 'number' ? data.apr : 0;
 }
 
 async function fetchAgencyLockedEgld() {
-  const data = await fetchWithBackup<any>(
-    PRIMARY_PROVIDER_API,
-    BACKUP_PROVIDER_API
-  );
+  const data = await fetchWithBackup<any>(PRIMARY_PROVIDER_API, BACKUP_PROVIDER_API);
   if (data?.locked) {
     return Math.round((Number(data.locked) / 1e18) * 10000) / 10000;
   }
@@ -93,53 +85,7 @@ async function fetchEgldPrice() {
   }
 }
 
-/** --- ElasticSearch fetch (main API) --- */
-async function fetchEgldStakedMapFromES(): Promise<Record<string, number>> {
-  const map: Record<string, number> = {};
-  try {
-    const start = performance.now();
-    let res = await axios.post(ELASTIC_URL, {
-      query: `
-        SELECT address, activeStakeNum 
-        FROM "delegators-*"
-        WHERE contract = '${AGENCY_CONTRACT}'
-      `,
-      fetch_size: 500
-    });
-    const duration = performance.now() - start;
-    if (duration > 3000) {
-      console.warn(`Elasticsearch slow (${duration.toFixed(2)}ms)`);
-      throw new Error('Elasticsearch query timeout');
-    }
-
-    if (res.data?.rows?.length) {
-      res.data.rows.forEach((row: any[]) => {
-        let stake = Number(row[1]) || 0;
-        if (stake > 1e12) stake = stake / 1e18;
-        map[row[0]] = stake;
-      });
-    } else throw new Error('No data from ES');
-
-    let cursor = res.data.cursor;
-    while (cursor) {
-      const curRes = await axios.post(ELASTIC_URL, { cursor });
-      if (curRes.data?.rows?.length) {
-        curRes.data.rows.forEach((row: any[]) => {
-          let stake = Number(row[1]) || 0;
-          if (stake > 1e12) stake = stake / 1e18;
-          map[row[0]] = stake;
-        });
-      }
-      cursor = curRes.data.cursor;
-    }
-    return map;
-  } catch (err) {
-    console.error('ES fetch failed', err);
-    return {};
-  }
-}
-
-/** --- One-by-one fetch (used only by backup API) --- */
+/** --- Contract-based staking fetch (always correct) --- */
 async function fetchStakeWithRetry(addr: string, retries = 5, delayMs = 1500) {
   const provider = new ProxyNetworkProvider(network.gatewayAddress);
   for (let i = 0; i < retries; i++) {
@@ -159,8 +105,8 @@ async function fetchStakeWithRetry(addr: string, retries = 5, delayMs = 1500) {
   return 0;
 }
 
-/** --- Backup API map fetch --- */
-async function fetchEgldStakedMapFromBackup(addresses: string[]): Promise<Record<string, number>> {
+/** --- Always use backup (contract query) to get correct eGLD staked --- */
+async function fetchEgldStakedMap(addresses: string[]): Promise<Record<string, number>> {
   const map: Record<string, number> = {};
   const results = await Promise.allSettled(addresses.map(addr => fetchStakeWithRetry(addr)));
   results.forEach((res, idx) => {
@@ -177,16 +123,10 @@ function calculateColsOnlyApr({
   agencyLockedEgld,
   egldPrice,
   colsPrice
-}: {
-  sumColsStaked: number;
-  baseApr: number;
-  serviceFee: number;
-  agencyLockedEgld: number;
-  egldPrice: number;
-  colsPrice: number;
-}) {
+}: any) {
   if (!sumColsStaked || !baseApr || !agencyLockedEgld || !egldPrice || !colsPrice)
     return 0;
+
   const baseAprCorrected = baseApr / (1 - serviceFee) / 100;
   const numerator =
     agencyLockedEgld *
@@ -195,8 +135,10 @@ function calculateColsOnlyApr({
     serviceFee *
     DAO_DISTRIBUTION_RATIO *
     egldPrice;
+
   const denominator = colsPrice * sumColsStaked;
   if (denominator === 0) return 0;
+
   return (numerator / denominator) * 100;
 }
 
@@ -212,6 +154,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   const { contractDetails } = useGlobalContext();
 
+  /** --- Fetch list of COLS stakers --- */
   const fetchColsStakers = useCallback(async () => {
     const provider = new ProxyNetworkProvider(network.gatewayAddress);
     const query = new Query({
@@ -222,6 +165,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
     const data = await provider.queryContract(query);
     const parts = data.getReturnDataParts();
     const result: { address: string; colsStaked: number }[] = [];
+
     for (let i = 0; i < parts.length; i += 2) {
       const addr = new Address(parts[i]).bech32();
       const amt = decodeBigNumber(parts[i + 1]).toFixed();
@@ -230,6 +174,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
     return result;
   }, []);
 
+  /** --- Full APR recalculation --- */
   const recalc = useCallback(async () => {
     setLoading(true);
     try {
@@ -252,26 +197,17 @@ export function useColsApr({ trigger }: { trigger: any }) {
       setBaseApr(fetchedBaseApr);
       setAgencyLockedEgld(lockedEgld);
 
-      // Try ElasticSearch (main API)
-      let egldStakedMap: Record<string, number> = {};
-      try {
-        egldStakedMap = await fetchEgldStakedMapFromES();
-        if (!Object.keys(egldStakedMap).length) throw new Error('Empty ES data');
-      } catch (err) {
-        console.warn('ElasticSearch failed, switching to backup API...');
-        const addresses = colsStakers.map(s => s.address);
-        egldStakedMap = await fetchEgldStakedMapFromBackup(addresses);
-      }
+      /** --- Always use correct backup API for staking --- */
+      const addresses = colsStakers.map(s => s.address);
+      const egldStakedMap = await fetchEgldStakedMap(addresses);
 
       let serviceFee = 0.10;
       if (contractDetails?.data?.serviceFee) {
-        const feeNum = parseFloat(
-          contractDetails.data.serviceFee.replace('%', '').trim()
-        );
+        const feeNum = parseFloat(contractDetails.data.serviceFee.replace('%', '').trim());
         if (!isNaN(feeNum)) serviceFee = feeNum / 100;
       }
 
-      /** --- Continue with the same APR logic --- */
+      /** --- Build main staker table --- */
       const table: ColsStakerRow[] = colsStakers.map(s => ({
         address: s.address,
         colsStaked: s.colsStaked,
@@ -285,6 +221,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         aprColsOnly: null
       }));
 
+      /** --- Continue with same APR logic --- */
       const targetAvg =
         (lockedEgld *
           fetchedBaseApr /
@@ -296,10 +233,13 @@ export function useColsApr({ trigger }: { trigger: any }) {
           fetchedEgldPrice) /
         fetchedColsPrice /
         365;
+
       setTargetAvgAprBonus(targetAvg);
 
+      /** --- APR bonus solver --- */
       const aprMin = 0.3;
       let left = aprMin, right = 50, bestAprMax = 15;
+
       const calcSum = (aprMax: number) => {
         const filtered = table.filter(r => r.colsStaked > 0 && r.egldStaked > 0);
         if (!filtered.length) return 0;
@@ -318,6 +258,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
             maxRatio !== minRatio && r.ratio !== null
               ? (r.ratio - minRatio) / (maxRatio - minRatio)
               : 0;
+
           r.aprBonus =
             aprMin + (aprMax - aprMin) * Math.sqrt(r.normalized as number);
         });
@@ -338,12 +279,17 @@ export function useColsApr({ trigger }: { trigger: any }) {
       for (let iter = 0; iter < 30; iter++) {
         const mid = (left + right) / 2;
         const sum = calcSum(mid);
-        if (Math.abs(sum - targetAvg) < 0.01) { bestAprMax = mid; break; }
-        if (sum < targetAvg) left = mid; else right = mid;
+        if (Math.abs(sum - targetAvg) < 0.01) {
+          bestAprMax = mid;
+          break;
+        }
+        if (sum < targetAvg) left = mid;
+        else right = mid;
         bestAprMax = mid;
       }
       setAprMax(bestAprMax);
 
+      /** --- Final APR details --- */
       const validRatios = table
         .filter(r => r.egldStaked > 0 && r.colsStaked > 0)
         .map(r => {
@@ -361,6 +307,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
           r.ratio !== null && maxRatio !== minRatio
             ? (r.ratio - minRatio) / (maxRatio - minRatio)
             : null;
+
         r.aprBonus =
           r.normalized !== null
             ? aprMin + (bestAprMax - aprMin) * Math.sqrt(r.normalized as number)
@@ -369,6 +316,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
       const sumCols = table.reduce((sum, r) => sum + (r.colsStaked || 0), 0);
       const baseAprCorrected = fetchedBaseApr / (1 - serviceFee) / 100;
+
       table.forEach(r => {
         if (r.egldStaked > 0 && r.colsStaked > 0 && sumCols > 0) {
           r.dao =
@@ -410,6 +358,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
       const sorted = [...table].sort(
         (a, b) => (b.aprTotal || 0) - (a.aprTotal || 0)
       );
+
       const rankMap = new Map(sorted.map((r, i) => [r.address, i + 1]));
       table.forEach(r => (r.rank = rankMap.get(r.address) ?? null));
 
