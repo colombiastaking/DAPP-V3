@@ -350,7 +350,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
         365;
       setTargetAvgAprBonus(targetAvg);
 
-      const aprMin = 0.3;
+      const aprMin = 0.5;
       let left = aprMin, right = 50, bestAprMax = 15;
       const calcSum = (aprMax: number) => {
         const filtered = table.filter(r => r.colsStaked > 0 && r.egldStaked > 0);
