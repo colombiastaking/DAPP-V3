@@ -38,13 +38,17 @@ export interface ColsStakerRow {
   aprTotal: number | null;
   rank: number | null;
   aprColsOnly?: number | null;
+
+  /** NEW FIELDS FOR EGLD-ONLY USERS **/
+  potentialApr?: number | null;
+  infoMessage?: string | null;
 }
 
-// sleep util
+/* ================================ */
 const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 /* ================================
-   FETCH — TOKEN / APR / ECONOMICS
+   FETCH economics
 ================================ */
 async function fetchColsPriceFromApi() {
   const primary = 'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7';
@@ -83,11 +87,9 @@ async function fetchEgldPrice() {
 }
 
 /* ================================
-   PRIMARY FETCH — CONTRACT FIRST
-   BACKUP ONLY — Accounts API
+   STAKE FETCH (contract priority)
 ================================ */
 
-/**📌 Priority #1 → CONTRACT */
 async function fetchStakeContract(addr: string, retries = 5) {
   const provider = new ProxyNetworkProvider(network.gatewayAddress);
 
@@ -101,16 +103,14 @@ async function fetchStakeContract(addr: string, retries = 5) {
 
       const data = await provider.queryContract(query);
       const [stake] = data.getReturnDataParts();
-      return stake ? Number(decodeBigNumber(stake)) / 1e18 : 0; // always return valid number
+      return stake ? Number(decodeBigNumber(stake)) / 1e18 : 0;
     } catch {
       await wait(200 * (i + 1));
     }
   }
-
-  return null; // contract unavailable → triggers API fallback
+  return null;
 }
 
-/**📌 Priority #2 → ACCOUNTS API (only if SC fails) */
 async function fetchStakeApiBackup(addr: string): Promise<number|null> {
   try {
     const res = await axios.get(`${network.apiAddress}/accounts/${addr}`);
@@ -125,7 +125,7 @@ async function fetchStakeApiBackup(addr: string): Promise<number|null> {
     for (const c of candidates) {
       if (c == null) continue;
       const v = Number(c);
-      return v > 1e12 ? v / 1e18 : v; // capable of raw or formatted
+      return v > 1e12 ? v / 1e18 : v;
     }
 
     return null;
@@ -134,20 +134,16 @@ async function fetchStakeApiBackup(addr: string): Promise<number|null> {
   }
 }
 
-/**💥 Final fetcher called by the APR engine */
 async function fetchEgldStakedContractPriority(addresses: string[]): Promise<Record<string, number>> {
   let result: Record<string, number> = {};
 
-  // 1️⃣ Try contract for all
   const primary = await Promise.allSettled(addresses.map(a => fetchStakeContract(a)));
 
-  // allocate
   addresses.forEach((addr, idx) => {
     const r = primary[idx];
-    result[addr] = (r.status === 'fulfilled' && r.value !== null) ? r.value : -1; // -1 = needs backup
+    result[addr] = (r.status === 'fulfilled' && r.value !== null) ? r.value : -1;
   });
 
-  // 2️⃣ Backup only for missing addresses
   const fallbackList = Object.keys(result).filter(a => result[a] === -1);
 
   if (fallbackList.length) {
@@ -226,41 +222,45 @@ export function useColsApr({ trigger }: { trigger: any }) {
       setEgldPrice(pE); setColsPrice(pC);
       setBaseApr(pA); setAgencyLockedEgld(pL);
 
+      /** 🔥 FETCH EGLD for all COLS users — but will later add EGLD-only users if desired */
       const addresses = users.map(u=>u.address);
-
-      /* 🔥 delegation fetch using PRIORITY CONTRACT */
       const egldStakedMap = await fetchEgldStakedContractPriority(addresses);
 
-      /* build rows */
+      /** Build table rows */
       const table: ColsStakerRow[] = users.map(u=>({
         address:u.address,
         colsStaked:u.colsStaked,
         egldStaked:egldStakedMap[u.address] ?? 0,
         ratio:null,normalized:null,aprBonus:null,
-        dao:null,aprTotal:null,rank:null,aprColsOnly:null
+        dao:null,aprTotal:null,rank:null,aprColsOnly:null,
+        potentialApr:null,infoMessage:null
       }));
 
+      /** SERVICE FEE IMPORT **/
       let serviceFee=0.10;
       if(contractDetails?.data?.serviceFee){
         const num=parseFloat(contractDetails.data.serviceFee.replace('%','').trim());
         if(!isNaN(num)) serviceFee=num/100;
       }
 
-      /* 🔥 target APR compute */
-      const baseCorrected=pA/(1-serviceFee)/100;
-      const targetAvg=((pL*baseCorrected*AGENCY_BUYBACK*serviceFee*BONUS_BUYBACK_FACTOR*pE)/pC)/365;
-      setTargetAvgAprBonus(targetAvg);
-
-      /** Ranking/bonus algorithm identical below... */
+      /** MIN/MAX APR TARGETING */
       const aprMin=0.5; let L=0.5,R=50,best=15;
       const calc=(mx:number)=>{
         const f=table.filter(r=>r.colsStaked>0&&r.egldStaked>0);
         if(!f.length)return 0;
 
-        let mn=1e99,mxv=-1e99;
+        let mn=Number.POSITIVE_INFINITY,mxv=Number.NEGATIVE_INFINITY;
         f.forEach(r=>{
-          r.ratio=(r.colsStaked*pC)/(r.egldStaked*pE);
-          mn=Math.min(mn,r.ratio!); mxv=Math.max(mxv,r.ratio!);
+          // safe guards for division
+          if (r.egldStaked > 0) {
+            r.ratio = (r.colsStaked * pC) / (r.egldStaked * pE);
+            mn = Math.min(mn, r.ratio!);
+            mxv = Math.max(mxv, r.ratio!);
+          } else {
+            r.ratio = 0;
+            mn = Math.min(mn, 0);
+            mxv = Math.max(mxv, 0);
+          }
         });
 
         f.forEach(r=>{
@@ -269,6 +269,10 @@ export function useColsApr({ trigger }: { trigger: any }) {
         });
         return f.reduce((s,r)=>s+(((r.aprBonus!/100)*r.egldStaked*pE)/365/pC),0);
       };
+
+      const baseCorrected=pA/(1-serviceFee)/100;
+      const targetAvg=((pL*baseCorrected*AGENCY_BUYBACK*serviceFee*BONUS_BUYBACK_FACTOR*pE)/pC)/365;
+      setTargetAvgAprBonus(targetAvg);
 
       for(let i=0;i<30;i++){
         const mid=(L+R)/2;
@@ -279,45 +283,78 @@ export function useColsApr({ trigger }: { trigger: any }) {
       }
       setAprMax(best);
 
-      /* Recompute APR fields */
-      const ratios=table.filter(r=>r.egldStaked>0&&r.colsStaked>0).map(r=>
-        (r.colsStaked*pC)/(r.egldStaked*pE)
-      );
-      const mn=Math.min(...ratios),mx=Math.max(...ratios);
-
-      table.forEach(r=>{
-        r.normalized=(r.ratio!==null&&mx!==mn)
-          ?((r.colsStaked*pC)/(r.egldStaked*pE)-mn)/(mx-mn)
-          :null;
-        r.aprBonus=r.normalized!==null?
-          aprMin+(best-aprMin)*Math.sqrt(r.normalized):null;
-      });
-
       const sumCols=table.reduce((s,r)=>s+(r.colsStaked||0),0);
 
-      table.forEach(r=>{
-        if(r.egldStaked&&r.colsStaked&&sumCols){
-          r.dao=(((pL*baseCorrected*AGENCY_BUYBACK*serviceFee*DAO_DISTRIBUTION_RATIO*r.colsStaked)
-            /sumCols/r.egldStaked)*100);
-        }
-        r.aprColsOnly=r.colsStaked?calculateColsOnlyApr({
-          sumColsStaked:sumCols,baseApr:pA,serviceFee,
-          agencyLockedEgld:pL,egldPrice:pE,colsPrice:pC
-        }):null;
+      /** compute ratios safely for final pass */
+      const ratios = table
+        .filter(r => r.egldStaked > 0 && r.colsStaked > 0)
+        .map(r => (r.colsStaked * pC) / (r.egldStaked * pE));
 
-        r.aprTotal=r.egldStaked?pA+(r.aprBonus||0)+(r.dao||0)
-          :r.colsStaked?r.aprColsOnly ?? pA
-          :pA;
+      const mn = (ratios.length > 0) ? Math.min(...ratios) : 0;
+      const mx = (ratios.length > 0) ? Math.max(...ratios) : 0;
+
+      table.forEach(r=>{
+        // If both present, compute bonuses/dao/aprTotal
+        if(r.colsStaked && r.egldStaked && sumCols){
+          r.normalized=(mx!==mn)?((r.colsStaked*pC)/(r.egldStaked*pE)-mn)/(mx-mn):0;
+          r.aprBonus=r.normalized!==null?aprMin+(best-aprMin)*Math.sqrt(r.normalized):0;
+
+          r.dao = ((pL*baseCorrected*AGENCY_BUYBACK*serviceFee*DAO_DISTRIBUTION_RATIO*r.colsStaked)
+            /sumCols/r.egldStaked)*100;
+
+          r.aprColsOnly = calculateColsOnlyApr({
+            sumColsStaked:sumCols,
+            baseApr:pA, serviceFee,
+            agencyLockedEgld:pL, egldPrice:pE, colsPrice:pC
+          });
+
+          r.aprTotal = pA + (r.aprBonus||0) + (r.dao||0);
+        }
+
+        /** NEW — EGLD ONLY USERS — base APR only */
+        if(r.egldStaked > 0 && r.colsStaked === 0){
+          r.aprTotal = pA;
+          r.aprBonus = 0;
+          r.dao = 0;
+          r.rank = null;
+
+          /** simulate if user stakes = eGLD amount */
+          const simCols = r.egldStaked || 0;
+          const newTotal = sumCols + simCols;
+
+          const simColsApr = calculateColsOnlyApr({
+            sumColsStaked: newTotal,
+            baseApr: pA, serviceFee,
+            agencyLockedEgld: pL, egldPrice: pE, colsPrice: pC
+          });
+
+          const simulatedTotalAPR = pA + simColsApr;
+
+          r.potentialApr = simulatedTotalAPR;
+
+          // safe fallback for formatting (TS-safe)
+          const potApr = r.potentialApr ?? pA;
+
+          r.infoMessage =
+            `With ${simCols.toFixed(2)} COLS staked you could earn ~${potApr.toFixed(2)}% APR instead of base ${pA}%`;
+        }
       });
 
-      const sorted=[...table].sort((a,b)=>(b.aprTotal||0)-(a.aprTotal||0));
-      sorted.forEach((r,i)=>r.rank=i+1);
+      /** SORTING — COLS users first, EGLD-only below */
+      const sorted=[...table].sort((a,b)=>{
+        if(a.colsStaked>0 && b.colsStaked===0) return -1;
+        if(a.colsStaked===0 && b.colsStaked>0) return  1;
+        return (b.aprTotal||0)-(a.aprTotal||0);
+      });
+
+      /** Only rank users with COLS */
+      sorted.filter(r=>r.colsStaked>0).forEach((r,i)=>r.rank=i+1);
 
       setStakers(sorted);
     }catch(e){
       console.error('APR calc failed',e); setStakers([]);
     }finally{setLoading(false);}
-  },[trigger]);
+  },[trigger, contractDetails]);
 
   useEffect(()=>{recalc();},[trigger,recalc]);
 
