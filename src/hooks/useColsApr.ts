@@ -251,19 +251,11 @@ export function useColsApr({ trigger }: { trigger: any }) {
       const targetAvg=((pL*baseCorrected*AGENCY_BUYBACK*serviceFee*BONUS_BUYBACK_FACTOR*pE)/pC)/365;
       setTargetAvgAprBonus(targetAvg);
 
-<<<<<<< HEAD
       /** Ranking/bonus algorithm identical below... */
       const aprMin=0.5; let L=0.5,R=50,best=15;
       const calc=(mx:number)=>{
         const f=table.filter(r=>r.colsStaked>0&&r.egldStaked>0);
         if(!f.length)return 0;
-=======
-      const aprMin = 0.5;
-      let left = aprMin, right = 50, bestAprMax = 15;
-      const calcSum = (aprMax: number) => {
-        const filtered = table.filter(r => r.colsStaked > 0 && r.egldStaked > 0);
-        if (!filtered.length) return 0;
->>>>>>> 750ad601fafdd7692c8d88c3a8defc2912050cd1
 
         let mn=1e99,mxv=-1e99;
         f.forEach(r=>{
