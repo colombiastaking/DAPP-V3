@@ -41,10 +41,21 @@ export const Navbar = () => {
     if (address) fetchCols();
   }, [address]);
 
-  const formattedBalance = Number(denominated(account?.balance ?? '0')).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const formattedColsBalance = Number(colsBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Get delegated eGLD from account?.balance or fallback to 0
+  const delegatedEgldRaw = account?.balance ?? '0';
+  const delegatedEgldNum = Number(denominated(delegatedEgldRaw));
+  // Format delegated eGLD with min 2 decimals if > 0, else '0.00'
+  const formattedBalance = delegatedEgldNum > 0
+    ? delegatedEgldNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '0.00';
 
-  // Removed the disconnect button from buttons array
+  // Format COLS balance number for display
+  const colsBalanceNum = Number(colsBalance);
+  const formattedColsBalance = colsBalanceNum > 0
+    ? colsBalanceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '0.00';
+
+  // No disconnect button
   const buttons: { icon: ReactNode; label: string; onClick?: () => void }[] = [];
 
   return (
@@ -59,10 +70,32 @@ export const Navbar = () => {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <span style={{ color: '#6ee7c7', fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap', userSelect: 'text' }}>
+        <span
+          style={{
+            color: '#6ee7c7',
+            fontWeight: 700,
+            fontSize: 16,
+            whiteSpace: 'nowrap',
+            userSelect: 'text'
+          }}
+          aria-label="Delegated eGLD balance"
+          title="Your delegated eGLD balance"
+        >
           {formattedBalance} {network.egldLabel}
         </span>
-        <span style={{ color: '#6ee7c7', fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap', userSelect: 'text' }}>
+
+        { /* Show COLS staked balance or ... while loading */ }
+        <span
+          style={{
+            color: '#6ee7c7',
+            fontWeight: 700,
+            fontSize: 16,
+            whiteSpace: 'nowrap',
+            userSelect: 'text'
+          }}
+          aria-label="COLS staked balance"
+          title="Your COLS staked balance"
+        >
           {loading ? '...' : formattedColsBalance} COLS
         </span>
       </div>
