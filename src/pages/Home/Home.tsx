@@ -1,88 +1,43 @@
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
-import { useEffect, useState } from 'react';
-import { decodeBigNumber, Query, ContractFunction, Address, AddressValue } from '@multiversx/sdk-core';
-import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
-
 import { RankingTable } from 'components/Stake/RankingTable';
 import { useColsAprContext } from '../../context/ColsAprContext';
+import styles from './styles.module.scss';
 import { AnimatedDots } from 'components/AnimatedDots';
 import { HelpIcon } from 'components/HelpIcon';
 import { ColsAprTable } from 'components/ColsAprTable';
-
-import styles from './styles.module.scss';
-
-const denomination = 1e18;
-
-function formatNumber(amount: number | string, decimals = 6) {
-  const num = typeof amount === 'string' ? Number(amount) : amount;
-  if (isNaN(num)) return '0';
-  return num.toLocaleString(undefined, { maximumFractionDigits: decimals });
-}
+import { useEffect, useCallback } from 'react';
+import { onTxCompleted } from 'utils/txEvents';
 
 export const Home = () => {
   const { address } = useGetAccountInfo();
-  const { stakers, loading, egldPrice, colsPrice, baseApr } = useColsAprContext();
+  const { stakers, loading, egldPrice, colsPrice, baseApr, refresh } = useColsAprContext();
 
-  const [additionalEgldDelegatedRaw, setAdditionalEgldDelegatedRaw] = useState<string | null>(null);
-  const [loadingAdditionalEgld, setLoadingAdditionalEgld] = useState(false);
+  // Refresh on any blockchain transaction completed event
+  const onTxCompleteHandler = useCallback(() => {
+    refresh();
+  }, [refresh]);
 
-  // Find user row in stakers
+  useEffect(() => {
+    const unsubscribe = onTxCompleted(onTxCompleteHandler);
+    return unsubscribe;
+  }, [onTxCompleteHandler]);
+
+  if (!address) {
+    return null;
+  }
+
   const userRow = stakers.find((s: any) => s.address === address) ?? null;
 
-  // Current user delegated and staked amounts (raw numbers)
-  const egldDelegatedFromApr = userRow?.egldStaked ?? 0;
+  const egldDelegated = userRow?.egldStaked ?? 0;
   const colsStaked = userRow?.colsStaked ?? 0;
-
-  // Convert raw value to eGLD decimals
-  const additionalEgldDelegated = additionalEgldDelegatedRaw
-    ? (Number(additionalEgldDelegatedRaw) / denomination).toString()
-    : null;
+  const aprTotal = userRow?.aprTotal ?? null;
+  const rank = userRow?.rank ?? null;
 
   const totalUsd =
-    (Number(egldDelegatedFromApr) * Number(egldPrice || 0)) +
+    (Number(egldDelegated) * Number(egldPrice || 0)) +
     (Number(colsStaked) * Number(colsPrice || 0));
 
   const totalStakers = stakers.length;
-
-  // Conditionally fetch delegated eGLD if no COLS staked
-  useEffect(() => {
-    let mounted = true;
-    if (!address || colsStaked > 0) {
-      setAdditionalEgldDelegatedRaw(null);
-      setLoadingAdditionalEgld(false);
-      return () => { mounted = false; };
-    }
-
-    setLoadingAdditionalEgld(true);
-
-    async function fetchDelegatedEgld() {
-      try {
-        const provider = new ProxyNetworkProvider('https://gateway.multiversx.com');
-        const q = new Query({
-          address: new Address('erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'), // delegation contract
-          func: new ContractFunction('getUserActiveStake'),
-          args: [new AddressValue(new Address(address))]
-        });
-
-        const response = await provider.queryContract(q);
-        const parts = response.getReturnDataParts();
-
-        if (parts.length > 0) {
-          const delegatedRaw = decodeBigNumber(parts[0]).toFixed();
-          if (mounted) setAdditionalEgldDelegatedRaw(delegatedRaw);
-        } else {
-          if (mounted) setAdditionalEgldDelegatedRaw('0');
-        }
-      } catch (e) {
-        if (mounted) setAdditionalEgldDelegatedRaw('0');
-      }
-      if (mounted) setLoadingAdditionalEgld(false);
-    }
-
-    fetchDelegatedEgld();
-
-    return () => { mounted = false; };
-  }, [address, colsStaked]);
 
   const aprColor = '#1976d2';
 
@@ -97,29 +52,17 @@ This ensures the APR reflects your actual staking position.`;
         <div className={styles.assetCard}>
           <div className={styles.assetLabel}>eGLD Delegated</div>
           <div className={styles.assetValue}>
-            {
-              loading || loadingAdditionalEgld
-                ? <><AnimatedDots /> </>
-                : (
-                  +colsStaked === 0 && additionalEgldDelegated !== null
-                    ? formatNumber(additionalEgldDelegated)
-                    : formatNumber(egldDelegatedFromApr)
-                )
-            } EGLD
+            {egldDelegated ? Number(egldDelegated).toLocaleString(undefined, { maximumFractionDigits: 6 }) : '0'} EGLD
           </div>
           <div className={styles.assetUsd}>
-            ≈ ${Math.floor(
-              +colsStaked === 0 && additionalEgldDelegated !== null
-                ? Number(additionalEgldDelegated) * Number(egldPrice || 0)
-                : Number(egldDelegatedFromApr) * Number(egldPrice || 0)
-            )}
+            ≈ ${Math.floor(Number(egldDelegated) * Number(egldPrice || 0))}
           </div>
         </div>
 
         <div className={styles.assetCard}>
           <div className={styles.assetLabel}>COLS Staked</div>
           <div className={styles.assetValue}>
-            {loading ? <><AnimatedDots /> </> : formatNumber(colsStaked)} COLS
+            {colsStaked ? Number(colsStaked).toLocaleString(undefined, { maximumFractionDigits: 6 }) : '0'} COLS
           </div>
           <div className={styles.assetUsd}>
             ≈ ${(Number(colsStaked) * Number(colsPrice || 0)).toFixed(2)}
@@ -141,7 +84,7 @@ This ensures the APR reflects your actual staking position.`;
         <div className={styles.APRHeader} style={{ fontSize: 24, fontWeight: 700, background: aprColor, color: '#fff', borderRadius: 8, padding: '4px 12px', display: 'inline-block', marginBottom: 8 }}>
           <span>Total APR&nbsp;&nbsp;</span>
           <span className={styles.aprValue} style={{ fontSize: 28, fontWeight: 900 }}>
-            {loading ? <><AnimatedDots /> </> : userRow?.aprTotal !== null && userRow?.aprTotal !== undefined ? Number(userRow.aprTotal).toFixed(2) : '—'}%
+            {loading ? <><AnimatedDots /> </> : aprTotal !== null ? Number(aprTotal).toFixed(2) : '—'}%
           </span>
           <HelpIcon text={totalAprHelpText} />
         </div>
@@ -154,8 +97,8 @@ This ensures the APR reflects your actual staking position.`;
           <span>
             {loading
               ? '...'
-              : userRow?.rank !== null && userRow?.rank !== undefined
-                ? `${userRow.rank} out of ${totalStakers} COLS stakers`
+              : rank !== null
+                ? `${rank} out of ${totalStakers} COLS stakers`
                 : 'N/A'}
           </span>
           <HelpIcon text="Ranking is based on your total APR compared to other stakers. The more COLS you stake (relative to your eGLD), the higher your rank." />
