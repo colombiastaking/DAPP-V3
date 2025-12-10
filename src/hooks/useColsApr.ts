@@ -24,11 +24,15 @@ const AGENCY_BUYBACK = 0.30;
 const DAO_DISTRIBUTION_RATIO = 0.333;
 const BONUS_BUYBACK_FACTOR = 0.66;
 
-const PRIMARY_PROVIDER_API = `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}`;
-const PRIMARY_PROVIDER_ACCOUNTS = `${PRIMARY_PROVIDER_API}/accounts?size=10000`;
+const PRIMARY_PROVIDER_API =
+  `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}`;
+const PRIMARY_PROVIDER_ACCOUNTS =
+  `${PRIMARY_PROVIDER_API}/accounts?size=10000`;
 
-const BACKUP_PROVIDER_API = `https://api.multiversx.com/providers/${network.delegationContract}`;
-const BACKUP_ACCOUNTS_API = `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
+const BACKUP_PROVIDER_API =
+  `https://api.multiversx.com/providers/${network.delegationContract}`;
+const BACKUP_ACCOUNTS_API =
+  `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
 
 export interface ColsStakerRow {
   address: string;
@@ -46,22 +50,19 @@ export interface ColsStakerRow {
 const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 /*───────────────────────────────────────────────
-  🔥 ALWAYS FAILOVER SAFE — PRICE SOURCES
+  PRICE & BASE DATA FETCHERS
 ─────────────────────────────────────────────────*/
 async function fetchColsPriceFromApi() {
   const primary = 'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7';
   const backup =
     'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7';
-
   const data = await fetchWithBackup<any>(primary, backup);
+
   if (!data) return 0;
-
-  if (Array.isArray(data) && data.length > 0 && typeof data[data.length - 1].value === 'number')
-    return +(data[data.length - 1].value.toFixed(3));
-
-  if (Array.isArray(data) && typeof data[0]?.price === 'number')
-    return +(data[0].price.toFixed(3));
-
+  if (Array.isArray(data) && data[data.length - 1]?.value)
+    return +data[data.length - 1].value.toFixed(3);
+  if (Array.isArray(data) && data[0]?.price)
+    return +data[0].price.toFixed(3);
   return 0;
 }
 
@@ -72,89 +73,107 @@ async function fetchBaseAprFromApi() {
 
 async function fetchAgencyLockedEgld() {
   const d = await fetchWithBackup<any>(PRIMARY_PROVIDER_API, BACKUP_PROVIDER_API);
-  return d?.locked ? +(Number(d.locked)/1e18).toFixed(4) : 0;
+  return d?.locked ? +(Number(d.locked) / 1e18).toFixed(4) : 0;
 }
 
 async function fetchEgldPrice() {
   try {
     const { data } = await axios.get(`${network.apiAddress}/economics`);
     return Number(data.price);
-  } catch {
-    return 0;
-  }
+  } catch { return 0; }
 }
 
 /*───────────────────────────────────────────────
-  🔥 BULK EGLD FETCH (Primary → Backup → SC fallback)
+  BULK EGLD ACCOUNT FETCH
 ─────────────────────────────────────────────────*/
-async function fetchEgldBulkPrimary(): Promise<Record<string,number>> {
-  // 1) Try primary → backup automatically
+async function fetchEgldBulkPrimary(): Promise<Record<string, number>> {
   try {
     const r = await fetchWithBackup<any>(PRIMARY_PROVIDER_ACCOUNTS, BACKUP_ACCOUNTS_API);
-    if (!r || !Array.isArray(r.accounts) || r.accounts.length === 0)
-      throw new Error("Bulk fetch empty — escalate to SC fallback");
+    if (!r?.accounts?.length) throw new Error("Bulk empty → fallback");
 
     const out: Record<string, number> = {};
     r.accounts.forEach((a: any) => {
-      const val = Number(a.activeStake || a.delegationActiveStake || 0);
-      out[a.address] = val > 1e12 ? val / 1e18 : val;
+      const v = Number(a.activeStake || a.delegationActiveStake || 0);
+      out[a.address] = v > 1e12 ? v / 1e18 : v;
     });
-
     return out;
   } catch {
-    console.warn("⚠️ Bulk API unreachable — switching to per-address smart-contract fallback");
-    return {}; // handled by fetchStake_All()
+    console.warn("⚠️ bulk API failed → per-address querying later");
+    return {};
   }
 }
 
 /*───────────────────────────────────────────────
-  🧨 FINAL ESCAPE — Per-address smart contract query
+  🔥 SMART CONTRACT ONLY (Main + Backup)
+  - 4 tries main SC `getUserActiveStake`
+  - If still failing → SC backup call `getUserStake`
+  ❗ NO REST ENDPOINT ANYMORE
 ─────────────────────────────────────────────────*/
-async function fetchStakeContract(addr: string, retries = 4) {
-  const provider = new ProxyNetworkProvider(network.gatewayAddress);
-  for (let i = 0; i < retries; i++) {
+async function fetchStakeContract(addr: string) {
+  const main = new ProxyNetworkProvider(network.gatewayAddress);
+  const backup = new ProxyNetworkProvider("https://gateway.multiversx.com"); // backup SC RPC
+
+  const q1 = new Query({
+    address: new Address(network.delegationContract),
+    func: new ContractFunction("getUserActiveStake"),
+    args: [new AddressValue(new Address(addr))]
+  });
+
+  // MAIN (4 retry attempts)
+  for (let i = 0; i < 4; i++) {
     try {
-      const q = new Query({
-        address: new Address(network.delegationContract),
-        func: new ContractFunction('getUserActiveStake'),
-        args: [new AddressValue(new Address(addr))]
-      });
-      const d = await provider.queryContract(q);
-      const [x] = d.getReturnDataParts();
-      return x ? Number(decodeBigNumber(x)) / 1e18 : 0;
+      const r = await main.queryContract(q1);
+      const [raw] = r.getReturnDataParts();
+      if (raw) return Number(decodeBigNumber(raw)) / 1e18;
     } catch {
-      await wait(150 * (i + 1)); // exponential retry spacing
+      await wait(200 * (i + 1));
     }
   }
+
+  console.warn(`⚠️ MAIN SC failed → activating SC backup for ${addr}`);
+
+  // BACKUP SC SAME CALL
+  try {
+    const r2 = await backup.queryContract(q1);
+    const [raw2] = r2.getReturnDataParts();
+    if (raw2) return Number(decodeBigNumber(raw2)) / 1e18;
+  } catch {}
+
+  // LAST OPTION — alternative SC (slower but reliable)
+  try {
+    const q2 = new Query({
+      address: new Address(network.delegationContract),
+      func: new ContractFunction("getUserStake"),
+      args: [new AddressValue(new Address(addr))]
+    });
+    const r3 = await backup.queryContract(q2);
+    const [raw3] = r3.getReturnDataParts();
+    if (raw3) return Number(decodeBigNumber(raw3)) / 1e18;
+  } catch {
+    console.warn("❌ SC backup also failed", addr);
+  }
+
   return 0;
 }
 
 /*───────────────────────────────────────────────
-  🔥 GRANULAR TOTAL FALLBACK LOGIC
+  GLOBAL STAKE FETCHER
 ─────────────────────────────────────────────────*/
 async function fetchStake_All(addresses: string[]) {
   let bulk = await fetchEgldBulkPrimary();
 
-  // If bulk failed → SC fallback
-  if (!bulk || Object.keys(bulk).length === 0) {
-    console.warn("⚡ Bulk fetch failed completely — SC per-address recovery running...");
+  if (!Object.keys(bulk).length) {
+    console.warn("⛓ SC fallback for ALL delegators...");
     const r = await Promise.allSettled(addresses.map(a => fetchStakeContract(a)));
-    r.forEach((x, i) => {
-      bulk[addresses[i]] =
-        x.status === "fulfilled" && x.value != null ? x.value : 0;
-    });
+    r.forEach((x, i) => bulk[addresses[i]] = x.status === "fulfilled" ? x.value as number : 0);
   }
 
-  // Ensure object integrity
-  addresses.forEach(addr => {
-    if (!(addr in bulk)) bulk[addr] = 0;
-  });
-
+  addresses.forEach(a => { if (!(a in bulk)) bulk[a] = 0; });
   return bulk;
 }
 
 /*───────────────────────────────────────────────
-  APR Logic
+  APR CALCULATIONS
 ─────────────────────────────────────────────────*/
 function calcColsOnlyApr({ sumColsStaked, baseApr, serviceFee, agencyLockedEgld, egldPrice, colsPrice }: any) {
   if (!sumColsStaked || !baseApr || !agencyLockedEgld || !egldPrice || !colsPrice) return 0;
@@ -164,7 +183,7 @@ function calcColsOnlyApr({ sumColsStaked, baseApr, serviceFee, agencyLockedEgld,
 }
 
 /*───────────────────────────────────────────────
-  MAIN HOOK — using new fault-tolerant backend
+  MAIN HOOK
 ─────────────────────────────────────────────────*/
 export function useColsApr({ trigger }: { trigger: any }) {
   const [loading, setLoading] = useState(true);
@@ -178,7 +197,6 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   const { contractDetails } = useGlobalContext();
 
-  /* Fetch COLS stakers list */
   const fetchColsStakers = useCallback(async () => {
     const p = new ProxyNetworkProvider(network.gatewayAddress);
     const q = new Query({
@@ -194,33 +212,28 @@ export function useColsApr({ trigger }: { trigger: any }) {
     return arr;
   }, []);
 
-  /*──────────────┤ CORE RECALC ├──────────────*/
   const recalc = useCallback(async () => {
     setLoading(true);
     try {
       const [users, pE, pC, pA, pL] = await Promise.all([
-        fetchColsStakers(), fetchEgldPrice(),
-        fetchColsPriceFromApi(), fetchBaseAprFromApi(),
-        fetchAgencyLockedEgld()
+        fetchColsStakers(), fetchEgldPrice(), fetchColsPriceFromApi(),
+        fetchBaseAprFromApi(), fetchAgencyLockedEgld()
       ]);
       setEgldPrice(pE); setColsPrice(pC); setBaseApr(pA); setAgencyLockedEgld(pL);
 
       const addresses = users.map(u => u.address);
-
-      /* 🟩 ALWAYS GET EGLD STAKE EVEN IN WORST CONDITIONS */
       const egldMap = await fetchStake_All(addresses);
 
       const table: ColsStakerRow[] = users.map(u => ({
-        address: u.address,
-        colsStaked: u.colsStaked,
+        address: u.address, colsStaked: u.colsStaked,
         egldStaked: egldMap[u.address] ?? 0,
         ratio: null, normalized: null, aprBonus: null, dao: null, aprTotal: null, rank: null
       }));
 
       let serviceFee = 0.10;
       if (contractDetails?.data?.serviceFee) {
-        const num = parseFloat(contractDetails.data.serviceFee.replace('%', '').trim());
-        if (!isNaN(num)) serviceFee = num / 100;
+        const n = parseFloat(contractDetails.data.serviceFee.replace('%', '').trim());
+        if (!isNaN(n)) serviceFee = n / 100;
       }
 
       const baseCorrected = pA / (1 - serviceFee) / 100;
@@ -231,16 +244,10 @@ export function useColsApr({ trigger }: { trigger: any }) {
       const calc = (mx: number) => {
         const f = table.filter(r => r.colsStaked > 0 && r.egldStaked > 0);
         if (!f.length) return 0;
-        let mn = 1e99, mxv = -1e99;
-        f.forEach(r => {
-          r.ratio = (r.colsStaked * pC) / (r.egldStaked * pE);
-          mn = Math.min(mn, r.ratio!); mxv = Math.max(mxv, r.ratio!);
-        });
-        f.forEach(r => {
-          r.normalized = (mxv !== mn) ? ((r.ratio! - mn) / (mxv - mn)) : 0;
-          r.aprBonus = aprMin + (mx - aprMin) * Math.sqrt(r.normalized);
-        });
-        return f.reduce((s, r) => s + (((r.aprBonus! / 100) * r.egldStaked * pE) / 365 / pC), 0);
+        let mn = 1e9, mxv = -1e9;
+        f.forEach(r => { r.ratio = (r.colsStaked * pC) / (r.egldStaked * pE); mn=Math.min(mn,r.ratio!); mxv=Math.max(mxv,r.ratio!)});
+        f.forEach(r => { r.normalized = (mxv!==mn)?((r.ratio!-mn)/(mxv-mn)):0; r.aprBonus=aprMin+(mx-aprMin)*Math.sqrt(r.normalized!);});
+        return f.reduce((s,r)=>s+(((r.aprBonus!/100)*r.egldStaked*pE)/365/pC),0);
       };
 
       for (let i = 0; i < 30; i++) {
@@ -252,42 +259,31 @@ export function useColsApr({ trigger }: { trigger: any }) {
       }
       setAprMax(best);
 
-      const ratios = table
-        .filter(r => r.egldStaked > 0 && r.colsStaked > 0)
-        .map(r => (r.colsStaked * pC) / (r.egldStaked * pE));
+      const ratios = table.filter(r=>r.egldStaked&&r.colsStaked)
+        .map(r=> (r.colsStaked*pC)/(r.egldStaked*pE));
       const mn = Math.min(...ratios), mx = Math.max(...ratios);
 
-      const sumCols = table.reduce((s, r) => s + (r.colsStaked || 0), 0);
+      const sumCols = table.reduce((s,r)=>s+(r.colsStaked||0),0);
 
-      table.forEach(r => {
-        r.normalized = (r.colsStaked && r.egldStaked && mx !== mn)
-          ? ((r.colsStaked * pC) / (r.egldStaked * pE) - mn) / (mx - mn) : null;
-        r.aprBonus = r.normalized != null ? aprMin + (best - aprMin) * Math.sqrt(r.normalized) : null;
-        if (r.egldStaked && r.colsStaked && sumCols) {
-          r.dao = (((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * r.colsStaked)
-            / sumCols / r.egldStaked) * 100);
+      table.forEach(r=>{
+        r.normalized = (r.colsStaked&&r.egldStaked&&mx!==mn)?(((r.colsStaked*pC)/(r.egldStaked*pE)-mn)/(mx-mn)):null;
+        r.aprBonus = r.normalized!=null?aprMin+(best-aprMin)*Math.sqrt(r.normalized):null;
+        if(r.egldStaked&&r.colsStaked&&sumCols){
+          r.dao=(((pL*baseCorrected*AGENCY_BUYBACK*serviceFee*DAO_DISTRIBUTION_RATIO*r.colsStaked)/sumCols/r.egldStaked)*100);
         }
-        r.aprColsOnly = r.colsStaked ? calcColsOnlyApr({
-          sumColsStaked: sumCols, baseApr: pA, serviceFee, agencyLockedEgld: pL,
-          egldPrice: pE, colsPrice: pC
-        }) : null;
-        r.aprTotal = r.egldStaked ? pA + (r.aprBonus || 0) + (r.dao || 0)
-          : r.colsStaked ? (r.aprColsOnly ?? pA)
-            : pA;
+        r.aprColsOnly = r.colsStaked?calcColsOnlyApr({sumColsStaked:sumCols,baseApr:pA,serviceFee,agencyLockedEgld:pL,egldPrice:pE,colsPrice:pC}):null;
+        r.aprTotal = r.egldStaked?pA+(r.aprBonus||0)+(r.dao||0):r.colsStaked?(r.aprColsOnly??pA):pA;
       });
 
-      const sorted = [...table].sort((a, b) => (b.aprTotal || 0) - (a.aprTotal || 0));
-      sorted.forEach((r, i) => r.rank = i + 1);
+      const sorted=[...table].sort((a,b)=>(b.aprTotal||0)-(a.aprTotal||0));
+      sorted.forEach((r,i)=>r.rank=i+1);
       setStakers(sorted);
     }
-    catch (e) { console.error(e); setStakers([]); }
-    finally { setLoading(false); }
-  }, [trigger]);
+    catch(e){ console.error(e); setStakers([]); }
+    finally{ setLoading(false); }
+  },[trigger]);
 
-  useEffect(() => { recalc(); }, [trigger, recalc]);
+  useEffect(()=>{ recalc(); },[trigger,recalc]);
 
-  return {
-    loading, stakers, egldPrice, colsPrice,
-    baseApr, agencyLockedEgld, aprMax, targetAvgAprBonus, recalc
-  };
+  return {loading,stakers,egldPrice,colsPrice,baseApr,agencyLockedEgld,aprMax,targetAvgAprBonus,recalc};
 }
