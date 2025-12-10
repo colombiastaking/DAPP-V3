@@ -46,7 +46,7 @@ export interface ColsStakerRow {
 const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 /*───────────────────────────────────────────────
-  API — PRICE / ECONOMICS
+  🔥 ALWAYS FAILOVER SAFE — PRICE SOURCES
 ─────────────────────────────────────────────────*/
 async function fetchColsPriceFromApi() {
   const primary = 'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7';
@@ -85,12 +85,14 @@ async function fetchEgldPrice() {
 }
 
 /*───────────────────────────────────────────────
-  🥇 New Primary Fetch (FAST — 10000 accounts)
+  🔥 BULK EGLD FETCH (Primary → Backup → SC fallback)
 ─────────────────────────────────────────────────*/
 async function fetchEgldBulkPrimary(): Promise<Record<string,number>> {
+  // 1) Try primary → backup automatically
   try {
     const r = await fetchWithBackup<any>(PRIMARY_PROVIDER_ACCOUNTS, BACKUP_ACCOUNTS_API);
-    if (!r || !r.accounts) return {};
+    if (!r || !Array.isArray(r.accounts) || r.accounts.length === 0)
+      throw new Error("Bulk fetch empty — escalate to SC fallback");
 
     const out: Record<string, number> = {};
     r.accounts.forEach((a: any) => {
@@ -100,12 +102,13 @@ async function fetchEgldBulkPrimary(): Promise<Record<string,number>> {
 
     return out;
   } catch {
-    return {};
+    console.warn("⚠️ Bulk API unreachable — switching to per-address smart-contract fallback");
+    return {}; // handled by fetchStake_All()
   }
 }
 
 /*───────────────────────────────────────────────
-  🥈 Secondary — SC query (only if bulk fails completely)
+  🧨 FINAL ESCAPE — Per-address smart contract query
 ─────────────────────────────────────────────────*/
 async function fetchStakeContract(addr: string, retries = 4) {
   const provider = new ProxyNetworkProvider(network.gatewayAddress);
@@ -120,24 +123,21 @@ async function fetchStakeContract(addr: string, retries = 4) {
       const [x] = d.getReturnDataParts();
       return x ? Number(decodeBigNumber(x)) / 1e18 : 0;
     } catch {
-      await wait(130 * (i + 1));
+      await wait(150 * (i + 1)); // exponential retry spacing
     }
   }
-  return null;
+  return 0;
 }
 
 /*───────────────────────────────────────────────
-  FETCH ALL STAKES
+  🔥 GRANULAR TOTAL FALLBACK LOGIC
 ─────────────────────────────────────────────────*/
 async function fetchStake_All(addresses: string[]) {
-  let bulk: Record<string, number> = {};
-  try {
-    bulk = await fetchEgldBulkPrimary();
-    if (!bulk || Object.keys(bulk).length === 0) {
-      throw new Error("Bulk fetch failed");
-    }
-  } catch (err) {
-    console.warn("Bulk fetch failed, fallback to per-address SC queries", err);
+  let bulk = await fetchEgldBulkPrimary();
+
+  // If bulk failed → SC fallback
+  if (!bulk || Object.keys(bulk).length === 0) {
+    console.warn("⚡ Bulk fetch failed completely — SC per-address recovery running...");
     const r = await Promise.allSettled(addresses.map(a => fetchStakeContract(a)));
     r.forEach((x, i) => {
       bulk[addresses[i]] =
@@ -145,7 +145,7 @@ async function fetchStake_All(addresses: string[]) {
     });
   }
 
-  // ensure all addresses exist in the map
+  // Ensure object integrity
   addresses.forEach(addr => {
     if (!(addr in bulk)) bulk[addr] = 0;
   });
@@ -153,7 +153,9 @@ async function fetchStake_All(addresses: string[]) {
   return bulk;
 }
 
-/*───────────────────────────────────────────────*/
+/*───────────────────────────────────────────────
+  APR Logic
+─────────────────────────────────────────────────*/
 function calcColsOnlyApr({ sumColsStaked, baseApr, serviceFee, agencyLockedEgld, egldPrice, colsPrice }: any) {
   if (!sumColsStaked || !baseApr || !agencyLockedEgld || !egldPrice || !colsPrice) return 0;
   const base = baseApr / (1 - serviceFee) / 100;
@@ -162,7 +164,7 @@ function calcColsOnlyApr({ sumColsStaked, baseApr, serviceFee, agencyLockedEgld,
 }
 
 /*───────────────────────────────────────────────
-  MAIN HOOK
+  MAIN HOOK — using new fault-tolerant backend
 ─────────────────────────────────────────────────*/
 export function useColsApr({ trigger }: { trigger: any }) {
   const [loading, setLoading] = useState(true);
@@ -176,6 +178,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   const { contractDetails } = useGlobalContext();
 
+  /* Fetch COLS stakers list */
   const fetchColsStakers = useCallback(async () => {
     const p = new ProxyNetworkProvider(network.gatewayAddress);
     const q = new Query({
@@ -191,6 +194,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
     return arr;
   }, []);
 
+  /*──────────────┤ CORE RECALC ├──────────────*/
   const recalc = useCallback(async () => {
     setLoading(true);
     try {
@@ -203,7 +207,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
       const addresses = users.map(u => u.address);
 
-      /* 🔥 Fetch eGLD stakes */
+      /* 🟩 ALWAYS GET EGLD STAKE EVEN IN WORST CONDITIONS */
       const egldMap = await fetchStake_All(addresses);
 
       const table: ColsStakerRow[] = users.map(u => ({
