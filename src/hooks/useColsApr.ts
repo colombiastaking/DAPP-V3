@@ -53,16 +53,38 @@ const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
   PRICE & BASE DATA FETCHERS
 ─────────────────────────────────────────────────*/
 async function fetchColsPriceFromApi() {
-  const primary = 'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7';
-  const backup =
-    'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7';
-  const data = await fetchWithBackup<any>(primary, backup);
+  const primary =
+    'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7';
 
-  if (!data) return 0;
+  const backup1 =
+    'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7';
+
+  const backup2 =
+    'https://api.multiversx.com/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7';
+
+  // 1️⃣ try primary + backup1
+  let data = await fetchWithBackup<any>(primary, backup1);
+
+  // 2️⃣ if still empty → final fallback
+  if (!data) {
+    try {
+      const r = await axios.get(backup2, { timeout: 6000 });
+      data = r.data;
+    } catch {
+      return 0;
+    }
+  }
+
+  // ── normalize formats ─────────────────────
   if (Array.isArray(data) && data[data.length - 1]?.value)
     return +data[data.length - 1].value.toFixed(3);
+
   if (Array.isArray(data) && data[0]?.price)
     return +data[0].price.toFixed(3);
+
+  if (Array.isArray(data) && data[0]?.balance && data[0]?.price)
+    return +Number(data[0].price).toFixed(3);
+
   return 0;
 }
 
