@@ -18,7 +18,8 @@ export const App = () => (
     <DappProvider
       environment={network.id}
       dappConfig={{
-        shouldUseWebViewProvider: true
+        shouldUseWebViewProvider: true,
+        autoLogin: true                // <— enable automatic re-login
       }}
       customNetworkConfig={{
         name: 'customConfig',
