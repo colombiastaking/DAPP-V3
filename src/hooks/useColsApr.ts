@@ -34,6 +34,14 @@ const BACKUP_PROVIDER_API =
 const BACKUP_ACCOUNTS_API =
   `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
 
+const MAIN_GATEWAY = network.gatewayAddress;
+const BACKUP_GATEWAY = 'https://gateway.multiversx.com';
+
+type ApiMode = 'main' | 'backup';
+
+/* ───────────────────────────────────────────────
+   TYPES
+──────────────────────────────────────────────────*/
 export interface ColsStakerRow {
   address: string;
   colsStaked: number;
@@ -47,71 +55,86 @@ export interface ColsStakerRow {
   aprColsOnly?: number | null;
 }
 
-const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
+const safe = (v?: number | null) => (isFinite(v || 0) ? v || 0 : 0);
 
 /*───────────────────────────────────────────────
-  PRICE & BASE DATA FETCHERS
+  API MODE DETECTION
 ─────────────────────────────────────────────────*/
-async function fetchColsPriceFromApi() {
-  const primary =
-    'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7';
-
-  const backup1 =
-    'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7';
-
-  const backup2 =
-    'https://api.multiversx.com/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7';
-
-  // 1️⃣ try primary + backup1
-  let data = await fetchWithBackup<any>(primary, backup1);
-
-  // 2️⃣ if still empty → final fallback
-  if (!data) {
-    try {
-      const r = await axios.get(backup2, { timeout: 6000 });
-      data = r.data;
-    } catch {
-      return 0;
-    }
-  }
-
-  // ── normalize formats ─────────────────────
-  if (Array.isArray(data) && data[data.length - 1]?.value)
-    return +data[data.length - 1].value.toFixed(3);
-
-  if (Array.isArray(data) && data[0]?.price)
-    return +data[0].price.toFixed(3);
-
-  if (Array.isArray(data) && data[0]?.balance && data[0]?.price)
-    return +Number(data[0].price).toFixed(3);
-
-  return 0;
-}
-
-async function fetchBaseAprFromApi() {
-  const d = await fetchWithBackup<any>(PRIMARY_PROVIDER_API, BACKUP_PROVIDER_API);
-  return d?.apr ?? 0;
-}
-
-async function fetchAgencyLockedEgld() {
-  const d = await fetchWithBackup<any>(PRIMARY_PROVIDER_API, BACKUP_PROVIDER_API);
-  return d?.locked ? +(Number(d.locked) / 1e18).toFixed(4) : 0;
-}
-
-async function fetchEgldPrice() {
+async function detectApiMode(): Promise<ApiMode> {
   try {
-    const { data } = await axios.get(`${network.apiAddress}/economics`);
+    const r = await axios.get(PRIMARY_PROVIDER_API, { timeout: 4000 });
+    if (r.data?.apr) return 'main';
+  } catch {}
+  console.warn('⚠️ MAIN API / GATEWAY down → BACKUP MODE');
+  return 'backup';
+}
+
+function getScProvider(mode: ApiMode) {
+  return new ProxyNetworkProvider(
+    mode === 'main' ? MAIN_GATEWAY : BACKUP_GATEWAY
+  );
+}
+
+/*───────────────────────────────────────────────
+  PRICE & BASE DATA (MODE AWARE)
+─────────────────────────────────────────────────*/
+async function fetchBaseApr(mode: ApiMode) {
+  const url = mode === 'main' ? PRIMARY_PROVIDER_API : BACKUP_PROVIDER_API;
+  try {
+    const { data } = await axios.get(url, { timeout: 6000 });
+    return data?.apr ?? 0;
+  } catch { return 0; }
+}
+
+async function fetchAgencyLockedEgld(mode: ApiMode) {
+  const url = mode === 'main' ? PRIMARY_PROVIDER_API : BACKUP_PROVIDER_API;
+  try {
+    const { data } = await axios.get(url, { timeout: 6000 });
+    return data?.locked ? Number(data.locked) / 1e18 : 0;
+  } catch { return 0; }
+}
+
+async function fetchEgldPrice(mode: ApiMode) {
+  const url =
+    mode === 'main'
+      ? `${network.apiAddress}/economics`
+      : `https://api.multiversx.com/economics`;
+
+  try {
+    const { data } = await axios.get(url, { timeout: 6000 });
     return Number(data.price);
   } catch { return 0; }
 }
 
+async function fetchColsPrice(mode: ApiMode) {
+  if (mode === 'main') {
+    const data = await fetchWithBackup<any>(
+      'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7',
+      'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7'
+    );
+    if (Array.isArray(data) && data[data.length - 1]?.value)
+      return Number(data[data.length - 1].value);
+  }
+
+  try {
+    const r = await axios.get(
+      'https://api.multiversx.com/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7',
+      { timeout: 6000 }
+    );
+    return Number(r.data?.[0]?.price ?? 0);
+  } catch { return 0; }
+}
+
 /*───────────────────────────────────────────────
-  BULK EGLD ACCOUNT FETCH
+  BULK EGLD FETCH
 ─────────────────────────────────────────────────*/
 async function fetchEgldBulkPrimary(): Promise<Record<string, number>> {
   try {
-    const r = await fetchWithBackup<any>(PRIMARY_PROVIDER_ACCOUNTS, BACKUP_ACCOUNTS_API);
-    if (!r?.accounts?.length) throw new Error("Bulk empty → fallback");
+    const r = await fetchWithBackup<any>(
+      PRIMARY_PROVIDER_ACCOUNTS,
+      BACKUP_ACCOUNTS_API
+    );
+    if (!r?.accounts?.length) throw new Error();
 
     const out: Record<string, number> = {};
     r.accounts.forEach((a: any) => {
@@ -120,88 +143,48 @@ async function fetchEgldBulkPrimary(): Promise<Record<string, number>> {
     });
     return out;
   } catch {
-    console.warn("⚠️ bulk API failed → per-address querying later");
+    console.warn('⚠️ Bulk EGLD failed → SC fallback');
     return {};
   }
 }
 
 /*───────────────────────────────────────────────
-  🔥 SMART CONTRACT ONLY (Main + Backup)
-  - 4 tries main SC `getUserActiveStake`
-  - If still failing → SC backup call `getUserStake`
-  ❗ NO REST ENDPOINT ANYMORE
+  SMART CONTRACT STAKE (MODE AWARE)
 ─────────────────────────────────────────────────*/
-async function fetchStakeContract(addr: string) {
-  const main = new ProxyNetworkProvider(network.gatewayAddress);
-  const backup = new ProxyNetworkProvider("https://gateway.multiversx.com"); // backup SC RPC
+async function fetchStakeContract(addr: string, mode: ApiMode) {
+  const gateways =
+    mode === 'main'
+      ? [MAIN_GATEWAY, BACKUP_GATEWAY]
+      : [BACKUP_GATEWAY];
 
-  const q1 = new Query({
-    address: new Address(network.delegationContract),
-    func: new ContractFunction("getUserActiveStake"),
-    args: [new AddressValue(new Address(addr))]
-  });
-
-  // MAIN (4 retry attempts)
-  for (let i = 0; i < 4; i++) {
+  for (const gw of gateways) {
     try {
-      const r = await main.queryContract(q1);
+      const provider = new ProxyNetworkProvider(gw);
+      const q = new Query({
+        address: new Address(network.delegationContract),
+        func: new ContractFunction('getUserActiveStake'),
+        args: [new AddressValue(new Address(addr))]
+      });
+      const r = await provider.queryContract(q);
       const [raw] = r.getReturnDataParts();
       if (raw) return Number(decodeBigNumber(raw)) / 1e18;
-    } catch {
-      await wait(200 * (i + 1));
-    }
+    } catch {}
   }
-
-  console.warn(`⚠️ MAIN SC failed → activating SC backup for ${addr}`);
-
-  // BACKUP SC SAME CALL
-  try {
-    const r2 = await backup.queryContract(q1);
-    const [raw2] = r2.getReturnDataParts();
-    if (raw2) return Number(decodeBigNumber(raw2)) / 1e18;
-  } catch {}
-
-  // LAST OPTION — alternative SC (slower but reliable)
-  try {
-    const q2 = new Query({
-      address: new Address(network.delegationContract),
-      func: new ContractFunction("getUserStake"),
-      args: [new AddressValue(new Address(addr))]
-    });
-    const r3 = await backup.queryContract(q2);
-    const [raw3] = r3.getReturnDataParts();
-    if (raw3) return Number(decodeBigNumber(raw3)) / 1e18;
-  } catch {
-    console.warn("❌ SC backup also failed", addr);
-  }
-
   return 0;
 }
 
-/*───────────────────────────────────────────────
-  GLOBAL STAKE FETCHER
-─────────────────────────────────────────────────*/
-async function fetchStake_All(addresses: string[]) {
-  let bulk = await fetchEgldBulkPrimary();
+async function fetchStake_All(addresses: string[], mode: ApiMode) {
+  const bulk = await fetchEgldBulkPrimary();
+  if (Object.keys(bulk).length) return bulk;
 
-  if (!Object.keys(bulk).length) {
-    console.warn("⛓ SC fallback for ALL delegators...");
-    const r = await Promise.allSettled(addresses.map(a => fetchStakeContract(a)));
-    r.forEach((x, i) => bulk[addresses[i]] = x.status === "fulfilled" ? x.value as number : 0);
-  }
-
-  addresses.forEach(a => { if (!(a in bulk)) bulk[a] = 0; });
-  return bulk;
-}
-
-/*───────────────────────────────────────────────
-  APR CALCULATIONS
-─────────────────────────────────────────────────*/
-function calcColsOnlyApr({ sumColsStaked, baseApr, serviceFee, agencyLockedEgld, egldPrice, colsPrice }: any) {
-  if (!sumColsStaked || !baseApr || !agencyLockedEgld || !egldPrice || !colsPrice) return 0;
-  const base = baseApr / (1 - serviceFee) / 100;
-  return ((agencyLockedEgld * base * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * egldPrice)
-    / (colsPrice * sumColsStaked)) * 100;
+  const out: Record<string, number> = {};
+  const r = await Promise.allSettled(
+    addresses.map(a => fetchStakeContract(a, mode))
+  );
+  r.forEach((x, i) => {
+    out[addresses[i]] = x.status === 'fulfilled' ? x.value as number : 0;
+  });
+  return out;
 }
 
 /*───────────────────────────────────────────────
@@ -219,93 +202,148 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   const { contractDetails } = useGlobalContext();
 
-  const fetchColsStakers = useCallback(async () => {
-    const p = new ProxyNetworkProvider(network.gatewayAddress);
+  const fetchColsStakers = useCallback(async (mode: ApiMode) => {
+    const p = getScProvider(mode);
     const q = new Query({
       address: new Address(PEERME_COLS_CONTRACT),
       func: new ContractFunction('getEntityUsers'),
       args: [new AddressValue(new Address(PEERME_ENTITY_ADDRESS))]
     });
+
     const d = await p.queryContract(q);
     const x = d.getReturnDataParts();
     const arr: any[] = [];
-    for (let i = 0; i < x.length; i += 2)
-      arr.push({ address: new Address(x[i]).bech32(), colsStaked: Number(decodeBigNumber(x[i + 1])) / 1e18 });
+
+    for (let i = 0; i < x.length; i += 2) {
+      arr.push({
+        address: new Address(x[i]).bech32(),
+        colsStaked: Number(decodeBigNumber(x[i + 1])) / 1e18
+      });
+    }
     return arr;
   }, []);
 
   const recalc = useCallback(async () => {
     setLoading(true);
     try {
-      const [users, pE, pC, pA, pL] = await Promise.all([
-        fetchColsStakers(), fetchEgldPrice(), fetchColsPriceFromApi(),
-        fetchBaseAprFromApi(), fetchAgencyLockedEgld()
-      ]);
-      setEgldPrice(pE); setColsPrice(pC); setBaseApr(pA); setAgencyLockedEgld(pL);
+      const mode = await detectApiMode();
 
-      const addresses = users.map(u => u.address);
-      const egldMap = await fetchStake_All(addresses);
+      const [users, pE, pC, pA, pL] = await Promise.all([
+        fetchColsStakers(mode),
+        fetchEgldPrice(mode),
+        fetchColsPrice(mode),
+        fetchBaseApr(mode),
+        fetchAgencyLockedEgld(mode)
+      ]);
+
+      if (!pE || !pC || !pA || !pL) {
+        console.error('❌ APR aborted — invalid data', { mode, pE, pC, pA, pL });
+        setStakers([]);
+        return;
+      }
+
+      setEgldPrice(pE);
+      setColsPrice(pC);
+      setBaseApr(pA);
+      setAgencyLockedEgld(pL);
+
+      const egldMap = await fetchStake_All(
+        users.map(u => u.address),
+        mode
+      );
 
       const table: ColsStakerRow[] = users.map(u => ({
-        address: u.address, colsStaked: u.colsStaked,
-        egldStaked: egldMap[u.address] ?? 0,
-        ratio: null, normalized: null, aprBonus: null, dao: null, aprTotal: null, rank: null
+        address: u.address,
+        colsStaked: u.colsStaked,
+        egldStaked: egldMap[u.address] || 0,
+        ratio: null,
+        normalized: null,
+        aprBonus: null,
+        dao: null,
+        aprTotal: null,
+        rank: null
       }));
 
       let serviceFee = 0.10;
       if (contractDetails?.data?.serviceFee) {
-        const n = parseFloat(contractDetails.data.serviceFee.replace('%', '').trim());
+        const n = parseFloat(contractDetails.data.serviceFee.replace('%', ''));
         if (!isNaN(n)) serviceFee = n / 100;
       }
 
       const baseCorrected = pA / (1 - serviceFee) / 100;
-      const targetAvg = ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * BONUS_BUYBACK_FACTOR * pE) / pC) / 365;
+      const targetAvg =
+        ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * BONUS_BUYBACK_FACTOR * pE) / pC) / 365;
+
       setTargetAvgAprBonus(targetAvg);
 
-      const aprMin = 0.5; let L = 0.5, R = 50, best = 15;
+      const aprMin = 0.5;
+      let L = 0.5, R = 50, best = 15;
+
       const calc = (mx: number) => {
-        const f = table.filter(r => r.colsStaked > 0 && r.egldStaked > 0);
+        const f = table.filter(r => r.colsStaked && r.egldStaked);
         if (!f.length) return 0;
-        let mn = 1e9, mxv = -1e9;
-        f.forEach(r => { r.ratio = (r.colsStaked * pC) / (r.egldStaked * pE); mn=Math.min(mn,r.ratio!); mxv=Math.max(mxv,r.ratio!)});
-        f.forEach(r => { r.normalized = (mxv!==mn)?((r.ratio!-mn)/(mxv-mn)):0; r.aprBonus=aprMin+(mx-aprMin)*Math.sqrt(r.normalized!);});
-        return f.reduce((s,r)=>s+(((r.aprBonus!/100)*r.egldStaked*pE)/365/pC),0);
+
+        let mn = Infinity, mxv = -Infinity;
+        f.forEach(r => {
+          r.ratio = (r.colsStaked * pC) / (r.egldStaked * pE);
+          mn = Math.min(mn, r.ratio);
+          mxv = Math.max(mxv, r.ratio);
+        });
+
+        f.forEach(r => {
+          r.normalized = mxv !== mn ? (r.ratio! - mn) / (mxv - mn) : 0;
+          r.aprBonus = aprMin + (mx - aprMin) * Math.sqrt(r.normalized);
+        });
+
+        return f.reduce(
+          (s, r) => s + ((r.aprBonus! / 100) * r.egldStaked * pE) / 365 / pC,
+          0
+        );
       };
 
       for (let i = 0; i < 30; i++) {
         const mid = (L + R) / 2;
         const sum = calc(mid);
         if (Math.abs(sum - targetAvg) < 0.01) { best = mid; break; }
-        if (sum < targetAvg) L = mid; else R = mid;
+        sum < targetAvg ? (L = mid) : (R = mid);
         best = mid;
       }
+
       setAprMax(best);
 
-      const ratios = table.filter(r=>r.egldStaked&&r.colsStaked)
-        .map(r=> (r.colsStaked*pC)/(r.egldStaked*pE));
-      const mn = Math.min(...ratios), mx = Math.max(...ratios);
+      const sumCols = table.reduce((s, r) => s + r.colsStaked, 0);
 
-      const sumCols = table.reduce((s,r)=>s+(r.colsStaked||0),0);
-
-      table.forEach(r=>{
-        r.normalized = (r.colsStaked&&r.egldStaked&&mx!==mn)?(((r.colsStaked*pC)/(r.egldStaked*pE)-mn)/(mx-mn)):null;
-        r.aprBonus = r.normalized!=null?aprMin+(best-aprMin)*Math.sqrt(r.normalized):null;
-        if(r.egldStaked&&r.colsStaked&&sumCols){
-          r.dao=(((pL*baseCorrected*AGENCY_BUYBACK*serviceFee*DAO_DISTRIBUTION_RATIO*r.colsStaked)/sumCols/r.egldStaked)*100);
+      table.forEach(r => {
+        if (r.egldStaked && r.colsStaked) {
+          r.dao =
+            ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * r.colsStaked)
+              / sumCols / r.egldStaked) * 100;
         }
-        r.aprColsOnly = r.colsStaked?calcColsOnlyApr({sumColsStaked:sumCols,baseApr:pA,serviceFee,agencyLockedEgld:pL,egldPrice:pE,colsPrice:pC}):null;
-        r.aprTotal = r.egldStaked?pA+(r.aprBonus||0)+(r.dao||0):r.colsStaked?(r.aprColsOnly??pA):pA;
+        r.aprTotal = safe(pA + safe(r.aprBonus) + safe(r.dao));
       });
 
-      const sorted=[...table].sort((a,b)=>(b.aprTotal||0)-(a.aprTotal||0));
-      sorted.forEach((r,i)=>r.rank=i+1);
+      const sorted = [...table].sort((a, b) => safe(b.aprTotal) - safe(a.aprTotal));
+      sorted.forEach((r, i) => r.rank = i + 1);
       setStakers(sorted);
+    } catch (e) {
+      console.error(e);
+      setStakers([]);
+    } finally {
+      setLoading(false);
     }
-    catch(e){ console.error(e); setStakers([]); }
-    finally{ setLoading(false); }
-  },[trigger]);
+  }, [trigger, contractDetails]);
 
-  useEffect(()=>{ recalc(); },[trigger,recalc]);
+  useEffect(() => { recalc(); }, [recalc, trigger]);
 
-  return {loading,stakers,egldPrice,colsPrice,baseApr,agencyLockedEgld,aprMax,targetAvgAprBonus,recalc};
+  return {
+    loading,
+    stakers,
+    egldPrice,
+    colsPrice,
+    baseApr,
+    agencyLockedEgld,
+    aprMax,
+    targetAvgAprBonus,
+    recalc
+  };
 }
