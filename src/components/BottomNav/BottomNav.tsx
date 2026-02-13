@@ -7,7 +7,7 @@ import {
   faHandshake,
   faUser,
   faBolt,
-  faTruck
+  faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { emitNavTabChange } from 'utils/navEvents';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
@@ -75,12 +75,12 @@ const TABS: TabType[] = [
     )
   },
   {
-    key: 'migration',
-    label: 'Migration',
-    path: '/migration',
+    key: 'info',
+    label: 'Info',
+    path: '/info',
     icon: (
       <FontAwesomeIcon
-        icon={faTruck}
+        icon={faInfoCircle}
         style={{ color: iconColors.default, filter: 'drop-shadow(0 0 1.5px #3bb3a9)' }}
       />
     )

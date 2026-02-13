@@ -1,0 +1,379 @@
+.infoPage {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  color: #e5e5e5;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  font-size: 20px;
+  color: #6ee7c7;
+}
+
+/* Header Banner */
+.headerBanner {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 16px;
+  border: 1px solid #2d3748;
+  box-shadow: 0 4px 20px rgba(110, 231, 199, 0.1);
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #6ee7c7;
+  margin: 0 0 8px 0;
+  text-shadow: 0 0 20px rgba(110, 231, 199, 0.3);
+}
+
+.subtitle {
+  font-size: 16px;
+  color: #9ca3af;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #1e1f22 0%, #23272a 100%);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #2f3136;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(110, 231, 199, 0.15);
+}
+
+.statIcon {
+  font-size: 36px;
+  flex-shrink: 0;
+}
+
+.statContent {
+  flex: 1;
+}
+
+.statLabel {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.statValue {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.statSubtext {
+  font-size: 12px;
+  color: #6ee7c7;
+  margin-top: 4px;
+}
+
+/* Section Titles */
+.sectionTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #6ee7c7;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sectionSubtitle {
+  font-size: 14px;
+  color: #9ca3af;
+  margin: -8px 0 16px 0;
+}
+
+/* Prices Section */
+.pricesSection {
+  margin-bottom: 32px;
+}
+
+.pricesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.priceCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #23272a 0%, #2d3748 100%);
+  border-radius: 12px;
+  padding: 20px 24px;
+  border: 1px solid #374151;
+}
+
+.tokenLogo {
+  font-size: 32px;
+}
+
+.tokenName {
+  font-size: 14px;
+  color: #9ca3af;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.priceValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* COLS Section */
+.colsSection {
+  margin-bottom: 32px;
+  background: linear-gradient(135deg, #1e1f22 0%, #23272a 100%);
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #2f3136;
+}
+
+.colsStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+}
+
+.colsStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.colsLabel {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.colsValue {
+  font-size: 26px;
+  font-weight: 700;
+  color: #a78bfa;
+}
+
+/* Top Stakers Section */
+.topStakersSection {
+  margin-bottom: 32px;
+}
+
+.tableContainer {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #2f3136;
+  background: #181a1b;
+}
+
+.stakersTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.stakersTable th {
+  background: #23272a;
+  color: #ffe082;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 2px solid #2f3136;
+}
+
+.stakersTable td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #23272a;
+  font-size: 14px;
+}
+
+.stakersTable tr:hover {
+  background: #1e1f22;
+}
+
+.stakersTable tr:last-child td {
+  border-bottom: none;
+}
+
+.rankCell {
+  font-weight: 700;
+  font-size: 18px;
+  text-align: center;
+  width: 60px;
+}
+
+.addressCell {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 13px;
+}
+
+.addressLink {
+  color: #6ee7c7;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.addressLink:hover {
+  color: #9ee7d7;
+  text-decoration: underline;
+}
+
+.numberCell {
+  text-align: right;
+  font-weight: 600;
+  color: #e5e5e5;
+}
+
+.aprCell {
+  text-align: center;
+  font-weight: 700;
+  color: #6ee7c7;
+}
+
+.leagueBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* Info Footer */
+.infoFooter {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid #2f3136;
+  text-align: center;
+}
+
+.linksRow {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.footerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #23272a 0%, #2d3748 100%);
+  border-radius: 8px;
+  color: #e5e5e5;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #374151;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.footerLink:hover {
+  background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+  transform: translateY(-1px);
+}
+
+.footerText {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .title {
+    font-size: 24px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .statCard {
+    padding: 16px;
+  }
+
+  .statValue {
+    font-size: 24px;
+  }
+
+  .statIcon {
+    font-size: 28px;
+  }
+
+  .pricesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .colsStats {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .colsValue {
+    font-size: 22px;
+  }
+
+  .sectionTitle {
+    font-size: 18px;
+  }
+
+  .stakersTable th,
+  .stakersTable td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .rankCell {
+    width: 40px;
+  }
+
+  .leagueBadge {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+
+  .linksRow {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .footerLink {
+    width: 100%;
+    max-width: 200px;
+    justify-content: center;
+  }
+}

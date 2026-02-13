@@ -1,4 +1,3 @@
-// Add import for Migration page
 import { ComponentType } from 'react';
 import { dAppName } from 'config';
 import withPageTitle from './components/PageTitle';
@@ -9,7 +8,7 @@ import { Home } from './pages/Home';
 import { Delegation } from './pages/Delegation';
 import { Stake } from './pages/Stake';
 import { Simulation } from './pages/Simulation';
-import { Migration } from './pages/Migration'; // Ensure import
+import { Info } from './pages/Info';
 
 export interface RouteType {
   path: string;
@@ -25,7 +24,7 @@ export const routeNames = {
   delegation: '/delegate',
   stake: '/stake',
   simulation: '/simulation',
-  migration: '/migration', // Ensure route name
+  info: '/info',
   transaction: '/transaction',
   unlock: '/unlock',
   ledger: '/ledger',
@@ -70,9 +69,9 @@ const routes: RouteType[] = [
     authenticatedRoute: true
   },
   {
-    path: routeNames.migration,
-    title: 'Migration',
-    component: Migration,
+    path: routeNames.info,
+    title: 'Info',
+    component: Info,
     authenticatedRoute: true
   },
   {
