@@ -4,6 +4,7 @@ import { useGetActiveTransactionsStatus } from "@multiversx/sdk-dapp/hooks/trans
 import classNames from "classnames";
 import { sendTransactions } from "@multiversx/sdk-dapp/services/transactions/sendTransactions";
 import { network } from "config";
+import { useGlobalContext, useDispatch } from "context";
 import { fetchClaimableColsAndLockTime } from "helpers/fetchClaimableCols";
 import { AnimatedDots } from "components/AnimatedDots";
 
@@ -27,38 +28,42 @@ function denominateCols(raw: string) {
 
 export function ClaimColsButton({ onClaimed }: { onClaimed: () => void }) {
   const { address } = useGetAccountInfo();
-  const { pending } = useGetActiveTransactionsStatus();
-  const [claimable, setClaimable] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { pending, success } = useGetActiveTransactionsStatus();
+  const { claimableCols } = useGlobalContext();
+  const dispatch = useDispatch();
   const [txLoading, setTxLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Get claimable from cached context
+  const claimable = claimableCols.status === 'loaded' ? claimableCols.data : null;
+  const loading = claimableCols.status === 'loading';
+
+  // Refresh claimable COLS after a successful transaction
   useEffect(() => {
     let mounted = true;
-    async function fetchData() {
-      setLoading(true);
-      setError(null);
+    async function refreshClaimable() {
+      if (!address || !success) return;
       try {
-        if (!address) {
-          setClaimable(null);
-          setLoading(false);
-          return;
-        }
-        const { claimable } = await fetchClaimableColsAndLockTime({
+        const { claimable: newClaimable } = await fetchClaimableColsAndLockTime({
           contract: CLAIM_COLS_CONTRACT,
           entity: ENTITY_ADDRESS,
           user: address,
           providerUrl: network.gatewayAddress
         });
-        if (mounted) setClaimable(claimable);
-      } catch (e: any) {
-        if (mounted) setError("Failed to fetch claimable COLS");
+        if (mounted) {
+          dispatch({
+            type: 'getClaimableCols',
+            claimableCols: { status: 'loaded', data: newClaimable, error: null }
+          });
+          onClaimed();
+        }
+      } catch (e) {
+        console.error('Failed to refresh claimable COLS', e);
       }
-      setLoading(false);
     }
-    fetchData();
+    refreshClaimable();
     return () => { mounted = false; };
-  }, [address]);
+  }, [success, address, dispatch, onClaimed]);
 
   const handleClaimCols = async () => {
     setError(null);

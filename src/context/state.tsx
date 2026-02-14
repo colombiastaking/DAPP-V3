@@ -83,6 +83,22 @@ export interface StateType {
     error: ErrorType;
     data: null | string;
   };
+  // Cached data fetched at login
+  delegatorCount: {
+    status: StatusType;
+    error: ErrorType;
+    data: null | number;
+  };
+  claimableCols: {
+    status: StatusType;
+    error: ErrorType;
+    data: null | string;
+  };
+  colsLockTime: {
+    status: StatusType;
+    error: ErrorType;
+    data: null | number;
+  };
 }
 
 export const initializer: StateType = {
@@ -147,6 +163,21 @@ export const initializer: StateType = {
     error: null
   },
   stakedCols: {
+    status: 'idle',
+    data: null,
+    error: null
+  },
+  delegatorCount: {
+    status: 'idle',
+    data: null,
+    error: null
+  },
+  claimableCols: {
+    status: 'idle',
+    data: null,
+    error: null
+  },
+  colsLockTime: {
     status: 'idle',
     data: null,
     error: null

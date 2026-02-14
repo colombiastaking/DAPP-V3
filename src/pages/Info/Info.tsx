@@ -2,10 +2,15 @@ import { useEffect, useState } from 'react';
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 import { useNavigate } from 'react-router-dom';
 import { useColsAprContext } from '../../context/ColsAprContext';
+import { useGlobalContext } from 'context';
 import { AnimatedDots } from 'components/AnimatedDots';
 import styles from './Info.module.scss';
 
 const NUMBER_OF_NODES = 48;
+const SOLAR_POWER_KW = 5.75;
+const CPU_CORES = 60;
+const MACHINES = 9;
+const ISP_COUNT = 4;
 
 // Animal leagues (same as RankingTable)
 const ANIMAL_LEAGUES = [
@@ -41,7 +46,7 @@ export const Info = () => {
   const { address } = useGetAccountInfo();
   const navigate = useNavigate();
   const { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld } = useColsAprContext();
-  const [delegatorCount, setDelegatorCount] = useState<number | null>(null);
+  const { delegatorCount } = useGlobalContext();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -59,27 +64,8 @@ export const Info = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fetch delegator count from API
-  useEffect(() => {
-    const fetchDelegatorCount = async () => {
-      try {
-        const res = await fetch(
-          'https://staking.colombia-staking.com/mvx-api/providers/erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'
-        );
-        const data = await res.json();
-        if (data?.numUsers) {
-          setDelegatorCount(data.numUsers);
-        } else if (data?.accounts) {
-          setDelegatorCount(data.accounts);
-        }
-      } catch {
-        // Fallback: count from stakers with eGLD
-        const count = stakers.filter((s: any) => s.egldStaked > 0).length;
-        setDelegatorCount(count > 0 ? count : null);
-      }
-    };
-    fetchDelegatorCount();
-  }, [stakers]);
+  // Get delegator count from cached context
+  const delegatorCountValue = delegatorCount.status === 'loaded' ? delegatorCount.data : null;
 
   // Calculate total COLS staked
   const totalColsStaked = stakers.reduce((sum: number, s: any) => sum + (s.colsStaked || 0), 0);
@@ -142,7 +128,8 @@ export const Info = () => {
               <div className={styles.statContent}>
                 <div className={styles.statLabel}>Delegators</div>
                 <div className={styles.statValue}>
-                  {delegatorCount !== null ? delegatorCount.toLocaleString() : '—'}
+                  {delegatorCountValue !== null ? delegatorCountValue.toLocaleString() : 
+                   delegatorCount.status === 'loading' ? '...' : '—'}
                 </div>
                 <div className={styles.statSubtext}>Trusting our nodes</div>
               </div>
@@ -157,6 +144,52 @@ export const Info = () => {
                   {baseApr ? baseApr.toFixed(2) + '%' : '—'}
                 </div>
                 <div className={styles.statSubtext}>From blockchain rewards</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Infrastructure Section */}
+          <div className={styles.infraSection}>
+            <h2 className={styles.sectionTitle}>🖥️ Infrastructure</h2>
+            <div className={styles.infraGrid}>
+              {/* Solar Power */}
+              <div className={styles.infraCard}>
+                <div className={styles.infraIcon}>☀️</div>
+                <div className={styles.infraContent}>
+                  <div className={styles.infraLabel}>Solar Power</div>
+                  <div className={styles.infraValue}>{SOLAR_POWER_KW} kW</div>
+                  <div className={styles.infraSubtext}>Clean energy</div>
+                </div>
+              </div>
+
+              {/* CPU Cores */}
+              <div className={styles.infraCard}>
+                <div className={styles.infraIcon}>⚙️</div>
+                <div className={styles.infraContent}>
+                  <div className={styles.infraLabel}>CPU Cores</div>
+                  <div className={styles.infraValue}>{CPU_CORES}</div>
+                  <div className={styles.infraSubtext}>Total processing power</div>
+                </div>
+              </div>
+
+              {/* Machines */}
+              <div className={styles.infraCard}>
+                <div className={styles.infraIcon}>🖥️</div>
+                <div className={styles.infraContent}>
+                  <div className={styles.infraLabel}>Machines</div>
+                  <div className={styles.infraValue}>{MACHINES}</div>
+                  <div className={styles.infraSubtext}>Validator servers</div>
+                </div>
+              </div>
+
+              {/* ISP */}
+              <div className={styles.infraCard}>
+                <div className={styles.infraIcon}>🌐</div>
+                <div className={styles.infraContent}>
+                  <div className={styles.infraLabel}>ISP Connections</div>
+                  <div className={styles.infraValue}>{ISP_COUNT}</div>
+                  <div className={styles.infraSubtext}>Redundant connectivity</div>
+                </div>
               </div>
             </div>
           </div>

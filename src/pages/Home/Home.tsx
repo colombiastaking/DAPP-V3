@@ -8,6 +8,7 @@ import { useColsAprContext } from '../../context/ColsAprContext';
 import { AnimatedDots } from 'components/AnimatedDots';
 import { HelpIcon } from 'components/HelpIcon';
 import { ColsAprTable } from 'components/ColsAprTable';
+import { usePreloadData } from 'hooks/usePreloadData';
 
 import styles from './styles.module.scss';
 
@@ -22,6 +23,9 @@ function formatNumber(amount: number | string, decimals = 6) {
 export const Home = () => {
   const { address } = useGetAccountInfo();
   const { stakers, loading, egldPrice, colsPrice, baseApr } = useColsAprContext();
+  
+  // Preload all cached data at login (delegator count, claimable COLS, etc.)
+  usePreloadData();
 
   const [additionalEgldDelegatedRaw, setAdditionalEgldDelegatedRaw] = useState<string | null>(null);
   const [loadingAdditionalEgld, setLoadingAdditionalEgld] = useState(false);

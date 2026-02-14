@@ -111,6 +111,62 @@
   margin: -8px 0 16px 0;
 }
 
+/* Infrastructure Section */
+.infraSection {
+  margin-bottom: 32px;
+}
+
+.infraGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.infraCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #1e1f22 0%, #23272a 100%);
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid #2f3136;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.infraCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(110, 231, 199, 0.1);
+}
+
+.infraIcon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.infraContent {
+  flex: 1;
+}
+
+.infraLabel {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.infraValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.infraSubtext {
+  font-size: 11px;
+  color: #6ee7c7;
+  margin-top: 2px;
+}
+
 /* Prices Section */
 .pricesSection {
   margin-bottom: 32px;
@@ -332,6 +388,31 @@
 
   .statIcon {
     font-size: 28px;
+  }
+
+  .infraGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .infraCard {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .infraIcon {
+    font-size: 24px;
+  }
+
+  .infraValue {
+    font-size: 18px;
+  }
+
+  .infraLabel {
+    font-size: 11px;
+  }
+
+  .infraSubtext {
+    font-size: 10px;
   }
 
   .pricesGrid {

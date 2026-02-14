@@ -53,6 +53,18 @@ export type ActionType =
   | {
       type: 'getStakedCols';
       stakedCols: StateType['stakedCols'];
+    }
+  | {
+      type: 'getDelegatorCount';
+      delegatorCount: StateType['delegatorCount'];
+    }
+  | {
+      type: 'getClaimableCols';
+      claimableCols: StateType['claimableCols'];
+    }
+  | {
+      type: 'getColsLockTime';
+      colsLockTime: StateType['colsLockTime'];
     };
 
 const reducer = (state: StateType, action: any) => {
@@ -133,6 +145,24 @@ const reducer = (state: StateType, action: any) => {
       return {
         ...state,
         stakedCols: action.stakedCols
+      };
+    }
+    case 'getDelegatorCount': {
+      return {
+        ...state,
+        delegatorCount: action.delegatorCount
+      };
+    }
+    case 'getClaimableCols': {
+      return {
+        ...state,
+        claimableCols: action.claimableCols
+      };
+    }
+    case 'getColsLockTime': {
+      return {
+        ...state,
+        colsLockTime: action.colsLockTime
       };
     }
     default: {
