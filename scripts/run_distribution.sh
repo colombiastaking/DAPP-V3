@@ -40,6 +40,10 @@ case "$1" in
   execute|--execute|-e)
     echo -e "${YELLOW}⚠️  EXECUTION MODE - Transactions will be sent!${NC}"
     echo ""
+    echo "This will:"
+    echo "  1. DAO Pool: Send COLS to PeerMe contract (distribute function)"
+    echo "  2. BONUS Pool: Individual transfers to eligible addresses"
+    echo ""
     echo -n "Type 'yes' to confirm: "
     read confirm
     if [ "$confirm" != "yes" ]; then
@@ -48,7 +52,35 @@ case "$1" in
     fi
     echo ""
     echo -e "${GREEN}Executing distribution...${NC}"
-    node "$SCRIPTS_DIR/execute_bonus_distribution.mjs" --execute
+    node "$SCRIPTS_DIR/execute_distribution.mjs" --all
+    ;;
+  
+  dao|--dao)
+    echo -e "${YELLOW}⚠️  DAO DISTRIBUTION ONLY${NC}"
+    echo ""
+    echo -n "Type 'yes' to confirm: "
+    read confirm
+    if [ "$confirm" != "yes" ]; then
+      echo "Cancelled."
+      exit 0
+    fi
+    echo ""
+    echo -e "${GREEN}Sending DAO pool to PeerMe contract...${NC}"
+    node "$SCRIPTS_DIR/execute_distribution.mjs" --dao
+    ;;
+  
+  bonus|--bonus)
+    echo -e "${YELLOW}⚠️  BONUS DISTRIBUTION ONLY${NC}"
+    echo ""
+    echo -n "Type 'yes' to confirm: "
+    read confirm
+    if [ "$confirm" != "yes" ]; then
+      echo "Cancelled."
+      exit 0
+    fi
+    echo ""
+    echo -e "${GREEN}Sending BONUS transfers...${NC}"
+    node "$SCRIPTS_DIR/execute_distribution.mjs" --bonus
     ;;
   
   verify|--verify|-v)
@@ -143,17 +175,23 @@ case "$1" in
     echo "  (none)        Show this help"
     echo "  calc          Calculate fresh BONUS distribution"
     echo "  fetch         Fetch COLS stakers data"
-    echo "  execute       Execute distribution on blockchain"
+    echo "  execute       Execute BOTH distributions (DAO + BONUS)"
+    echo "  dao           Execute DAO distribution only (PeerMe contract)"
+    echo "  bonus         Execute BONUS distribution only (individual transfers)"
     echo "  verify        Verify last distribution"
     echo "  status        Show distribution status and wallet balances"
     echo "  table         Show COLS-DIST table"
     echo "  help          Show this help"
     echo ""
+    echo "Distribution explanation:"
+    echo "  DAO Pool (1/3): Single tx to PeerMe contract → distributes to ALL COLS stakers"
+    echo "  BONUS Pool (2/3): Individual transfers → addresses with BOTH EGLD + COLS"
+    echo ""
     echo "Typical daily workflow:"
     echo "  1. $0 fetch      # Update COLS stakers cache"
     echo "  2. $0 calc       # Calculate distribution"
     echo "  3. $0 table      # Review amounts"
-    echo "  4. $0 execute    # Send to blockchain"
+    echo "  4. $0 execute    # Send BOTH to blockchain"
     echo "  5. $0 verify     # Verify transactions"
     ;;
 esac

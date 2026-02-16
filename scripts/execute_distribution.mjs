@@ -1,203 +1,303 @@
-import { Address, Transaction, TransactionPayload, TokenIdentifierValue, BigUIntValue } from "@multiversx/sdk-core";
-import { ProxyNetworkProvider } from "@multiversx/sdk-network-providers";
-import { UserSigner, UserSecretKey } from "@multiversx/sdk-wallet";
+/**
+ * COLS Distribution Scripts - FIXED
+ * 
+ * TWO POOLS:
+ * 
+ * 1. DAO POOL (1/3 of buyback):
+ *    - ONE transaction to PeerMe smart contract
+ *    - Call distribute() function with entity argument
+ *    - Contract distributes proportionally to ALL COLS stakers
+ *    
+ * 2. BONUS POOL (2/3 of buyback):
+ *    - Individual ESDT transfers to each eligible address
+ *    - Eligible = has BOTH EGLD delegated AND COLS staked
+ * 
+ * Usage:
+ *   node execute_distribution.mjs --dao          # Execute DAO distribution only
+ *   node execute_distribution.mjs --bonus        # Execute BONUS distribution only  
+ *   node execute_distribution.mjs --all          # Execute both
+ */
+
 import * as fs from "fs";
+import corePkg from "@multiversx/sdk-core";
+const { Address, Transaction, TransactionPayload } = corePkg;
+import { ProxyNetworkProvider } from "@multiversx/sdk-network-providers";
+import walletPkg from "@multiversx/sdk-wallet";
+const { UserSecretKey } = walletPkg;
 
 // Configuration
-const NETWORK_PROVIDER = "https://api.multiversx.com";
-const CHAIN_ID = "1"; // Mainnet
+const NETWORK_PROVIDER = "https://gateway.multiversx.com";
+const CHAIN_ID = "1";
 
-// Contract addresses
-const COLS_TOKEN = "COLS-744718";
-const CLAIM_CONTRACT = "erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0";
+// Contracts
+const COLS_TOKEN_ID = "COLS-9d91b7";
+const PEERME_CLAIM_CONTRACT = "erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0";
+const COLOMBIA_ENTITY = "erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0";
 
-// Distribution parameters
-const TOTAL_DAILY_COLS = 35.29;
-const DAO_POOL_RATIO = 0.333;
-const BONUS_POOL_RATIO = 0.667;
+// Gas limits
+const GAS_ESDT_TRANSFER = 600000;
+const GAS_DAO_DISTRIBUTE = 10000000; // 10M for contract call
 
 // Load wallet
-const walletPath = "/home/raspberry/.openclaw/wallet/.private_key";
-const privateKeyHex = fs.readFileSync(walletPath, "utf-8").trim();
-const secretKey = UserSecretKey.fromString(privateKeyHex);
-const signer = new UserSigner(secretKey);
-const aliceAddress = signer.getAddress();
-
-console.log("=== COLS DISTRIBUTION BOT ===");
-console.log("Wallet:", aliceAddress.bech32());
-console.log("Date:", new Date().toISOString().split('T')[0]);
-
-const provider = new ProxyNetworkProvider(NETWORK_PROVIDER);
-
-async function checkBalance() {
-  try {
-    const account = await provider.getAccount(aliceAddress);
-    const balance = Number(account.balance) / 1e18;
-    console.log(`Alice EGLD Balance: ${balance.toFixed(4)} EGLD`);
-    return { balance, nonce: account.nonce };
-  } catch (e) {
-    console.error("Error checking balance:", e.message);
-    return { balance: 0, nonce: 0 };
-  }
+function loadWallet() {
+  const keyHex = fs.readFileSync('/home/raspberry/.openclaw/wallet/.private_key', 'utf-8').trim();
+  return UserSecretKey.fromString(keyHex);
 }
 
 // Load distribution data
-function loadDistributionData() {
-  const bonusesPath = "/tmp/distribution_list.txt";
-  if (!fs.existsSync(bonusesPath)) {
-    console.error("Distribution file not found:", bonusesPath);
-    return [];
+function loadDistribution() {
+  const files = fs.readdirSync('/tmp/cols_distribution')
+    .filter(f => f.startsWith('bonus_distribution_'))
+    .sort()
+    .reverse();
+  
+  if (files.length === 0) {
+    throw new Error('No distribution file found. Run: ./run_distribution.sh calc');
   }
   
-  const lines = fs.readFileSync(bonusesPath, "utf-8").split("\n");
-  const amounts = [];
-  let total = 0;
-  
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    const [address, amount] = line.split(";");
-    if (address && amount) {
-      const amt = parseFloat(amount);
-      amounts.push({ address, amount: amt });
-      total += amt;
-    }
-  }
-  
-  console.log(`Loaded ${amounts.length} recipients, total: ${total.toFixed(4)} COLS`);
-  return amounts;
+  return JSON.parse(fs.readFileSync(`/tmp/cols_distribution/${files[0]}`, 'utf-8'));
 }
 
-// Create COLS transfer transaction
-function createColsTransfer(nonce, recipient, amount) {
-  const amountBig = BigInt(Math.floor(amount * 1e18));
+// Helper: Convert COLS amount to hex (with proper padding)
+function colsToHex(amount) {
+  let hex = BigInt(Math.floor(amount * 1e18)).toString(16);
+  // Ensure even length for valid bytecode
+  if (hex.length % 2 !== 0) hex = '0' + hex;
+  return hex;
+}
+
+// Helper: Convert string to hex
+function stringToHex(str) {
+  return Buffer.from(str).toString('hex');
+}
+
+// Helper: Address to hex (32 bytes, not string encoding)
+function addressToHex(bech32) {
+  // Convert bech32 address to its 32-byte hex representation
+  const addr = new (corePkg.Address)(bech32);
+  return addr.pubkey().toString('hex');
+}
+
+/**
+ * Build DAO distribution transaction
+ * 
+ * Format: ESDTTransfer@TOKEN_HEX@AMOUNT_HEX@FUNCTION_HEX@ENTITY_HEX
+ * This calls the distribute() function on the PeerMe claim contract
+ * which distributes tokens proportionally to all COLS stakers
+ */
+function buildDaoTransaction(sender, amount) {
+  const tokenIdHex = stringToHex(COLS_TOKEN_ID);
+  const amountHex = colsToHex(amount);
+  const functionHex = stringToHex("distribute");  // IMPORTANT: Must be hex-encoded!
+  const entityHex = addressToHex(COLOMBIA_ENTITY);  // Correct: 32 bytes in hex
   
-  // ESDT transfer data: ESDTTransfer@token@amount
-  const data = `ESDTTransfer@${Buffer.from(COLS_TOKEN).toString("hex")}@${amountBig.toString(16)}`;
+  // Data format: ESDTTransfer@COLS@AMOUNT@function@entity (all hex)
+  const data = `ESDTTransfer@${tokenIdHex}@${amountHex}@${functionHex}@${entityHex}`;
+  
+  console.log(`   Token hex: ${tokenIdHex}`);
+  console.log(`   Amount hex: ${amountHex}`);
+  console.log(`   Function hex: ${functionHex} ("distribute")`);
+  console.log(`   Entity hex: ${entityHex}`);
+  console.log(`   Full data: ${data}`);
   
   return new Transaction({
-    nonce: nonce,
+    sender: sender,
+    receiver: new Address(PEERME_CLAIM_CONTRACT),
     value: 0n,
-    receiver: new Address(recipient),
-    sender: aliceAddress,
-    gasLimit: 500000n,
+    gasLimit: GAS_DAO_DISTRIBUTE,
     chainID: CHAIN_ID,
-    data: TransactionPayload.fromEncoded(data)
+    data: new TransactionPayload(Buffer.from(data))
   });
 }
 
-// Main execution
+/**
+ * Build BONUS transfer transaction
+ * 
+ * Format: ESDTTransfer@TOKEN_HEX@AMOUNT_HEX
+ * Simple token transfer to individual address
+ */
+function buildBonusTransaction(sender, recipient, amount) {
+  const tokenIdHex = stringToHex(COLS_TOKEN_ID);
+  const amountHex = colsToHex(amount);
+  
+  const data = `ESDTTransfer@${tokenIdHex}@${amountHex}`;
+  
+  return new Transaction({
+    sender: sender,
+    receiver: new Address(recipient),
+    value: 0n,
+    gasLimit: GAS_ESDT_TRANSFER,
+    chainID: CHAIN_ID,
+    data: new TransactionPayload(Buffer.from(data))
+  });
+}
+
+/**
+ * Sign and send transaction
+ */
+async function signAndSend(provider, tx, secretKey) {
+  const serialized = tx.serializeForSigning();
+  const signature = secretKey.sign(serialized);
+  tx.applySignature(signature);
+  return await provider.sendTransaction(tx);
+}
+
 async function main() {
   const args = process.argv.slice(2);
+  const doDao = args.includes('--dao') || args.includes('--all');
+  const doBonus = args.includes('--bonus') || args.includes('--all');
   
-  console.log("\n📊 Checking wallet status...");
-  const { balance, nonce } = await checkBalance();
-  
-  if (balance < 0.1) {
-    console.error("⚠️  WARNING: Alice may not have enough EGLD for gas!");
-    console.error("Please ensure Alice has at least 0.5 EGLD for transactions.");
+  if (!doDao && !doBonus) {
+    console.log("Usage:");
+    console.log("  node execute_distribution.mjs --dao      # DAO pool only");
+    console.log("  node execute_distribution.mjs --bonus    # BONUS pool only");
+    console.log("  node execute_distribution.mjs --all      # Both pools");
+    console.log("");
+    console.log("IMPORTANT:");
+    console.log("  DAO pool: Sends to PeerMe contract with distribute() call");
+    console.log("  BONUS pool: Individual transfers to eligible addresses");
+    process.exit(1);
   }
   
-  console.log("\n📋 Loading distribution data...");
-  const recipients = loadDistributionData();
+  console.log("═".repeat(70));
+  console.log("🚀 COLS DISTRIBUTION EXECUTOR (FIXED)");
+  console.log("═".repeat(70));
+  console.log(`Time: ${new Date().toISOString()}`);
+  console.log("");
   
-  if (recipients.length === 0) {
-    console.error("No recipients loaded. Run the calculation first.");
-    return;
+  // Setup
+  const provider = new ProxyNetworkProvider(NETWORK_PROVIDER);
+  const secretKey = loadWallet();
+  const senderAddress = secretKey.generatePublicKey().toAddress();
+  
+  console.log(`Wallet: ${senderAddress.bech32()}`);
+  
+  // Check balance
+  const account = await provider.getAccount(senderAddress);
+  console.log(`Nonce: ${account.nonce}`);
+  console.log(`Balance: ${Number(account.balance) / 1e18} EGLD`);
+  
+  try {
+    const tokens = await provider.getFungibleTokensOfAccount(senderAddress, [COLS_TOKEN_ID]);
+    console.log(`COLS Balance: ${Number(tokens[0]?.balance || 0n) / 1e18}`);
+  } catch (e) {
+    console.log(`COLS Balance: (unable to fetch)`);
   }
+  console.log("");
   
-  // Show summary
-  const daoPool = TOTAL_DAILY_COLS * DAO_POOL_RATIO;
-  const bonusPool = TOTAL_DAILY_COLS * BONUS_POOL_RATIO;
+  // Load distribution
+  const dist = loadDistribution();
+  const bonusRecipients = dist.bonus.recipients;
+  const totalBonus = dist.bonus.totalBonus;
   
-  console.log("\n" + "=".repeat(60));
-  console.log("📊 DISTRIBUTION SUMMARY");
-  console.log("=".repeat(60));
-  console.log(`Total Daily: ${TOTAL_DAILY_COLS} COLS`);
-  console.log(`DAO Pool (1/3): ${daoPool.toFixed(2)} COLS → Smart Contract`);
-  console.log(`Bonus Pool (2/3): ${bonusPool.toFixed(2)} COLS → ${recipients.length} recipients`);
-  console.log("=".repeat(60));
+  // Calculate DAO amount
+  const totalBuyback = totalBonus / 0.667;
+  const daoAmount = totalBuyback * 0.333;
   
-  // Calculate gas costs
-  const avgGasPerTransfer = 500000;
-  const transfers = recipients.length;
-  const totalGas = transfers * avgGasPerTransfer;
-  const gasInEgld = totalGas / 1e18 * 0.05;
+  console.log("📊 Distribution Summary:");
+  console.log(`   DAO Pool: ${daoAmount.toFixed(6)} COLS → PeerMe contract (distribute)`);
+  console.log(`   BONUS Pool: ${totalBonus.toFixed(6)} COLS → ${bonusRecipients.length} addresses`);
+  console.log(`   Total: ${(daoAmount + totalBonus).toFixed(6)} COLS`);
+  console.log("");
   
-  console.log(`\n⛽ Estimated Gas: ${totalGas.toLocaleString()} units (~${gasInEgld.toFixed(4)} EGLD minimum)`);
+  let nonce = account.nonce;
+  const results = { dao: null, bonus: [] };
   
-  // Dry run mode
-  if (args.includes("--dry-run") || args.includes("--preview")) {
-    console.log("\n🔍 DRY RUN MODE - No transactions will be sent");
-    console.log("\nFirst 10 transactions:");
-    console.log("-".repeat(60));
-    for (let i = 0; i < 10 && i < recipients.length; i++) {
-      const tx = createColsTransfer(nonce + i, recipients[i].address, recipients[i].amount);
-      console.log(`  ${i+1}. ${recipients[i].address}`);
-      console.log(`     Amount: ${recipients[i].amount.toFixed(6)} COLS`);
-      console.log(`     Gas: ${tx.gasLimit}`);
-    }
-    console.log("-".repeat(60));
-    console.log(`  ... and ${recipients.length - 10} more transactions`);
-    console.log(`\n📊 Total transactions: ${recipients.length}`);
-    console.log(`📊 Total COLS to distribute: ${bonusPool.toFixed(4)} COLS`);
-    return;
-  }
-  
-  // Execute mode requires --execute flag
-  if (!args.includes("--execute")) {
-    console.log("\n⚠️  Run with --execute to send transactions");
-    console.log("⚠️  Run with --dry-run to preview transactions");
-    return;
-  }
-  
-  console.log("\n🚀 EXECUTING DISTRIBUTION...");
-  console.log("This will send " + recipients.length + " transactions.");
-  console.log("Press Ctrl+C to abort within 5 seconds...");
-  await new Promise(r => setTimeout(r, 5000));
-  
-  let currentNonce = nonce;
-  let sentCount = 0;
-  let totalSent = 0;
-  const errors = [];
-  
-  for (const recipient of recipients) {
+  // =============================================
+  // DAO DISTRIBUTION (single transaction)
+  // =============================================
+  if (doDao) {
+    console.log("═".repeat(70));
+    console.log("🔴 DAO POOL: Distributing to PeerMe contract");
+    console.log("═".repeat(70));
+    console.log("");
+    console.log(`Amount: ${daoAmount.toFixed(6)} COLS`);
+    console.log(`Contract: ${PEERME_CLAIM_CONTRACT}`);
+    console.log(`Entity: ${COLOMBIA_ENTITY}`);
+    console.log(`Function: distribute()`);
+    console.log("");
+    
+    const daoTx = buildDaoTransaction(senderAddress, daoAmount);
+    daoTx.nonce = nonce;
+    
     try {
-      const tx = createColsTransfer(currentNonce, recipient.address, recipient.amount);
-      
-      // Sign transaction
-      const serializedTx = tx.serializeForSigning(aliceAddress);
-      const signature = await signer.sign(serializedTx);
-      tx.applySignature(signature);
-      
-      // Send transaction
-      const txHash = await provider.sendTransaction(tx);
-      console.log(`✅ [${sentCount + 1}/${recipients.length}] ${recipient.amount.toFixed(6)} COLS → ${recipient.address.substring(0, 20)}... (${txHash})`);
-      
-      currentNonce++;
-      sentCount++;
-      totalSent += recipient.amount;
-      
-      // Delay to avoid rate limiting
-      await new Promise(r => setTimeout(r, 200));
-      
-    } catch (error) {
-      console.error(`❌ Error sending to ${recipient.address}:`, error.message);
-      errors.push({ address: recipient.address, error: error.message });
-      // Don't increment nonce on error - will retry with same nonce
-      await new Promise(r => setTimeout(r, 1000));
+      const hash = await signAndSend(provider, daoTx, secretKey);
+      results.dao = { hash, amount: daoAmount };
+      console.log(`✅ DAO Transaction: ${hash}`);
+      console.log(`   Explorer: https://explorer.multiversx.com/transactions/${hash}`);
+      nonce++;
+    } catch (e) {
+      console.error(`❌ DAO Transaction failed: ${e.message}`);
+      throw e;
     }
+    
+    await new Promise(r => setTimeout(r, 1000));
   }
   
-  console.log("\n" + "=".repeat(60));
-  console.log("✅ DISTRIBUTION COMPLETE");
-  console.log("=".repeat(60));
-  console.log(`Transactions sent: ${sentCount}/${recipients.length}`);
-  console.log(`Total COLS distributed: ${totalSent.toFixed(4)} COLS`);
-  if (errors.length > 0) {
-    console.log(`Errors: ${errors.length}`);
-    console.log("Failed addresses:", errors.map(e => e.address.substring(0, 20)).join(", "));
+  // =============================================
+  // BONUS DISTRIBUTION (individual transfers)
+  // =============================================
+  if (doBonus) {
+    console.log("");
+    console.log("═".repeat(70));
+    console.log("🟢 BONUS POOL: Individual transfers");
+    console.log("═".repeat(70));
+    console.log(`Recipients: ${bonusRecipients.length}`);
+    console.log("");
+    
+    let success = 0, fail = 0;
+    
+    for (const recipient of bonusRecipients) {
+      const tx = buildBonusTransaction(senderAddress, recipient.address, recipient.amount);
+      tx.nonce = nonce;
+      
+      try {
+        const hash = await signAndSend(provider, tx, secretKey);
+        results.bonus.push({ hash, ...recipient });
+        success++;
+        
+        if (success <= 5 || success % 20 === 0 || success === bonusRecipients.length) {
+          console.log(`  ✅ [${success}/${bonusRecipients.length}] ${recipient.address.slice(0,12)}... → ${recipient.amount.toFixed(6)} COLS`);
+        }
+      } catch (e) {
+        console.error(`  ❌ ${recipient.address.slice(0,12)}... → ${e.message}`);
+        fail++;
+      }
+      
+      nonce++;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    
+    console.log("");
+    console.log(`BONUS Complete: ${success} success, ${fail} failed`);
   }
-  console.log("=".repeat(60));
+  
+  // Summary
+  console.log("");
+  console.log("═".repeat(70));
+  console.log("🎉 DISTRIBUTION COMPLETE");
+  console.log("═".repeat(70));
+  
+  if (results.dao) {
+    console.log(`DAO: ${daoAmount.toFixed(6)} COLS → PeerMe contract`);
+    console.log(`     https://explorer.multiversx.com/transactions/${results.dao.hash}`);
+  }
+  
+  if (results.bonus.length > 0) {
+    const totalSent = results.bonus.reduce((s, r) => s + r.amount, 0);
+    console.log(`BONUS: ${totalSent.toFixed(6)} COLS → ${results.bonus.length} addresses`);
+  }
+  
+  // Save results
+  const resultFile = `/tmp/cols_distribution/results_${new Date().toISOString().slice(0,10)}.json`;
+  fs.writeFileSync(resultFile, JSON.stringify({
+    timestamp: new Date().toISOString(),
+    dao: results.dao,
+    bonus: results.bonus.slice(0, 10), // First 10 only
+    bonusCount: results.bonus.length,
+    totalColsDistributed: (results.dao?.amount || 0) + results.bonus.reduce((s, r) => s + r.amount, 0)
+  }, null, 2));
+  console.log(`\nResults saved: ${resultFile}`);
 }
 
 main().catch(console.error);
