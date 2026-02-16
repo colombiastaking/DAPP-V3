@@ -1,0 +1,13 @@
+
+# Fichiers sensibles - NE JAMAIS PUSHER
+public/mvx-api.php
+.env
+.env.local
+*.key
+*_api.php
+
+# Build et cache
+build.zip
+build/
+node_modules/
+data/
