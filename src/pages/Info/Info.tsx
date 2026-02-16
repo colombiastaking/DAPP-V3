@@ -12,6 +12,27 @@ const CPU_CORES = 60;
 const MACHINES = 9;
 const ISP_COUNT = 4;
 
+// Node status interface
+interface NodeStatus {
+  name: string;
+  status: string;
+  nonce: number;
+  epoch: number;
+  peers: number;
+  blocksBehind: number;
+  version: string;
+  cpu: { percent: number; model: string; cores: string };
+  memory: { percent: number; usedGB: number; totalGB: number; ram: string };
+  txPool: number;
+}
+
+interface StatusData {
+  timestamp: string;
+  epoch: number;
+  thresholds: { cpu: number; memory: number; peers: number; txPool: number };
+  nodes: NodeStatus[];
+}
+
 // Animal leagues (same as RankingTable)
 const ANIMAL_LEAGUES = [
   { name: 'Leviathan', icon: '🐉', color: '#9c27b0', range: [0, 1] },
@@ -48,6 +69,8 @@ export const Info = () => {
   const { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld } = useColsAprContext();
   const { delegatorCount } = useGlobalContext();
   const [isMobile, setIsMobile] = useState(false);
+  const [nodeStatus, setNodeStatus] = useState<StatusData | null>(null);
+  const [nodeStatusLoading, setNodeStatusLoading] = useState(true);
 
   useEffect(() => {
     if (!address) {
@@ -62,6 +85,28 @@ export const Info = () => {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Fetch node status
+  useEffect(() => {
+    const fetchNodeStatus = async () => {
+      try {
+        const response = await fetch('https://colombia-staking.com/status.json');
+        if (response.ok) {
+          const data = await response.json();
+          setNodeStatus(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch node status:', error);
+      } finally {
+        setNodeStatusLoading(false);
+      }
+    };
+    
+    fetchNodeStatus();
+    // Refresh every 2 minutes
+    const interval = setInterval(fetchNodeStatus, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   // Get delegator count from cached context
@@ -192,6 +237,88 @@ export const Info = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Node Status Section */}
+          <div className={styles.nodeStatusSection}>
+            <h2 className={styles.sectionTitle}>🟢 Node Status</h2>
+            <p className={styles.sectionSubtitle}>
+              Real-time status of our displayed validator nodes
+            </p>
+            
+            {nodeStatusLoading ? (
+              <div className={styles.loadingContainer}>
+                <AnimatedDots />
+              </div>
+            ) : nodeStatus && nodeStatus.nodes ? (
+              <>
+                <div className={styles.nodeStatusGrid}>
+                  {nodeStatus.nodes.map((node) => (
+                    <div key={node.name} className={`${styles.nodeCard} ${styles[node.status.toLowerCase()]}`}>
+                      <div className={styles.nodeHeader}>
+                        <span className={styles.nodeName}>{node.name}</span>
+                        <span className={`${styles.statusBadge} ${styles[node.status.toLowerCase()]}`}>
+                          {node.status === 'SYNC' && '✓'}
+                          {node.status === 'SLOW' && '⚠'}
+                          {node.status === 'LAG' && '🔄'}
+                          {node.status === 'DESYNC' && '✗'}
+                          {node.status === 'ERROR' && '💀'}
+                          {' '}{node.status}
+                        </span>
+                      </div>
+                      
+                      <div className={styles.nodeMetrics}>
+                        <div className={styles.metricPair}>
+                          <span className={styles.metricLabel}>CPU</span>
+                          <div className={styles.metricBar}>
+                            <div 
+                              className={`${styles.metricFill} ${node.cpu.percent > 80 ? styles.danger : node.cpu.percent > 50 ? styles.warning : ''}`}
+                              style={{ width: `${node.cpu.percent}%` }}
+                            />
+                          </div>
+                          <span className={styles.metricValue}>{node.cpu.percent}%</span>
+                        </div>
+                        
+                        <div className={styles.metricPair}>
+                          <span className={styles.metricLabel}>RAM</span>
+                          <div className={styles.metricBar}>
+                            <div 
+                              className={`${styles.metricFill} ${node.memory.percent > 90 ? styles.danger : node.memory.percent > 70 ? styles.warning : ''}`}
+                              style={{ width: `${node.memory.percent}%` }}
+                            />
+                          </div>
+                          <span className={styles.metricValue}>{node.memory.percent}%</span>
+                        </div>
+                      </div>
+                      
+                      <div className={styles.nodeDetails}>
+                        <span>🌐 {node.peers} peers</span>
+                        <span>📦 {node.txPool} tx</span>
+                        {!isMobile && <span>⏱️ {node.blocksBehind} behind</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className={styles.statusFooter}>
+                  <span>Epoch: {nodeStatus.epoch}</span>
+                  <span>•</span>
+                  <span>Updated: {new Date(nodeStatus.timestamp).toLocaleTimeString()}</span>
+                </div>
+              </>
+            ) : (
+              <div className={styles.statusUnavailable}>
+                <p>⚠️ Node status temporarily unavailable</p>
+                <a 
+                  href="https://colombia-staking.com/node-status.html" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={styles.statusLink}
+                >
+                  View on website →
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Prices Section */}

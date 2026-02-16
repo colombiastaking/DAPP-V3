@@ -457,4 +457,193 @@
     max-width: 200px;
     justify-content: center;
   }
+
+  .nodeStatusGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .nodeDetails {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+}
+
+/* Node Status Section */
+.nodeStatusSection {
+  margin-bottom: 32px;
+}
+
+.nodeStatusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.nodeCard {
+  background: linear-gradient(135deg, #1e1f22 0%, #23272a 100%);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #2f3136;
+  transition: all 0.3s ease;
+}
+
+.nodeCard.sync {
+  border-color: #4caf50;
+}
+
+.nodeCard.slow {
+  border-color: #ff9800;
+}
+
+.nodeCard.lag, .nodeCard.desync {
+  border-color: #f44336;
+}
+
+.nodeCard.error {
+  border-color: #f44336;
+  background: linear-gradient(135deg, #2a1a1a 0%, #23272a 100%);
+}
+
+.nodeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.nodeName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.statusBadge.sync {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.statusBadge.slow {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.statusBadge.lag, .statusBadge.desync {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.statusBadge.error {
+  background: rgba(244, 67, 54, 0.3);
+  color: #ff5252;
+}
+
+.nodeMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.metricPair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metricLabel {
+  font-size: 11px;
+  color: #9ca3af;
+  width: 32px;
+  text-transform: uppercase;
+}
+
+.metricBar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.metricFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #81c784);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.metricFill.warning {
+  background: linear-gradient(90deg, #ff9800, #ffb74d);
+}
+
+.metricFill.danger {
+  background: linear-gradient(90deg, #f44336, #ef5350);
+}
+
+.metricValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e5e5e5;
+  width: 36px;
+  text-align: right;
+}
+
+.nodeDetails {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #9ca3af;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.statusFooter {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.statusUnavailable {
+  text-align: center;
+  padding: 32px;
+  background: linear-gradient(135deg, #1e1f22 0%, #23272a 100%);
+  border-radius: 12px;
+  border: 1px solid #2f3136;
+}
+
+.statusUnavailable p {
+  color: #9ca3af;
+  margin: 0 0 16px 0;
+}
+
+.statusLink {
+  display: inline-block;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #23272a 0%, #2d3748 100%);
+  border-radius: 8px;
+  color: #6ee7c7;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #374151;
+  transition: all 0.2s ease;
+}
+
+.statusLink:hover {
+  background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+  transform: translateY(-1px);
 }
