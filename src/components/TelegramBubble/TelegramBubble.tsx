@@ -6,20 +6,17 @@ const TELEGRAM_CHANNELS = [
   {
     name: 'English',
     flag: '🇬🇧',
-    url: 'https://t.me/ColombiaStakingChat',
-    members: '2.5K+'
+    url: 'https://t.me/ColombiaStakingChat'
   },
   {
     name: 'Español',
     flag: '🇪🇸',
-    url: 'https://t.me/colombiastakingesp',
-    members: '500+'
+    url: 'https://t.me/colombiastakingesp'
   },
   {
     name: 'Français',
     flag: '🇫🇷',
-    url: 'https://t.me/colmbiastakingfr',
-    members: '200+'
+    url: 'https://t.me/colmbiastakingfr'
   }
 ];
 
@@ -59,7 +56,6 @@ export const TelegramBubble = () => {
                 <span className={styles.channelFlag}>{channel.flag}</span>
                 <div className={styles.channelInfo}>
                   <span className={styles.channelName}>{channel.name}</span>
-                  <span className={styles.channelMembers}>{channel.members} members</span>
                 </div>
                 <svg className={styles.arrowIcon} viewBox="0 0 24 24">
                   <path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>

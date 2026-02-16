@@ -19,8 +19,8 @@ $border-color: #2a2a4a;
 
 // Main bubble button
 .bubble {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   border: none;
   background: linear-gradient(135deg, $telegram-blue, $telegram-dark);
@@ -71,8 +71,8 @@ $border-color: #2a2a4a;
 }
 
 .telegramIcon {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   position: relative;
   z-index: 1;
 }
@@ -202,13 +202,13 @@ $border-color: #2a2a4a;
   }
 
   .bubble {
-    width: 50px;
-    height: 50px;
+    width: 56px;
+    height: 56px;
   }
 
   .telegramIcon {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
   }
 
   .popup {
