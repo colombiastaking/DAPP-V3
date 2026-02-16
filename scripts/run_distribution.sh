@@ -1,0 +1,159 @@
+#!/bin/bash
+#
+# COLS Daily Distribution Runner
+# 
+# Usage:
+#   ./run_distribution.sh           # Preview today's distribution
+#   ./run_distribution.sh calc      # Calculate fresh distribution
+#   ./run_distribution.sh execute   # Execute on blockchain
+#   ./run_distribution.sh verify    # Verify last distribution
+#
+
+set -e
+
+SCRIPTS_DIR="/home/raspberry/.openclaw/workspace/colombia-staking-dapp/scripts"
+OUTPUT_DIR="/tmp/cols_distribution"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}══════════════════════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE}   COLS Daily Distribution System${NC}"
+echo -e "${BLUE}══════════════════════════════════════════════════════════════════════${NC}"
+echo ""
+
+case "$1" in
+  calc|calculate|--calc|-c)
+    echo -e "${GREEN}Calculating fresh BONUS distribution...${NC}"
+    node "$SCRIPTS_DIR/daily_distribution.mjs" --recalc
+    ;;
+  
+  fetch|--fetch|-f)
+    echo -e "${GREEN}Fetching COLS stakers...${NC}"
+    node "$SCRIPTS_DIR/fetch_cols_stakers.mjs"
+    ;;
+  
+  execute|--execute|-e)
+    echo -e "${YELLOW}⚠️  EXECUTION MODE - Transactions will be sent!${NC}"
+    echo ""
+    echo -n "Type 'yes' to confirm: "
+    read confirm
+    if [ "$confirm" != "yes" ]; then
+      echo "Cancelled."
+      exit 0
+    fi
+    echo ""
+    echo -e "${GREEN}Executing distribution...${NC}"
+    node "$SCRIPTS_DIR/execute_bonus_distribution.mjs" --execute
+    ;;
+  
+  verify|--verify|-v)
+    echo -e "${BLUE}Verifying distribution...${NC}"
+    node "$SCRIPTS_DIR/verify_distribution.mjs"
+    ;;
+  
+  status|--status|-s)
+    echo -e "${BLUE}Checking status...${NC}"
+    echo ""
+    
+    # Check for today's distribution
+    TODAY=$(date +%Y-%m-%d)
+    BONUS_FILE="$OUTPUT_DIR/bonus_distribution_$TODAY.json"
+    
+    if [ -f "$BONUS_FILE" ]; then
+      echo -e "${GREEN}✅ BONUS distribution calculated for today${NC}"
+      cat "$BONUS_FILE" | node -e "
+        const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+        console.log('   Total BONUS:', d.bonus.totalBonus.toFixed(6), 'COLS');
+        console.log('   Recipients:', d.bonus.recipients.length);
+        console.log('   Prices: EGLD $' + d.prices.egldPrice + ' | COLS $' + d.prices.colsPrice.toFixed(4));
+      "
+    else
+      echo -e "${YELLOW}❌ No distribution calculated for today${NC}"
+      echo "   Run: ./run_distribution.sh calc"
+    fi
+    
+    echo ""
+    
+    # Check COLS stakers cache
+    STAKERS_FILE="$OUTPUT_DIR/cols_stakers_latest.json"
+    if [ -f "$STAKERS_FILE" ]; then
+      echo -e "${GREEN}✅ COLS stakers cache exists${NC}"
+      cat "$STAKERS_FILE" | node -e "
+        const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+        console.log('   Total stakers:', d.totalStakers);
+        console.log('   Total staked:', d.totalStaked.toFixed(2), 'COLS');
+        console.log('   Cache time:', d.timestamp);
+      "
+    else
+      echo -e "${YELLOW}❌ No COLS stakers cache${NC}"
+      echo "   Run: ./run_distribution.sh fetch"
+    fi
+    
+    echo ""
+    
+    # Check wallet balance
+    echo "Wallet balances:"
+    ALICE_COLS=$(curl -s "https://api.multiversx.com/accounts/erd1a7e9dyqcffasu9d4vu45s6cuv25g6qfeqy2r7m6gqyle7vpdkgqqazpyuy/tokens/COLS-9d91b7" 2>/dev/null | node -e "
+      try {
+        const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+        console.log((parseFloat(d.balance) / 1e18).toFixed(2));
+      } catch(e) { console.log('error'); }
+    " || echo "error")
+    ALICE_EGLD=$(curl -s "https://api.multiversx.com/accounts/erd1a7e9dyqcffasu9d4vu45s6cuv25g6qfeqy2r7m6gqyle7vpdkgqqazpyuy" 2>/dev/null | node -e "
+      try {
+        const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+        console.log((parseFloat(d.balance) / 1e18).toFixed(4));
+      } catch(e) { console.log('error'); }
+    " || echo "error")
+    echo "   Alice: $ALICE_COLS COLS, $ALICE_EGLD EGLD"
+    ;;
+  
+  table|--table|-t)
+    echo -e "${BLUE}COLS-DIST Table:${NC}"
+    TODAY=$(date +%Y-%m-%d)
+    BONUS_FILE="$OUTPUT_DIR/bonus_distribution_$TODAY.json"
+    
+    if [ -f "$BONUS_FILE" ]; then
+      cat "$BONUS_FILE" | node -e "
+        const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+        const sorted = [...d.bonus.recipients].sort((a,b) => b.amount - a.amount);
+        console.log('Rank | Address | Amount (COLS)');
+        console.log('-----|---------|-------------');
+        sorted.forEach((r, i) => {
+          console.log((i+1).toString().padStart(4) + ' | ' + r.address.slice(0, 30) + '... | ' + r.amount.toFixed(8));
+        });
+        console.log('-----|---------|-------------');
+        console.log('TOTAL: ' + d.bonus.totalBonus.toFixed(8) + ' COLS');
+        console.log('Recipients: ' + sorted.length);
+      "
+    else
+      echo "No distribution found. Run: ./run_distribution.sh calc"
+    fi
+    ;;
+  
+  help|--help|-h|*)
+    echo "Usage: $0 <command>"
+    echo ""
+    echo "Commands:"
+    echo "  (none)        Show this help"
+    echo "  calc          Calculate fresh BONUS distribution"
+    echo "  fetch         Fetch COLS stakers data"
+    echo "  execute       Execute distribution on blockchain"
+    echo "  verify        Verify last distribution"
+    echo "  status        Show distribution status and wallet balances"
+    echo "  table         Show COLS-DIST table"
+    echo "  help          Show this help"
+    echo ""
+    echo "Typical daily workflow:"
+    echo "  1. $0 fetch      # Update COLS stakers cache"
+    echo "  2. $0 calc       # Calculate distribution"
+    echo "  3. $0 table      # Review amounts"
+    echo "  4. $0 execute    # Send to blockchain"
+    echo "  5. $0 verify     # Verify transactions"
+    ;;
+esac

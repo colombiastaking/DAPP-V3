@@ -321,14 +321,6 @@ export const Info = () => {
                 🌐 Website
               </a>
               <a 
-                href="https://t.me/ColombiaStakingChat" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className={styles.footerLink}
-              >
-                💬 Telegram
-              </a>
-              <a 
                 href="https://x.com/ColombiaStaking" 
                 target="_blank" 
                 rel="noopener noreferrer"

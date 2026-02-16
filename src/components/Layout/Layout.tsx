@@ -7,6 +7,7 @@ import routes, { routeNames } from 'routes';
 
 import { Navbar } from './components/Navbar';
 import { BottomNav } from 'components/BottomNav';
+import { TelegramBubble } from 'components/TelegramBubble';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { search } = useLocation();
@@ -27,6 +28,9 @@ export const Layout = ({ children }: { children: ReactNode }) => {
 
       {/* Bottom navigation for mobile devices */}
       <BottomNav />
+      
+      {/* Floating Telegram bubble */}
+      {Boolean(address) && <TelegramBubble />}
     </div>
   );
 };
