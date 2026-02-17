@@ -6,7 +6,7 @@ import {
   faChartLine,
   faHandshake,
   faUser,
-  faBolt,
+  faCalculator,
   faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { emitNavTabChange } from 'utils/navEvents';
@@ -71,7 +71,7 @@ const TABS: TabType[] = [
     path: '/simulation',
     icon: (
       <FontAwesomeIcon
-        icon={faBolt}
+        icon={faCalculator}
         style={{ color: themeColors.inactiveColor }}
       />
     )

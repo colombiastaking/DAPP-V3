@@ -246,7 +246,7 @@ export const Simulation = () => {
     setSimResult(null);
     setSimLoading(true);
     if (!address) {
-      setSimError("Not logged in");
+      setSimError("Please connect your wallet first");
       setSimLoading(false);
       return;
     }
@@ -268,7 +268,7 @@ export const Simulation = () => {
         return;
       }
     } catch {
-      setSimError("Invalid COLS or eGLD value");
+      setSimError("Please enter valid numbers");
       setSimLoading(false);
       return;
     }
@@ -300,51 +300,70 @@ export const Simulation = () => {
 
   return (
     <div className={styles.simulation}>
-      <h2 style={{ background: '#1976d2', color: '#fff', borderRadius: 8, padding: '6px 12px', display: 'inline-block', marginBottom: 24 }}>
-        Simulate Your Stake
-      </h2>
-      <div className={styles.inputs}>
-        <label>
-          COLS Amount:
-          <input
-            type="number"
-            min={0}
-            max={40000}
-            step="any"
-            value={simulatedCols}
-            onChange={e => setSimulatedCols(e.target.value)}
-            placeholder="COLS"
-          />
-        </label>
-        <label>
-          eGLD Amount:
-          <input
-            type="number"
-            min={0}
-            max={1000000}
-            step="any"
-            value={simulatedEgld}
-            onChange={e => setSimulatedEgld(e.target.value)}
-            placeholder="eGLD"
-          />
-        </label>
-        <button onClick={handleSimulate} disabled={simLoading}>
-          {simLoading ? <><AnimatedDots /> Calculating...</> : "Apply"}
-        </button>
-      </div>
-      {simError && <div className={styles.error}>{simError}</div>}
-      {simResult && (
-        <div className={styles.results}>
-          <div style={{ background: '#1976d2', color: '#fff', borderRadius: 8, padding: '6px 12px', display: 'inline-block' }}>
-            <strong>Simulated Total APR:</strong>{' '}
-            {simResult.newApr !== null ? simResult.newApr.toFixed(2) + '%' : 'N/A'}
+      <div className={styles.card}>
+        <div className={styles.header}>
+          <h2>🎯 Simulate Your Stake</h2>
+          <p>See how your APR and ranking would change with different amounts</p>
+        </div>
+        
+        <div className={styles.inputRow}>
+          <div className={styles.inputGroup}>
+            <label>COLS Amount</label>
+            <input
+              type="number"
+              min={0}
+              max={40000}
+              step="any"
+              value={simulatedCols}
+              onChange={e => setSimulatedCols(e.target.value)}
+              placeholder="Enter COLS"
+            />
           </div>
-          <div>
-            <strong>Simulated Ranking:</strong>{' '}
-            {simResult.newRank !== null ? `#${simResult.newRank} of ${stakers.length} COLS stakers` : 'N/A'}
+          <div className={styles.inputGroup}>
+            <label>eGLD Amount</label>
+            <input
+              type="number"
+              min={0}
+              max={1000000}
+              step="any"
+              value={simulatedEgld}
+              onChange={e => setSimulatedEgld(e.target.value)}
+              placeholder="Enter eGLD"
+            />
           </div>
         </div>
-      )}
+
+        <button 
+          className={styles.simulateBtn} 
+          onClick={handleSimulate} 
+          disabled={simLoading || aprLoading}
+        >
+          {simLoading ? <><AnimatedDots /> Calculating...</> : "Calculate My APR"}
+        </button>
+
+        {simError && <div className={styles.error}>{simError}</div>}
+
+        {simResult && (
+          <div className={styles.results}>
+            <div className={styles.resultsGrid}>
+              <div className={styles.resultCard}>
+                <div className={styles.label}>Simulated APR</div>
+                <div className={styles.value}>
+                  {simResult.newApr !== null ? simResult.newApr.toFixed(2) : 'N/A'}%
+                </div>
+                <div className={styles.subtext}>Estimated annual return</div>
+              </div>
+              <div className={styles.resultCard}>
+                <div className={styles.label}>Your Rank</div>
+                <div className={styles.value}>
+                  {simResult.newRank !== null ? `#${simResult.newRank}` : 'N/A'}
+                </div>
+                <div className={styles.subtext}>of {stakers.length} COLS stakers</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

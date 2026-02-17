@@ -52,7 +52,7 @@ case "$1" in
     fi
     echo ""
     echo -e "${GREEN}Executing distribution...${NC}"
-    node "$SCRIPTS_DIR/execute_distribution.mjs" --all
+    node "$SCRIPTS_DIR/execute_distribution.cjs" --all
     ;;
   
   dao|--dao)
@@ -66,7 +66,7 @@ case "$1" in
     fi
     echo ""
     echo -e "${GREEN}Sending DAO pool to PeerMe contract...${NC}"
-    node "$SCRIPTS_DIR/execute_distribution.mjs" --dao
+    node "$SCRIPTS_DIR/execute_distribution.cjs" --dao
     ;;
   
   bonus|--bonus)
@@ -80,7 +80,7 @@ case "$1" in
     fi
     echo ""
     echo -e "${GREEN}Sending BONUS transfers...${NC}"
-    node "$SCRIPTS_DIR/execute_distribution.mjs" --bonus
+    node "$SCRIPTS_DIR/execute_distribution.cjs" --bonus
     ;;
   
   verify|--verify|-v)

@@ -1,83 +1,166 @@
 .simulation {
-  max-width: 600px;
-  margin: 40px auto;
-  background: #181a1b;
-  border: 2px solid #6ee7c7;
+  max-width: 500px;
+  margin: 24px auto 80px;
+  padding: 0 16px;
+}
+
+.card {
+  background: #1a1a1a;
+  border: 1px solid rgba(98, 219, 184, 0.2);
   border-radius: 12px;
   padding: 24px;
-  color: #6ee7c7;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  box-shadow: 0 2px 12px #6ee7c7aa;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.header {
   text-align: center;
-}
-
-h2 {
   margin-bottom: 24px;
+  
+  h2 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: #fff;
+    margin: 0 0 8px 0;
+  }
+  
+  p {
+    color: #a0a0a0;
+    font-size: 0.9rem;
+    margin: 0;
+  }
 }
 
-.inputs {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-bottom: 16px;
+.inputGroup {
+  margin-bottom: 20px;
+  
+  label {
+    display: block;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: #a0a0a0;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  input {
+    width: 100%;
+    padding: 14px 16px;
+    background: #0a0a0a;
+    border: 1px solid rgba(98, 219, 184, 0.3);
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    
+    &:focus {
+      border-color: #62dbb8;
+      box-shadow: 0 0 0 3px rgba(98, 219, 184, 0.15);
+    }
+    
+    &::placeholder {
+      color: #555;
+    }
+  }
 }
 
-label {
-  display: flex;
-  flex-direction: column;
+.inputRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.simulateBtn {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%);
+  color: #0a0a0a;
+  font-family: 'Poppins', sans-serif;
   font-weight: 600;
-  font-size: 16px;
-  min-width: 120px;
-  color: #6ee7c7;
-}
-
-input {
-  margin-top: 6px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #6ee7c7;
-  background: #242526;
-  color: #fff;
-  font-size: 16px;
-  outline: none;
-}
-
-button {
-  background: #6ee7c7;
-  color: #181a1b;
-  font-weight: 700;
-  border-radius: 8px;
-  padding: 12px 24px;
+  font-size: 1rem;
   border: none;
-  font-size: 16px;
+  border-radius: 8px;
   cursor: pointer;
-  box-shadow: 0 2px 8px #6ee7c7aa;
-  transition: box-shadow 0.2s;
-}
-
-button:disabled {
-  background: #303234;
-  color: #888;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-button:hover:not(:disabled) {
-  box-shadow: 0 4px 16px #4f8cffcc;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 8px;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(98, 219, 184, 0.4);
+  }
+  
+  &:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+  }
 }
 
 .error {
-  color: #b71c1c;
-  margin-top: 8px;
-  font-size: 14px;
+  background: rgba(211, 54, 130, 0.15);
+  border: 1px solid rgba(211, 54, 130, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 16px;
+  color: #e85a8a;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 .results {
-  font-size: 18px;
-  font-weight: 700;
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(98, 219, 184, 0.15);
+}
+
+.resultCard {
+  background: linear-gradient(135deg, rgba(98, 219, 184, 0.1) 0%, rgba(211, 54, 130, 0.05) 100%);
+  border: 1px solid rgba(98, 219, 184, 0.3);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  
+  .label {
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.8rem;
+    color: #a0a0a0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  
+  .value {
+    font-family: 'Poppins', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #62dbb8 0%, #d33682 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .subtext {
+    font-size: 0.85rem;
+    color: #a0a0a0;
+    margin-top: 6px;
+  }
+}
+
+.resultsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
 }

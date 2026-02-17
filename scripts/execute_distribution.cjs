@@ -29,6 +29,44 @@ const { Address, TransferTransactionsFactory, TransactionsFactoryConfig, TokenTr
 const NETWORK_PROVIDER = "https://gateway.multiversx.com";
 const CHAIN_ID = "1";
 
+// State file to track what's been sent
+const STATE_FILE = "/tmp/cols_distribution/state.json";
+
+// Load state
+function loadState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      return JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
+    }
+  } catch (e) {}
+  return { lastDistributionDate: null, lastDaoHash: null, lastBonusCount: 0, nonce: null };
+}
+
+// Save state
+function saveState(state) {
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+// Check if already distributed today
+function checkAlreadyDistributed(state, doDao, doBonus) {
+  const today = new Date().toISOString().slice(0, 10);
+  
+  if (state.lastDistributionDate === today) {
+    console.log(`⚠️  Distribution already executed today: ${today}`);
+    if (doDao && state.lastDaoHash) {
+      console.log(`   DAO: ${state.lastDaoHash}`);
+    }
+    if (doBonus && state.lastBonusCount > 0) {
+      console.log(`   BONUS: ${state.lastBonusCount} txs`);
+    }
+    console.log(`   To re-run, delete state file: rm ${STATE_FILE}`);
+    return true;
+  }
+  return false;
+}
+
+// Configuration
+
 // Contracts
 const COLS_TOKEN_ID = "COLS-9d91b7";
 const PEERME_CLAIM_CONTRACT = "erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0";
@@ -104,97 +142,38 @@ function buildDaoTransaction(sender, amount) {
 }
 
 /**
- * Build BONUS transfer transaction using TransferTransactionsFactory
+ * Build BONUS transfer transaction manually
  */
 function buildBonusTransaction(sender, recipient, amount) {
-  const config = new TransactionsFactoryConfig({ chainID: CHAIN_ID });
-  const factory = new TransferTransactionsFactory(config);
+  const amountHex = colsToHex(amount);
+  const data = `ESDTTransfer@${stringToHex(COLS_TOKEN_ID)}@${amountHex}`;
   
-  const transfer = TokenTransfer.fungibleFromAmount(COLS_TOKEN_ID, amount, 18);
-  
-  const transaction = factory.createTransactionForESDTTransfer({
+  return new Transaction({
     sender: sender,
     receiver: new Address(recipient),
-    transfers: [transfer]
+    value: 0n,
+    gasLimit: GAS_ESDT_TRANSFER,
+    chainID: CHAIN_ID,
+    data: Buffer.from(data)
   });
-  
-  transaction.gasLimit = GAS_ESDT_TRANSFER;
-  
-  return transaction;
 }
 
 /**
- * Sign and send transaction - Manual implementation
+ * Sign and send transaction - Using SDK's TransactionComputer
  */
 async function signAndSend(provider, tx, secretKey) {
-  // Get transaction data for signing
-  const plain = tx.toPlainObject();
+  const transactionComputer = new TransactionComputer();
   
-  // Serialize fields for signing (same as TransactionComputer)
-  const fields = [];
-  
-  // Nonce (uint64)
-  const nonceBuf = Buffer.alloc(8);
-  nonceBuf.writeBigUInt64BE(plain.nonce);
-  fields.push(nonceBuf);
-  
-  // Value (bigint uint64)
-  const valueBig = BigInt(plain.value);
-  const valueBuf = Buffer.alloc(8);
-  valueBuf.writeBigUInt64BE(valueBig);
-  fields.push(valueBuf);
-  
-  // Receiver (32 bytes)
-  const receiverBytes = new Address(plain.receiver).getPublicKey().valueOf();
-  fields.push(Buffer.from(receiverBytes));
-  
-  // Sender (32 bytes)
-  const senderBytes = new Address(plain.sender).getPublicKey().valueOf();
-  fields.push(Buffer.from(senderBytes));
-  
-  // Gas price (uint64)
-  const gasPriceBuf = Buffer.alloc(8);
-  gasPriceBuf.writeBigUInt64BE(BigInt(plain.gasPrice));
-  fields.push(gasPriceBuf);
-  
-  // Gas limit (uint64)
-  const gasLimitBuf = Buffer.alloc(8);
-  gasLimitBuf.writeBigUInt64BE(BigInt(plain.gasLimit));
-  fields.push(gasLimitBuf);
-  
-  // Data (bytes)
-  const dataBytes = Buffer.from(plain.data, 'base64');
-  const dataLenBuf = Buffer.alloc(4);
-  dataLenBuf.writeUInt32BE(dataBytes.length);
-  fields.push(dataLenBuf);
-  fields.push(dataBytes);
-  
-  // Chain ID
-  const chainBuf = Buffer.from(plain.chainID);
-  const chainLenBuf = Buffer.alloc(4);
-  chainLenBuf.writeUInt32BE(chainBuf.length);
-  fields.push(chainLenBuf);
-  fields.push(chainBuf);
-  
-  // Version (uint32)
-  const versionBuf = Buffer.alloc(4);
-  versionBuf.writeUInt32BE(plain.version);
-  fields.push(versionBuf);
-  
-  // Options (uint32, default 0)
-  const optionsBuf = Buffer.alloc(4);
-  optionsBuf.writeUInt32BE(plain.options || 0);
-  fields.push(optionsBuf);
-  
-  // Concatenate all fields
-  const serialized = Buffer.concat(fields);
+  // Serialize for signing using SDK
+  const serializedTx = transactionComputer.computeBytesForSigning(tx);
   
   // Sign
-  const signature = secretKey.sign(serialized);
+  const signature = secretKey.sign(serializedTx);
   
-  // Apply signature to transaction
+  // Apply signature
   tx.signature = signature;
   
+  // Send
   return await provider.sendTransaction(tx);
 }
 
@@ -202,17 +181,28 @@ async function main() {
   const args = process.argv.slice(2);
   const doDao = args.includes('--dao') || args.includes('--all');
   const doBonus = args.includes('--bonus') || args.includes('--all');
+  const force = args.includes('--force'); // Force re-run even if already done today
   
   if (!doDao && !doBonus) {
     console.log("Usage:");
-    console.log("  node execute_distribution.mjs --dao      # DAO pool only");
-    console.log("  node execute_distribution.mjs --bonus    # BONUS pool only");
-    console.log("  node execute_distribution.mjs --all      # Both pools");
+    console.log("  node execute_distribution.cjs --dao      # DAO pool only");
+    console.log("  node execute_distribution.cjs --bonus    # BONUS pool only");
+    console.log("  node execute_distribution.cjs --all      # Both pools");
+    console.log("  node execute_distribution.cjs --all --force  # Force re-run");
     console.log("");
     console.log("IMPORTANT:");
     console.log("  DAO pool: Sends to PeerMe contract with distribute() call");
     console.log("  BONUS pool: Individual transfers to eligible addresses");
     process.exit(1);
+  }
+  
+  // Load state and check if already distributed
+  const state = loadState();
+  const today = new Date().toISOString().slice(0, 10);
+  
+  if (!force && checkAlreadyDistributed(state, doDao, doBonus)) {
+    console.log("Use --force to re-run anyway");
+    process.exit(0);
   }
   
   console.log("═".repeat(70));
@@ -225,20 +215,22 @@ async function main() {
   const provider = new ProxyNetworkProvider(NETWORK_PROVIDER, { timeout: 30000 });
   const secretKey = loadWallet();
   const senderPublicKey = secretKey.generatePublicKey();
-  // UserAddress for provider calls, Address for TransactionComputer
-  const senderAddress = senderPublicKey.toAddress();
-  const senderAddressForTx = new Address(senderPublicKey.valueOf());
-  const senderBech32 = senderAddress.bech32();
+  
+  // SDK v15 quirk: toAddress() works with Provider but lacks toBech32()
+  // new Address() has toBech32() but doesn't work with Provider
+  const senderAddressForProvider = senderPublicKey.toAddress();
+  const senderAddress = new Address(senderPublicKey.valueOf());
+  const senderBech32 = senderAddress.toBech32();
   
   console.log(`Wallet: ${senderBech32}`);
   
   // Check balance
-  const account = await provider.getAccount(senderAddress);
+  const account = await provider.getAccount(senderAddressForProvider);
   console.log(`Nonce: ${account.nonce}`);
   console.log(`Balance: ${Number(account.balance) / 1e18} EGLD`);
   
   try {
-    const tokens = await provider.getFungibleTokensOfAccount(senderAddress, [COLS_TOKEN_ID]);
+    const tokens = await provider.getFungibleTokensOfAccount(senderAddressForProvider, [COLS_TOKEN_ID]);
     console.log(`COLS Balance: ${Number(tokens[0]?.balance || 0n) / 1e18}`);
   } catch (e) {
     console.log(`COLS Balance: (unable to fetch)`);
@@ -347,6 +339,20 @@ async function main() {
     const totalSent = results.bonus.reduce((s, r) => s + r.amount, 0);
     console.log(`BONUS: ${totalSent.toFixed(6)} COLS → ${results.bonus.length} addresses`);
   }
+  
+  // Save state to prevent duplicate runs
+  const finalState = {
+    lastDistributionDate: today,
+    lastDaoHash: results.dao?.hash || state.lastDaoHash,
+    lastBonusCount: results.bonus.length || state.lastBonusCount,
+    lastNonce: nonce,
+    lastDistribution: {
+      dao: results.dao?.hash ? { amount: daoAmount, tx: results.dao.hash } : null,
+      bonus: results.bonus.length > 0 ? { count: results.bonus.length, total: results.bonus.reduce((s, r) => s + r.amount, 0) } : null
+    }
+  };
+  saveState(finalState);
+  console.log(`\nState saved to prevent duplicate runs`);
   
   // Save results
   const resultFile = `/tmp/cols_distribution/results_${new Date().toISOString().slice(0,10)}.json`;
