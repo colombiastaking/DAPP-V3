@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
   Address,
-  Query,
   ContractFunction,
   AddressValue,
   decodeBigNumber
@@ -11,6 +10,7 @@ import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import { network } from 'config';
 import { useGlobalContext } from 'context';
 import { fetchWithBackup } from '../utils/resilientApi';
+import { createContractQuery } from 'helpers/contractQuery';
 
 /* ───────────────────────────────────────────────
    CONSTANTS
@@ -160,7 +160,7 @@ async function fetchStakeContract(addr: string, mode: ApiMode) {
   for (const gw of gateways) {
     try {
       const provider = new ProxyNetworkProvider(gw);
-      const q = new Query({
+      const q = createContractQuery({
         address: new Address(network.delegationContract),
         func: new ContractFunction('getUserActiveStake'),
         args: [new AddressValue(new Address(addr))]
@@ -204,7 +204,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   const fetchColsStakers = useCallback(async (mode: ApiMode) => {
     const p = getScProvider(mode);
-    const q = new Query({
+    const q = createContractQuery({
       address: new Address(PEERME_COLS_CONTRACT),
       func: new ContractFunction('getEntityUsers'),
       args: [new AddressValue(new Address(PEERME_ENTITY_ADDRESS))]
@@ -216,7 +216,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
     for (let i = 0; i < x.length; i += 2) {
       arr.push({
-        address: new Address(x[i]).bech32(),
+        address: new Address(x[i]).toBech32(),
         colsStaked: Number(decodeBigNumber(x[i + 1])) / 1e18
       });
     }

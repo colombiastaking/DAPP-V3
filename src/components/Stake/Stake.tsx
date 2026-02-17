@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useGetAccountInfo } from "@multiversx/sdk-dapp/hooks/account/useGetAccountInfo";
+import { useGetAccount } from "@multiversx/sdk-dapp/out/react/account/useGetAccount";
 import classNames from "classnames";
 import { network, denomination } from "config";
 import { useGlobalContext } from "context";
@@ -41,7 +41,8 @@ function formatLockTime(lockTimestamp: number) {
 }
 
 export const Stake = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { userActiveStake, stakedCols } = useGlobalContext();
   const { onRedelegate } = useStakeData();
 

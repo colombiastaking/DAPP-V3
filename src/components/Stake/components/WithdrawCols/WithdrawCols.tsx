@@ -1,5 +1,5 @@
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
-import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sendTransactions';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
+import { sendTransactions } from 'helpers/sendTransactions';
 import classNames from 'classnames';
 import { useState } from 'react';
 

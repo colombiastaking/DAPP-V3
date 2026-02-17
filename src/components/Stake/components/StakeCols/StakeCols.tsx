@@ -1,7 +1,7 @@
 import { useState, useEffect, MouseEvent } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
-import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sendTransactions';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
+import { sendTransactions } from 'helpers/sendTransactions';
 import classNames from 'classnames';
 import { Formik } from 'formik';
 import { object, string } from 'yup';
@@ -48,7 +48,8 @@ function formatLockTime(lockTimestamp: number) {
 }
 
 export const StakeCols = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { pending } = useGetActiveTransactionsStatus();
   const [error, setError] = useState<string | null>(null);
   const [colsBalance, setColsBalance] = useState<string>('0');

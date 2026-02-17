@@ -12,10 +12,10 @@ import {
   decodeUnsignedNumber,
   ContractFunction,
   Address,
-  Query,
   decodeString
 } from '@multiversx/sdk-core';
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
+import { createContractQuery } from 'helpers/contractQuery';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
 import {
   ApiNetworkProvider,
   ProxyNetworkProvider
@@ -118,7 +118,7 @@ export const Cards = () => {
 
     try {
       const provider = new ProxyNetworkProvider(network.apiAddress);
-      const query = new Query({
+      const query = createContractQuery({
         address: new Address(network.delegationContract),
         func: new ContractFunction('getNumUsers')
       });

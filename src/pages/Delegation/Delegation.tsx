@@ -1,6 +1,7 @@
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { useEffect, useState } from 'react';
-import { decodeBigNumber, Query, ContractFunction, Address, AddressValue } from '@multiversx/sdk-core';
+import { decodeBigNumber, ContractFunction, Address, AddressValue } from '@multiversx/sdk-core';
+import { createContractQuery } from 'helpers/contractQuery';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import { Delegate } from 'components/Stake/components/Delegate';
 import { Undelegate } from 'components/Stake/components/Undelegate';
@@ -17,7 +18,8 @@ import styles from './Delegation.module.scss';
 const DELEGATION_CONTRACT = 'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf';
 
 export const Delegation = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { onRedelegate } = useStakeData();
   const { userClaimableRewards } = useGlobalContext();
   const { stakers } = useColsAprContext();
@@ -48,7 +50,7 @@ export const Delegation = () => {
         } else {
           // No COLS staked, query the blockchain directly
           const provider = new ProxyNetworkProvider(network.gatewayAddress);
-          const query = new Query({
+          const query = createContractQuery({
             address: new Address(DELEGATION_CONTRACT),
             func: new ContractFunction('getUserActiveStake'),
             args: [new AddressValue(new Address(address))]

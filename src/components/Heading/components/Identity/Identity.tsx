@@ -2,10 +2,9 @@ import { useEffect } from 'react';
 import {
   ContractFunction,
   Address,
-  Query,
   decodeString
 } from '@multiversx/sdk-core';
-import { useGetSuccessfulTransactions } from '@multiversx/sdk-dapp/hooks/transactions/useGetSuccessfulTransactions';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import classNames from 'classnames';
 import { Formik, FormikProps } from 'formik';
@@ -15,6 +14,7 @@ import { Submit } from 'components/Action';
 import { network } from 'config';
 import { useDispatch, useGlobalContext } from 'context';
 import useTransaction from 'helpers/useTransaction';
+import { createContractQuery } from 'helpers/contractQuery';
 
 import styles from './styles.module.scss';
 
@@ -35,7 +35,7 @@ export const Identity = () => {
   const { agencyMetaData } = useGlobalContext();
   const { sendTransaction } = useTransaction();
   const { hasSuccessfulTransactions, successfulTransactionsArray } =
-    useGetSuccessfulTransactions();
+    useGetActiveTransactionsStatus();
 
   const dispatch = useDispatch();
   const fields: FieldType[] = [
@@ -90,7 +90,7 @@ export const Identity = () => {
 
     try {
       const provider = new ProxyNetworkProvider(network.gatewayAddress);
-      const query = new Query({
+      const query = createContractQuery({
         address: new Address(network.delegationContract),
         func: new ContractFunction('getMetaData')
       });

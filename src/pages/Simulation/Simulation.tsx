@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { useColsAprContext } from '../../context/ColsAprContext';
 import { AnimatedDots } from 'components/AnimatedDots';
 import styles from './Simulation.module.scss';
@@ -231,7 +231,8 @@ function simulateAprAndRank({
 }
 
 export const Simulation = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { stakers, baseApr, egldPrice, colsPrice, agencyLockedEgld, loading: aprLoading } = useColsAprContext();
 
   const [simulatedCols, setSimulatedCols] = useState('1');

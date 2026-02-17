@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { ClaimColsButton } from 'components/Stake/ClaimColsButton';
 import { StakeCols } from 'components/Stake/components/StakeCols';
 import { BuyCols } from 'components/Stake/components/BuyCols';
@@ -21,7 +21,8 @@ function denominateCols(raw: string) {
 }
 
 export const Stake = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { claimableCols } = useGlobalContext();
   const { stakers } = useColsAprContext();
   

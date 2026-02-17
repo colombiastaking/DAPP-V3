@@ -1,10 +1,11 @@
 import { ChangeEvent, useEffect, useState } from 'react';
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import classNames from 'classnames';
 import { Formik } from 'formik';
 import { object, string } from 'yup';
-import { decodeBigNumber, Query, ContractFunction, Address, AddressValue } from '@multiversx/sdk-core';
+import { decodeBigNumber, ContractFunction, Address, AddressValue } from '@multiversx/sdk-core';
+import { createContractQuery } from 'helpers/contractQuery';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 
 import { Action, Submit } from 'components/Action';
@@ -20,7 +21,8 @@ const DELEGATION_CONTRACT = 'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqal
 export const Undelegate = () => {
   const { onUndelegate } = useStakeData();
   const { pending } = useGetActiveTransactionsStatus();
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { stakers, loading: stakersLoading } = useColsAprContext();
   
   const [additionalEgldDelegated, setAdditionalEgldDelegated] = useState<string | null>(null);
@@ -62,7 +64,7 @@ export const Undelegate = () => {
     async function fetchDelegatedEgld() {
       try {
         const provider = new ProxyNetworkProvider(network.gatewayAddress);
-        const q = new Query({
+        const q = createContractQuery({
           address: new Address(DELEGATION_CONTRACT),
           func: new ContractFunction('getUserActiveStake'),
           args: [new AddressValue(new Address(address))]

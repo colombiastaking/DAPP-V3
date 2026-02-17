@@ -1,4 +1,4 @@
-import { parseAmount } from '@multiversx/sdk-dapp/utils/operations/parseAmount';
+import { parseAmount } from 'helpers/parseAmount';
 
 import BigNumber from 'bignumber.js';
 import { string } from 'yup';

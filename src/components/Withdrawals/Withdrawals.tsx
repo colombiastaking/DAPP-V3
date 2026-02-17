@@ -4,12 +4,11 @@ import {
   ContractFunction,
   AddressValue,
   Address,
-  Query,
   decodeString,
   decodeBigNumber
 } from '@multiversx/sdk-core';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
-import { useGetSuccessfulTransactions } from '@multiversx/sdk-dapp/hooks/transactions/useGetSuccessfulTransactions';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import moment from 'moment';
 
@@ -17,6 +16,7 @@ import { network, decimals, denomination } from 'config';
 import { useGlobalContext, useDispatch } from 'context';
 import { UndelegateStakeListType } from 'context/state';
 import denominate from 'helpers/denominate';
+import { createContractQuery } from 'helpers/contractQuery';
 
 import { Withdrawal } from './components/Withdrawal';
 
@@ -25,10 +25,10 @@ import styles from './styles.module.scss';
 export const Withdrawals = () => {
   const dispatch = useDispatch();
 
-  const { account } = useGetAccountInfo();
+  const account = useGetAccount();
   const { undelegatedStakeList } = useGlobalContext();
   const { hasSuccessfulTransactions, successfulTransactionsArray } =
-    useGetSuccessfulTransactions();
+    useGetActiveTransactionsStatus();
 
   const getUndelegatedStakeList = async (): Promise<void> => {
     dispatch({
@@ -42,7 +42,7 @@ export const Withdrawals = () => {
 
     try {
       const provider = new ProxyNetworkProvider(network.gatewayAddress);
-      const query = new Query({
+      const query = createContractQuery({
         address: new Address(network.delegationContract),
         func: new ContractFunction('getUserUnDelegatedList'),
         args: [new AddressValue(new Address(account.address))]

@@ -1,12 +1,13 @@
 import { useColsAprContext } from '../../context/ColsAprContext';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import type { ColsStakerRow } from '../../hooks/useColsApr';
 import { useState } from 'react';
 
 const TARGET_USER = 'erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm';
 
 export function ColsAprTable() {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { loading, stakers, egldPrice, colsPrice, targetAvgAprBonus } = useColsAprContext();
   const [copied, setCopied] = useState(false);
 

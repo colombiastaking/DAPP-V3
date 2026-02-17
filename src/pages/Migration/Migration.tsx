@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import axios from 'axios';
 import classNames from 'classnames';
 import { network } from 'config';
@@ -7,7 +7,7 @@ import { Formik } from 'formik';
 import { object, string } from 'yup';
 import BigNumber from 'bignumber.js';
 import { Modal } from 'react-bootstrap';
-import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sendTransactions';
+import { sendTransactions } from 'helpers/sendTransactions';
 import { HelpIcon } from 'components/HelpIcon';
 import styles from './Migration.module.scss';
 
@@ -327,7 +327,8 @@ function Withdrawal({
 }
 
 export const Migration = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const [providerMap, setProviderMap] = useState<Record<string, string>>({});
   const [delegationList, setDelegationList] = useState<any[]>([]);
   const [providerDetails, setProviderDetails] = useState<any[]>([]);
