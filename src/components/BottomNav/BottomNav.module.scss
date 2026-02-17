@@ -7,8 +7,10 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background: rgba(18, 18, 20, 0.95);
-  border-top: 1px solid #333;
+  background: rgba(26, 26, 26, 0.98);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(98, 219, 184, 0.2);
   z-index: 999;
   padding: 6px 0;
 }
@@ -23,7 +25,7 @@
 .tab {
   flex: 1 1 20%;
   text-align: center;
-  color: #bdbdbd;
+  color: #a0a0a0;
   text-decoration: none;
   display: flex;
   flex-direction: column;
@@ -31,16 +33,16 @@
   justify-content: center;
   padding: 6px 0;
   gap: 6px;
-  font-family: inherit;
+  font-family: 'Poppins', sans-serif;
   font-size: 12px;
-  border-radius: 8px;
-  transition: background 0.2s;
+  border-radius: 12px;
+  transition: all 0.3s ease;
 }
 
 .active {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  color: #62dbb8;
+  background: rgba(98, 219, 184, 0.1);
+  border-radius: 12px;
 }
 
 .icon {
@@ -52,5 +54,9 @@
 
 .label {
   font-size: 11px;
-  color: #cbd5e1;
+  color: #a0a0a0;
+}
+
+.active .label {
+  color: #62dbb8;
 }

@@ -2,31 +2,33 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.8) 100%);
 
   @media (min-width: 992px) {
     height: 100vh;
   }
 
   .wrapper {
-    background: rgba(0, 6, 13, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(26, 26, 26, 0.95);
+    border: 1px solid rgba(98, 219, 184, 0.2);
     box-sizing: border-box;
-    border-radius: 12px;
+    border-radius: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
     margin: 100px 30px 30px;
     padding: 30px;
     text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 
     @media (min-width: 992px) {
       padding: 0 60px 60px;
     }
 
     .logo {
-      background: #303234;
-      border: 1px solid #49494d;
-      box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.12);
+      background: linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%);
+      border: none;
+      box-shadow: 0 4px 20px rgba(98, 219, 184, 0.4);
       border-radius: 50%;
       justify-content: center;
       display: flex;
@@ -43,21 +45,22 @@
     }
 
     .heading {
-      line-height: 1;
-      color: white;
-      font-size: 24px;
+      line-height: 1.2;
+      color: #62dbb8;
+      font-size: 28px;
       margin-bottom: 15px;
+      font-family: 'Lustria', serif;
     }
 
     .description {
-      line-height: 1;
-      font-size: 18px;
-      color: #808ea3;
+      line-height: 1.6;
+      font-size: 17px;
+      color: #a0a0a0;
     }
 
     .connects {
       display: flex;
-      margin-top: 45px;
+      margin-top: 40px;
       flex-wrap: wrap;
       justify-content: center;
 
@@ -82,27 +85,32 @@
 
       .connect {
         cursor: pointer;
-        background: rgba(36, 37, 38, 0.5);
-        border: 1px solid #49494d;
-        box-shadow: 0px 6px 24px rgba(0, 0, 0, 0.12);
-        border-radius: 12px;
+        background: #1a1a1a;
+        border: 1px solid rgba(98, 219, 184, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        border-radius: 16px;
         width: 160px;
         padding: 20px;
         display: flex;
         align-items: center;
         flex-direction: column;
         margin: 0 0.5rem 1rem;
-        transition: all 200ms ease-in;
+        transition: all 0.3s ease;
 
         &:hover {
-          background: #303234;
+          background: #252525;
+          border-color: #62dbb8;
+          transform: translateY(-5px);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
 
         .title {
-          color: rgba(#808ea3, 0.9);
+          color: #a0a0a0;
           margin-bottom: 15px;
           font-size: 12px;
           line-height: 1;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .icon {
@@ -121,8 +129,9 @@
         }
 
         .name {
-          color: #f8f8ff;
+          color: #ffffff;
           font-size: 14px;
+          font-weight: 500;
         }
       }
     }
@@ -130,29 +139,31 @@
 }
 
 .qr {
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 30px;
-  background: rgba(36, 37, 38, 1);
+  background: #1a1a1a;
   position: relative;
+  border: 1px solid rgba(98, 219, 184, 0.2);
 
   .close {
     position: absolute;
     bottom: calc(100% + 5px);
     left: calc(100% + 5px);
     border-radius: 50%;
-    background: rgba(36, 37, 38, 1);
+    background: #1a1a1a;
     padding: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 1px solid rgba(98, 219, 184, 0.3);
 
     svg {
       width: 15px;
       height: 15px;
 
       path {
-        fill: white;
+        fill: #62dbb8;
       }
     }
   }
@@ -167,9 +178,10 @@
 
   .subheading {
     line-height: 1;
-    color: white;
+    color: #62dbb8;
     font-size: 20px;
     text-align: center;
+    font-family: 'Lustria', serif;
   }
 }
 
@@ -183,101 +195,104 @@
     margin: 32px auto 0;
     padding: 15px 30px;
     width: 150px;
-    border-radius: 7px;
-    color: white;
+    border-radius: 50px;
+    color: #0a0a0a;
     border: none;
     font-size: 14px;
     cursor: pointer;
+    background: linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%);
   }
 }
 
 [class*='dapp-ledger-modal'] *,
 [class*='dapp-wallet-connect-modal'] * {
-  color: #a3a3a3;
+  color: #a0a0a0;
 }
 
 [class*='dapp-core-component__dappModalStyles__dappModalContent'] {
-  background-color: black;
-  border-radius: 24px;
-  border: 1px solid rgba(white, 0.125) !important;
+  background-color: #1a1a1a;
+  border-radius: 20px;
+  border: 1px solid rgba(98, 219, 184, 0.2) !important;
 }
 
 [class*='modal-close-button'] {
   background: none !important;
   border: none;
-  color: #a3a3a3;
+  color: #62dbb8;
 
   &:hover {
-    color: #a3a3a3;
+    color: #62dbb8;
   }
 }
 
 .title {
-  color: #d4d4d4;
+  color: #62dbb8 !important;
+  font-family: 'Lustria', serif;
 }
 
 .subtitle,
 .description {
-  color: #a3a3a3 !important;
+  color: #a0a0a0 !important;
 }
 
 .head {
-  background-color: #a3a3a3 !important;
+  background-color: #252525 !important;
 }
 
 .navigation,
 .footer {
-  color: #a3a3a3 !important;
+  color: #a0a0a0 !important;
 }
 
 .selected {
-  color: #a3a3a3;
+  color: #a0a0a0;
 
   input:before {
-    border: 2px solid #adb5bd !important;
-    background-color: #adb5bd;
+    border: 2px solid #62dbb8 !important;
+    background-color: #62dbb8;
   }
 }
 
 .icon svg path {
-  fill: #a3a3a3;
+  fill: #62dbb8;
 }
 
 .phishing {
-  color: #a3a3a3;
+  color: #a0a0a0;
 
   svg,
   strong {
-    color: #1b46c2 !important;
+    color: #62dbb8 !important;
   }
 }
 
 .button {
-  background-color: #1b46c2 !important;
-  border-color: #1b46c2 !important;
-  color: #000 !important;
+  background: linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%) !important;
+  border-color: #62dbb8 !important;
+  color: #0a0a0a !important;
 
   svg path {
-    fill: #000 !important;
+    fill: #0a0a0a !important;
   }
 
   &:hover,
   &:active,
   &:focus {
-    background-color: #1b46c2 !important;
-    border-color: #1b46c2 !important;
-    color: #000 !important;
+    background: linear-gradient(135deg, #4bc9a1 0%, #3ab890 100%) !important;
+    border-color: #62dbb8 !important;
+    color: #0a0a0a !important;
 
     svg path {
-      fill: #000 !important;
+      fill: #0a0a0a !important;
     }
   }
 }
 
 .lead {
-  color: #a3a3a3;
+  color: #a0a0a0;
 }
 
 .pairing {
-  background-color: #d4d4d4 !important;
+  background: linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%) !important;
+  color: #0a0a0a !important;
 }

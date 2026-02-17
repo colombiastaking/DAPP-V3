@@ -65,18 +65,22 @@ export const Navbar = () => {
           <NewLogo width={64} height={64} />
         </span>
         <span className={styles.title} style={{ flexShrink: 0, userSelect: 'text' }}>
-          Colombia Staking Dashboard
+          Colombia Staking
         </span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <span
           style={{
-            color: '#6ee7c7',
-            fontWeight: 700,
-            fontSize: 16,
+            color: '#62dbb8',
+            fontWeight: 600,
+            fontSize: 14,
             whiteSpace: 'nowrap',
-            userSelect: 'text'
+            userSelect: 'text',
+            background: 'rgba(98, 219, 184, 0.1)',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            border: '1px solid rgba(98, 219, 184, 0.2)'
           }}
           aria-label="Delegated eGLD balance"
           title="Your delegated eGLD balance"
@@ -87,11 +91,15 @@ export const Navbar = () => {
         { /* Show COLS staked balance or ... while loading */ }
         <span
           style={{
-            color: '#6ee7c7',
-            fontWeight: 700,
-            fontSize: 16,
+            color: '#d33682',
+            fontWeight: 600,
+            fontSize: 14,
             whiteSpace: 'nowrap',
-            userSelect: 'text'
+            userSelect: 'text',
+            background: 'rgba(211, 54, 130, 0.1)',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            border: '1px solid rgba(211, 54, 130, 0.2)'
           }}
           aria-label="COLS staked balance"
           title="Your COLS staked balance"
@@ -112,7 +120,7 @@ export const Navbar = () => {
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') button.onClick && button.onClick(); }}
           >
-            <span className={styles.icon} style={{ color: '#6ee7c7' }}>
+            <span className={styles.icon} style={{ color: '#62dbb8' }}>
               {button.icon}
             </span>
             {button.label && <span>{button.label}</span>}

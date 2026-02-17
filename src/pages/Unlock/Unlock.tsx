@@ -11,7 +11,6 @@ import { Ledger } from 'assets/Ledger';
 import { MultiversX } from 'assets/MultiversX';
 import { Wallet } from 'assets/Wallet';
 import { xPortal } from 'assets/xPortal';
-// import { network } from 'config'; // Removed unused import
 
 import styles from './styles.module.scss';
 
@@ -25,7 +24,7 @@ export const Unlock = () => {
     {
       title: 'Desktop',
       name: 'MultiversX Web Wallet',
-      background: '#000000',
+      background: '#1a1a1a',
       icon: Wallet,
       component: WebWalletLoginButton,
       nativeAuth: true
@@ -34,7 +33,7 @@ export const Unlock = () => {
       title: 'Hardware',
       name: 'Ledger',
       nativeAuth: true,
-      background: '#000000',
+      background: '#1a1a1a',
       icon: Ledger,
       component: LedgerLoginButton,
       innerLedgerComponentsClasses: {
@@ -66,7 +65,7 @@ export const Unlock = () => {
     {
       title: 'Mobile',
       name: 'xPortal Mobile Wallet',
-      background: 'linear-gradient(225deg, #2C58DA 0%, #1A2ABA 100%)',
+      background: 'linear-gradient(135deg, #62dbb8 0%, #d33682 100%)',
       nativeAuth: true,
       icon: xPortal,
       isWalletConnectV2: true,
@@ -86,7 +85,7 @@ export const Unlock = () => {
     {
       title: 'Browser',
       name: 'MultiversX DeFi Wallet',
-      background: 'linear-gradient(225deg, #2C58DA 0%, #1A2ABA 100%)',
+      background: 'linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%)',
       nativeAuth: true,
       icon: Extension,
       component: ExtensionLoginButton
@@ -103,16 +102,16 @@ export const Unlock = () => {
 
   return (
     <div className={styles.unlock} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className={styles.wrapper} style={{ maxWidth: 500, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div className={styles.logo} style={{ marginBottom: 24 }}>
+      <div className={styles.wrapper} style={{ maxWidth: 520, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div className={styles.logo} style={{ marginBottom: 28 }}>
           <MultiversX />
         </div>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <strong className={styles.heading} style={{ fontSize: 28, color: '#fff', display: 'block', marginBottom: 12 }}>
-            Colombia Staking Dashboard
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <strong className={styles.heading} style={{ fontSize: 28, color: '#62dbb8', display: 'block', marginBottom: 14, fontFamily: 'Lustria, serif' }}>
+            Colombia Staking
           </strong>
-          <div className={styles.description} style={{ fontSize: 18, color: '#808ea3', lineHeight: 1.4 }}>
-            Delegate your eGLD and Stake your COLS to the decentralised Staking Agency
+          <div className={styles.description} style={{ fontSize: 17, color: '#a0a0a0', lineHeight: 1.5 }}>
+            Delegate your eGLD and stake your COLS tokens<br />to the decentralized staking agency
           </div>
         </div>
         <div className={styles.connects} style={{ justifyContent: 'center', width: '100%' }}>
@@ -136,17 +135,17 @@ export const Unlock = () => {
             </connect.component>
           ))}
         </div>
-        <div style={{ marginTop: 32, textAlign: 'center', color: '#6ee7c7', fontWeight: 600, fontSize: 16, maxWidth: 400 }}>
-          Don't have a MultiversX wallet yet?&nbsp;
+        <div style={{ marginTop: 36, textAlign: 'center', color: '#a0a0a0', fontWeight: 500, fontSize: 15, maxWidth: 420, lineHeight: 1.6 }}>
+          Don't have a MultiversX wallet yet?{' '}
           <a
             href="https://xportal.app.link/referral?code=00kcpys24e"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#4f8cff', textDecoration: 'underline', fontWeight: 700 }}
+            style={{ color: '#62dbb8', textDecoration: 'underline', fontWeight: 600 }}
           >
-            Get the Xportal Wallet here
+            Get the xPortal Wallet here
           </a>
-          &nbsp;and start staking today!
+          {' '}and start staking today!
         </div>
       </div>
     </div>

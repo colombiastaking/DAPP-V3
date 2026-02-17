@@ -1,31 +1,48 @@
 import { useState } from 'react';
 import styles from './TelegramBubble.module.scss';
 
-// Telegram channels
-const TELEGRAM_CHANNELS = [
-  {
-    name: 'English',
-    flag: '🇬🇧',
-    url: 'https://t.me/ColombiaStakingChat'
-  },
-  {
-    name: 'Español',
-    flag: '🇪🇸',
-    url: 'https://t.me/colombiastakingesp'
-  },
-  {
-    name: 'Français',
-    flag: '🇫🇷',
-    url: 'https://t.me/colmbiastakingfr'
-  }
-];
+// Social channels
+const SOCIAL_CHANNELS = {
+  telegram: [
+    {
+      name: 'English',
+      flag: '🇬🇧',
+      url: 'https://t.me/ColombiaStakingChat'
+    },
+    {
+      name: 'Español',
+      flag: '🇪🇸',
+      url: 'https://t.me/colombiastakingesp'
+    },
+    {
+      name: 'Français',
+      flag: '🇫🇷',
+      url: 'https://t.me/colmbiastakingfr'
+    }
+  ]
+};
+
+const X_URL = 'https://x.com/ColombiaStaking';
 
 export const TelegramBubble = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className={styles.bubbleContainer}>
-      {/* Main bubble button */}
+      {/* X (Twitter) Button */}
+      <a 
+        href={X_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={styles.xButton}
+        aria-label="Follow on X (Twitter)"
+      >
+        <svg viewBox="0 0 24 24" className={styles.xIcon}>
+          <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+      </a>
+
+      {/* Telegram bubble button */}
       <button 
         className={`${styles.bubble} ${isOpen ? styles.active : ''}`}
         onClick={() => setIsOpen(!isOpen)}
@@ -44,7 +61,7 @@ export const TelegramBubble = () => {
             <span className={styles.popupTitle}>💬 Join us on Telegram</span>
           </div>
           <div className={styles.channelsList}>
-            {TELEGRAM_CHANNELS.map((channel) => (
+            {SOCIAL_CHANNELS.telegram.map((channel) => (
               <a
                 key={channel.url}
                 href={channel.url}
