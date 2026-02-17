@@ -1,20 +1,77 @@
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useEffect, useState } from 'react';
+import { decodeBigNumber, Query, ContractFunction, Address, AddressValue } from '@multiversx/sdk-core';
+import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import { Delegate } from 'components/Stake/components/Delegate';
 import { Undelegate } from 'components/Stake/components/Undelegate';
 import { ClaimEgldButton } from 'components/Stake/ClaimEgldButton';
 import { Withdrawals } from 'components/Withdrawals';
 import useStakeData from 'components/Stake/hooks';
 import { useGlobalContext } from 'context';
+import { useColsAprContext } from 'context/ColsAprContext';
+import { usePreloadData } from 'hooks/usePreloadData';
+import { network } from 'config';
+import { AnimatedDots } from 'components/AnimatedDots';
 import styles from './Delegation.module.scss';
+
+const DELEGATION_CONTRACT = 'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf';
 
 export const Delegation = () => {
   const { address } = useGetAccountInfo();
   const { onRedelegate } = useStakeData();
-  const { userActiveStake, userClaimableRewards } = useGlobalContext();
+  const { userClaimableRewards } = useGlobalContext();
+  const { stakers } = useColsAprContext();
+  
+  // Preload all cached data at login
+  usePreloadData();
 
-  // Get delegated eGLD
-  const delegatedRaw = userActiveStake.data || '0';
-  const delegatedEgld = Number(delegatedRaw) / 1e18;
+  // Fetch delegated eGLD (same logic as Home.tsx)
+  const [delegatedEgld, setDelegatedEgld] = useState<number>(0);
+  const [loadingDelegated, setLoadingDelegated] = useState(true);
+
+  useEffect(() => {
+    if (!address) {
+      setDelegatedEgld(0);
+      setLoadingDelegated(false);
+      return;
+    }
+
+    const fetchDelegatedEgld = async () => {
+      setLoadingDelegated(true);
+      try {
+        // First try to get from stakers (COLS stakers data includes eGLD delegated)
+        const userRow = stakers.find((s: any) => s.address === address);
+        
+        if (userRow && Number(userRow.colsStaked) > 0) {
+          // User has COLS staked, use the eGLD from stakers data
+          setDelegatedEgld(Number(userRow.egldStaked) || 0);
+        } else {
+          // No COLS staked, query the blockchain directly
+          const provider = new ProxyNetworkProvider(network.gatewayAddress);
+          const query = new Query({
+            address: new Address(DELEGATION_CONTRACT),
+            func: new ContractFunction('getUserActiveStake'),
+            args: [new AddressValue(new Address(address))]
+          });
+          const response = await provider.queryContract(query);
+          const parts = response.getReturnDataParts();
+          
+          if (parts.length > 0) {
+            const rawStake = decodeBigNumber(parts[0]).toFixed();
+            setDelegatedEgld(Number(rawStake) / 1e18);
+          } else {
+            setDelegatedEgld(0);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching delegated eGLD:', error);
+        setDelegatedEgld(0);
+      }
+      setLoadingDelegated(false);
+    };
+
+    fetchDelegatedEgld();
+  }, [address, stakers]);
 
   // Get claimable rewards
   const claimableRewards = userClaimableRewards.status === 'loaded' 
@@ -51,7 +108,11 @@ export const Delegation = () => {
           <div className={styles.statIcon}>💰</div>
           <div className={styles.statLabel}>Delegated</div>
           <div className={styles.statValue}>
-            {delegatedEgld.toFixed(4)} eGLD
+            {loadingDelegated ? (
+              <AnimatedDots />
+            ) : (
+              <>{delegatedEgld.toFixed(4)} eGLD</>
+            )}
           </div>
         </div>
         <div className={styles.statCard}>

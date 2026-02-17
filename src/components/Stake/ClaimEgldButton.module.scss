@@ -21,6 +21,8 @@ $text-muted: #a0a0a0;
   transition: all 0.3s ease;
   font-family: 'Poppins', sans-serif;
   width: 100%;
+  min-height: 100px;
+  box-sizing: border-box;
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
@@ -51,6 +53,7 @@ $text-muted: #a0a0a0;
 .buttonAccent {
   background: linear-gradient(135deg, $accent 0%, #e85a8a 100%);
   color: $text-primary;
+  border: none;
   box-shadow: 0 4px 15px rgba($accent, 0.3);
 
   &:hover:not(:disabled) {

@@ -14,7 +14,7 @@ $text-muted: #6a6a6a;
 $border-color: rgba(98, 219, 184, 0.2);
 
 .wrapper {
-  display: contents;
+  display: contents; // Let parent grid control layout
 }
 
 .trigger {
@@ -25,12 +25,12 @@ $border-color: rgba(98, 219, 184, 0.2);
   gap: 10px;
   padding: 20px 16px;
   border-radius: 16px;
-  border: none;
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: 'Poppins', sans-serif;
-  text-decoration: none;
   width: 100%;
+  min-height: 100px;
+  box-sizing: border-box;
 
   &:hover:not(.disabled) {
     transform: translateY(-2px);
@@ -44,6 +44,7 @@ $border-color: rgba(98, 219, 184, 0.2);
 .triggerPrimary {
   background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
   color: $background;
+  border: none;
   box-shadow: 0 4px 15px rgba($primary, 0.3);
 
   &:hover:not(.disabled) {

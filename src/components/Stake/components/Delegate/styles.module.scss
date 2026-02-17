@@ -13,7 +13,7 @@ $text-muted: #6a6a6a;
 $border-color: rgba(98, 219, 184, 0.2);
 
 .wrapper {
-  display: contents;
+  display: contents; // Let parent grid control layout
 }
 
 .trigger {
@@ -24,12 +24,12 @@ $border-color: rgba(98, 219, 184, 0.2);
   gap: 10px;
   padding: 20px 16px;
   border-radius: 16px;
-  border: none;
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: 'Poppins', sans-serif;
-  text-decoration: none;
   width: 100%;
+  min-height: 100px;
+  box-sizing: border-box;
 
   &:hover:not(.disabled) {
     transform: translateY(-2px);
@@ -43,31 +43,11 @@ $border-color: rgba(98, 219, 184, 0.2);
 .triggerPrimary {
   background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
   color: $background;
+  border: none;
   box-shadow: 0 4px 15px rgba($primary, 0.3);
 
   &:hover:not(.disabled) {
     box-shadow: 0 6px 25px rgba($primary, 0.4);
-  }
-}
-
-.triggerSecondary {
-  background: $card-bg-hover;
-  color: $text-primary;
-  border: 1px solid $border-color;
-
-  &:hover:not(.disabled) {
-    border-color: $primary;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  }
-}
-
-.triggerAccent {
-  background: linear-gradient(135deg, $accent 0%, #e85a8a 100%);
-  color: $text-primary;
-  box-shadow: 0 4px 15px rgba($accent, 0.3);
-
-  &:hover:not(.disabled) {
-    box-shadow: 0 6px 25px rgba($accent, 0.4);
   }
 }
 
@@ -89,14 +69,6 @@ $border-color: rgba(98, 219, 184, 0.2);
 .triggerLabel {
   font-size: 14px;
   font-weight: 600;
-}
-
-.triggerBadge {
-  font-size: 12px;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 8px;
-  border-radius: 10px;
 }
 
 .disabled {
@@ -210,5 +182,3 @@ $border-color: rgba(98, 219, 184, 0.2);
   display: block;
   text-align: left;
 }
-
-// Modal styles are in Action/styles.module.scss
