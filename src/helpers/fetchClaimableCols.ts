@@ -8,20 +8,6 @@ import { createContractQuery } from 'helpers/contractQuery';
 
 /**
  * Fetches claimable COLS and lock time from the PeerMe contract
- * 
- * Contract returns EarnerInfo struct (manually parsed):
- * - entity: Address (32 bytes)
- * - entity_info: EntityInfo (nested struct)
- *   - stake_token: Option<TokenIdentifier> (1 byte flag + optional 4 byte len + bytes)
- *   - reward_token: TokenIdentifier (4 byte len + bytes)
- *   - lock_time_seconds: u64 (8 bytes)
- *   - last_reward_at: u64 (8 bytes)
- *   - last_reward_amount: BigUint (4 byte len + bytes)
- *   - total_reward_amount: BigUint (4 byte len + bytes)
- *   - paused: bool (1 byte)
- * - stake_amount: BigUint (4 byte len + bytes)
- * - stake_locked_until: u64 (8 bytes)
- * - reward_amount: BigUint (4 byte len + bytes) <- THIS IS THE CLAIMABLE COLS
  */
 export async function fetchClaimableColsAndLockTime({
   contract,
@@ -59,8 +45,6 @@ export async function fetchClaimableColsAndLockTime({
       return { claimable: "0", lockTime: 0 };
     }
 
-    console.log("Raw response length:", data.length, "bytes");
-
     // Parse the EarnerInfo struct
     let offset = 0;
 
@@ -72,13 +56,12 @@ export async function fetchClaimableColsAndLockTime({
     const stakeTokenFlag = data[offset];
     offset += 1;
     if (stakeTokenFlag === 1) {
-      // Some: read length + bytes
-      const stakeTokenLen = data.readUInt32BE(offset);
+      const stakeTokenLen = readUInt32BE(data, offset);
       offset += 4 + stakeTokenLen;
     }
 
     // reward_token: TokenIdentifier (4 byte len + bytes)
-    const rewardTokenLen = data.readUInt32BE(offset);
+    const rewardTokenLen = readUInt32BE(data, offset);
     offset += 4 + rewardTokenLen;
 
     // lock_time_seconds: u64
@@ -88,11 +71,11 @@ export async function fetchClaimableColsAndLockTime({
     offset += 8;
 
     // last_reward_amount: BigUint
-    const lastRewardLen = data.readUInt32BE(offset);
+    const lastRewardLen = readUInt32BE(data, offset);
     offset += 4 + lastRewardLen;
 
     // total_reward_amount: BigUint
-    const totalRewardLen = data.readUInt32BE(offset);
+    const totalRewardLen = readUInt32BE(data, offset);
     offset += 4 + totalRewardLen;
 
     // paused: bool
@@ -100,15 +83,15 @@ export async function fetchClaimableColsAndLockTime({
 
     // Now we're at EarnerInfo fields (after EntityInfo)
     // stake_amount: BigUint
-    const stakeAmountLen = data.readUInt32BE(offset);
+    const stakeAmountLen = readUInt32BE(data, offset);
     offset += 4 + stakeAmountLen;
 
-    // stake_locked_until: u64 (THE LOCK TIME!)
-    const stakeLockedUntil = Number(data.readBigUInt64BE(offset));
+    // stake_locked_until: u64 (THE LOCK TIME!) - read manually for browser compatibility
+    const stakeLockedUntil = readUInt64BE(data, offset);
     offset += 8;
 
     // reward_amount: BigUint (THE CLAIMABLE COLS!)
-    const rewardAmountLen = data.readUInt32BE(offset);
+    const rewardAmountLen = readUInt32BE(data, offset);
     offset += 4;
     
     let claimable = "0";
@@ -127,6 +110,28 @@ export async function fetchClaimableColsAndLockTime({
     console.error("Error fetching claimable COLS:", error);
     return { claimable: "0", lockTime: 0 };
   }
+}
+
+/**
+ * Read 32-bit unsigned integer from buffer (big-endian) - browser compatible
+ */
+function readUInt32BE(buffer: Buffer, offset: number): number {
+  return (
+    (buffer[offset] << 24) |
+    (buffer[offset + 1] << 16) |
+    (buffer[offset + 2] << 8) |
+    buffer[offset + 3]
+  ) >>> 0;
+}
+
+/**
+ * Read 64-bit unsigned integer from buffer (big-endian) - browser compatible
+ */
+function readUInt64BE(buffer: Buffer, offset: number): number {
+  const high = readUInt32BE(buffer, offset);
+  const low = readUInt32BE(buffer, offset + 4);
+  // For timestamps, we should be safe with Number (up to ~281 trillion)
+  return high * 4294967296 + low;
 }
 
 /**
