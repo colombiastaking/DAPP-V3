@@ -9,7 +9,7 @@ import { createContractQuery } from 'helpers/contractQuery';
 /**
  * Fetches claimable COLS and lock time from the PeerMe contract
  * 
- * Contract returns EarnerInfo struct:
+ * Contract returns EarnerInfo struct (manually parsed):
  * - entity: Address (32 bytes)
  * - entity_info: EntityInfo (nested struct)
  *   - stake_token: Option<TokenIdentifier> (1 byte flag + optional 4 byte len + bytes)
@@ -49,13 +49,17 @@ export async function fetchClaimableColsAndLockTime({
     const returnData = response.getReturnDataParts();
 
     if (!returnData || returnData.length === 0) {
+      console.log("No return data from getEarnerInfo");
       return { claimable: "0", lockTime: 0 };
     }
 
     const data = returnData[0];
     if (!data || data.length === 0) {
+      console.log("Empty data buffer from getEarnerInfo");
       return { claimable: "0", lockTime: 0 };
     }
+
+    console.log("Raw response length:", data.length, "bytes");
 
     // Parse the EarnerInfo struct
     let offset = 0;
@@ -64,10 +68,11 @@ export async function fetchClaimableColsAndLockTime({
     offset += 32;
 
     // Skip EntityInfo struct
-    // stake_token: Option<TokenIdentifier>
+    // stake_token: Option<TokenIdentifier> (1 byte flag + optional value)
     const stakeTokenFlag = data[offset];
     offset += 1;
     if (stakeTokenFlag === 1) {
+      // Some: read length + bytes
       const stakeTokenLen = data.readUInt32BE(offset);
       offset += 4 + stakeTokenLen;
     }
@@ -107,10 +112,12 @@ export async function fetchClaimableColsAndLockTime({
     offset += 4;
     
     let claimable = "0";
-    if (rewardAmountLen > 0) {
+    if (rewardAmountLen > 0 && offset + rewardAmountLen <= data.length) {
       const rewardAmountBytes = data.slice(offset, offset + rewardAmountLen);
       claimable = bytesToBigInt(rewardAmountBytes).toString();
     }
+
+    console.log("Parsed claimable:", claimable, "lockTime:", stakeLockedUntil);
 
     return { 
       claimable, 
