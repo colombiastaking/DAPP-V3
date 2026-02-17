@@ -1,23 +1,301 @@
+// Colombia Staking - Stake Page Styles
+$primary: #62dbb8;
+$primary-dark: #4bc9a1;
+$accent: #d33682;
+$background: #0a0a0a;
+$card-bg: #1a1a1a;
+$card-bg-hover: #252525;
+$text-primary: #ffffff;
+$text-secondary: #a0a0a0;
+$text-muted: #6a6a6a;
+$border-color: rgba(98, 219, 184, 0.2);
+
 .stake {
   max-width: 600px;
-  margin: 40px auto;
-  background: #181a1b;
-  border: 2px solid #6ee7c7;
-  border-radius: 12px;
+  margin: 0 auto;
   padding: 24px;
-  color: #6ee7c7;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  box-shadow: 0 2px 12px #6ee7c7aa;
+  padding-bottom: 100px;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+.noAddress {
   text-align: center;
+  padding: 60px 24px;
+  color: $text-secondary;
+  font-size: 16px;
+}
+
+// Hero Section
+.heroSection {
+  background: linear-gradient(135deg, rgba($accent, 0.1) 0%, rgba($primary, 0.05) 100%);
+  border: 1px solid rgba($accent, 0.2);
+  border-radius: 24px;
+  padding: 32px 24px;
+  margin-bottom: 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba($accent, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+.heroTitle {
+  font-family: 'Lustria', serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: $text-primary;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  @media (max-width: 575px) {
+    font-size: 22px;
+  }
+}
+
+.heroIcon {
+  font-size: 32px;
+}
+
+.heroSubtitle {
+  font-size: 14px;
+  color: $text-secondary;
+  margin: 0;
+}
+
+// Stats Grid
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statCard {
+  background: $card-bg;
+  border: 1px solid $border-color;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba($primary, 0.3);
+    transform: translateY(-2px);
+  }
+}
+
+.statCardAccent {
+  composes: statCard;
+  border-color: rgba($accent, 0.2);
+
+  &:hover {
+    border-color: rgba($accent, 0.4);
+  }
+}
+
+.statIcon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: $primary;
+  font-family: 'Poppins', sans-serif;
+}
+
+.statValueAccent {
+  color: $accent;
+}
+
+.statHint {
+  font-size: 11px;
+  color: $text-muted;
+  margin-top: 4px;
+}
+
+// Actions Section
+.actionsSection {
+  background: $card-bg;
+  border: 1px solid $border-color;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.actionsTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 20px 0;
+}
+
+.actionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.actionButton {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+  text-decoration: none;
+  width: 100%;
+  min-height: 100px;
+  box-sizing: border-box;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 }
 
-.buttonsRow {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  justify-content: center;
-  width: 100%;
+.actionButtonPrimary {
+  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+  color: $background;
+  box-shadow: 0 4px 15px rgba($primary, 0.3);
+
+  &:hover {
+    box-shadow: 0 6px 25px rgba($primary, 0.4);
+  }
+}
+
+.actionButtonAccent {
+  background: linear-gradient(135deg, $accent 0%, #e85a8a 100%);
+  color: $text-primary;
+  box-shadow: 0 4px 15px rgba($accent, 0.3);
+
+  &:hover {
+    box-shadow: 0 6px 25px rgba($accent, 0.4);
+  }
+}
+
+.actionButtonSecondary {
+  background: $card-bg-hover;
+  color: $text-primary;
+  border: 1px solid $border-color;
+
+  &:hover {
+    border-color: $primary;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.actionButtonWarning {
+  background: $card-bg-hover;
+  color: #ff9800;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+
+  &:hover {
+    border-color: #ff9800;
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.2);
+  }
+}
+
+.actionIcon {
+  font-size: 24px;
+}
+
+.actionLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.actionBadge {
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+// Lock time info
+.lockInfo {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba($accent, 0.1);
+  border: 1px solid rgba($accent, 0.2);
+  border-radius: 12px;
+  text-align: center;
+
+  &.unlocked {
+    background: rgba($primary, 0.1);
+    border-color: rgba($primary, 0.2);
+  }
+}
+
+.lockText {
+  font-size: 13px;
+  color: $text-secondary;
+}
+
+.lockTime {
+  color: $accent;
+  font-weight: 600;
+}
+
+.lockTimeUnlocked {
+  color: $primary;
+}
+
+// Responsive
+@media (max-width: 575px) {
+  .stake {
+    padding: 16px;
+    padding-bottom: 100px;
+  }
+
+  .heroSection {
+    padding: 24px 16px;
+    border-radius: 16px;
+  }
+
+  .actionsSection {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
 }

@@ -8,22 +8,21 @@ import { useGlobalContext, useDispatch } from "context";
 import { fetchClaimableColsAndLockTime } from "helpers/fetchClaimableCols";
 import { AnimatedDots } from "components/AnimatedDots";
 
+import styles from './ClaimColsButton.module.scss';
+
 const CLAIM_COLS_CONTRACT = "erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0";
 const ENTITY_ADDRESS = "erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0";
 const CLAIM_COLS_DATA = "claimRewards@00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787";
 const CLAIM_COLS_GAS_LIMIT = 10_000_000;
 
-// Format to 4 decimals, with commas
 function denominateCols(raw: string) {
   if (!raw || raw === "0") return "0.0000";
   let str = raw.padStart(19, "0");
   const intPart = str.slice(0, -18) || "0";
   let decPart = str.slice(-18).replace(/0+$/, "");
   let result = decPart ? `${intPart}.${decPart}` : intPart;
-  // Format to 4 decimals
   let num = Number(result);
-  let formatted = num.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-  return formatted;
+  return num.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 }
 
 export function ClaimColsButton({ onClaimed }: { onClaimed: () => void }) {
@@ -34,11 +33,10 @@ export function ClaimColsButton({ onClaimed }: { onClaimed: () => void }) {
   const [txLoading, setTxLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get claimable from cached context
   const claimable = claimableCols.status === 'loaded' ? claimableCols.data : null;
   const loading = claimableCols.status === 'loading';
+  const hasRewards = claimable !== null && Number(claimable) > 0;
 
-  // Refresh claimable COLS after a successful transaction
   useEffect(() => {
     let mounted = true;
     async function refreshClaimable() {
@@ -87,55 +85,29 @@ export function ClaimColsButton({ onClaimed }: { onClaimed: () => void }) {
     }
   };
 
-  // Button is enabled if user is logged in and not loading/txLoading/pending
   const isDisabled = pending || txLoading || loading || !address;
 
   return (
     <button
       type="button"
-      style={{
-        background: "#6ee7c7",
-        color: "#181a1b",
-        fontWeight: 700,
-        borderRadius: 7,
-        padding: "15px 30px",
-        border: "none",
-        marginRight: 0,
-        marginBottom: 0,
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        fontSize: 16,
-        boxShadow: "0 2px 8px #6ee7c7aa"
-      }}
+      className={classNames(
+        styles.button,
+        hasRewards ? styles.buttonAccent : styles.buttonSecondary
+      )}
       onClick={handleClaimCols}
-      className={classNames("claim-cols-btn")}
       disabled={isDisabled}
     >
-      <span role="img" aria-label="fire">🔥</span>
-      Claim COLS
+      <span className={styles.icon}>🎁</span>
+      <span className={styles.label}>Claim COLS</span>
       {loading ? (
-        <span style={{ marginLeft: 8, fontSize: 14 }}><AnimatedDots /></span>
+        <span className={styles.badge}><AnimatedDots /></span>
       ) : (
-        <span style={{
-          marginLeft: 8,
-          fontWeight: 900,
-          color: "#1976d2",
-          background: "#fff",
-          borderRadius: 6,
-          padding: "2px 10px",
-          fontSize: 15
-        }}>
+        <span className={styles.badge}>
           {claimable !== null ? denominateCols(claimable) : "—"}
         </span>
       )}
-      <span role="img" aria-label="fire">🔥</span>
-      {txLoading && (
-        <span style={{ marginLeft: 8, fontSize: 14 }}><AnimatedDots /></span>
-      )}
-      {error && (
-        <span style={{ color: "#b71c1c", marginLeft: 8, fontSize: 13 }}>{error}</span>
-      )}
+      {txLoading && <span className={styles.loading}><AnimatedDots /></span>}
+      {error && <span className={styles.error}>{error}</span>}
     </button>
   );
 }

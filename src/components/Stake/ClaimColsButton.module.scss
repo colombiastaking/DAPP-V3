@@ -1,0 +1,90 @@
+// Claim COLS Button Styles
+// Colombia Staking Theme
+
+$primary: #62dbb8;
+$primary-dark: #4bc9a1;
+$accent: #d33682;
+$card-bg-hover: #252525;
+$text-primary: #ffffff;
+$text-muted: #a0a0a0;
+
+.button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+  width: 100%;
+  min-height: 100px;
+  box-sizing: border-box;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.buttonSecondary {
+  background: $card-bg-hover;
+  color: $text-primary;
+  border: 1px solid rgba($primary, 0.2);
+
+  &:hover:not(:disabled) {
+    border-color: $primary;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.buttonAccent {
+  background: linear-gradient(135deg, $accent 0%, #e85a8a 100%);
+  color: $text-primary;
+  border: none;
+  box-shadow: 0 4px 15px rgba($accent, 0.3);
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 6px 25px rgba($accent, 0.4);
+  }
+}
+
+.icon {
+  font-size: 24px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 10px;
+}
+
+.loading {
+  margin-left: 8px;
+  font-size: 14px;
+}
+
+.error {
+  color: #f44336;
+  margin-left: 8px;
+  font-size: 12px;
+}

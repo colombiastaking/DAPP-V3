@@ -1,10 +1,9 @@
-// StakeCols Component Styles
+// BuyCols Component Styles
 // Colombia Staking Theme
 
 $primary: #62dbb8;
 $primary-dark: #4bc9a1;
 $accent: #d33682;
-$warning: #ff9800;
 $background: #0a0a0a;
 $card-bg: #1a1a1a;
 $card-bg-hover: #252525;
@@ -13,8 +12,36 @@ $text-secondary: #a0a0a0;
 $text-muted: #6a6a6a;
 $border-color: rgba(98, 219, 184, 0.2);
 
-.wrapper {
-  display: contents;
+.buySection {
+  background: $card-bg;
+  border: 1px solid $border-color;
+  border-radius: 20px;
+  padding: 24px;
+}
+
+.swapHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.swapIcon {
+  font-size: 32px;
+}
+
+.swapTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: $text-primary;
+  margin: 0 0 4px 0;
+  font-family: 'Lustria', serif;
+}
+
+.swapDesc {
+  font-size: 13px;
+  color: $text-secondary;
+  margin: 0;
 }
 
 .trigger {
@@ -29,47 +56,21 @@ $border-color: rgba(98, 219, 184, 0.2);
   transition: all 0.3s ease;
   font-family: 'Poppins', sans-serif;
   width: 100%;
-  min-height: 100px;
   box-sizing: border-box;
-  border: none;
 
   &:hover:not(.disabled) {
     transform: translateY(-2px);
   }
-
-  &:active:not(.disabled) {
-    transform: translateY(0);
-  }
 }
 
-.triggerPrimary {
-  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
-  color: $background;
-  box-shadow: 0 4px 15px rgba($primary, 0.3);
-
-  &:hover:not(.disabled) {
-    box-shadow: 0 6px 25px rgba($primary, 0.4);
-  }
-}
-
-.triggerAccent {
-  background: linear-gradient(135deg, $accent 0%, #e85a8a 100%);
-  color: $text-primary;
-  box-shadow: 0 4px 15px rgba($accent, 0.3);
-
-  &:hover:not(.disabled) {
-    box-shadow: 0 6px 25px rgba($accent, 0.4);
-  }
-}
-
-.triggerWarning {
+.triggerSecondary {
   background: $card-bg-hover;
-  color: $warning;
-  border: 1px solid rgba($warning, 0.3);
+  color: $text-primary;
+  border: 1px solid $border-color;
 
   &:hover:not(.disabled) {
-    border-color: $warning;
-    box-shadow: 0 4px 15px rgba($warning, 0.2);
+    border-color: $primary;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -86,69 +87,6 @@ $border-color: rgba(98, 219, 184, 0.2);
   pointer-events: none;
   opacity: 0.5;
   filter: grayscale(0.5);
-}
-
-// Lock info
-.lockInfo {
-  grid-column: 1 / -1;
-  margin-top: 12px;
-  padding: 12px 16px;
-  background: rgba($accent, 0.1);
-  border: 1px solid rgba($accent, 0.2);
-  border-radius: 12px;
-  text-align: center;
-
-  &.unlocked {
-    background: rgba($primary, 0.1);
-    border-color: rgba($primary, 0.2);
-  }
-}
-
-.lockText {
-  font-size: 13px;
-  color: $text-secondary;
-}
-
-.lockTime {
-  color: $accent;
-  font-weight: 600;
-}
-
-.lockTimeUnlocked {
-  color: $primary;
-  font-weight: 600;
-}
-
-// Withdraw button
-.withdrawButton {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 20px 16px;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: 'Poppins', sans-serif;
-  width: 100%;
-  min-height: 100px;
-  box-sizing: border-box;
-  background: $card-bg-hover;
-  color: $warning;
-  border: 1px solid rgba($warning, 0.3);
-
-  &:hover:not(.disabled) {
-    border-color: $warning;
-    box-shadow: 0 4px 15px rgba($warning, 0.2);
-    transform: translateY(-2px);
-  }
-
-  &.disabled {
-    pointer-events: none;
-    opacity: 0.5;
-    filter: grayscale(0.5);
-  }
 }
 
 // Form styles
@@ -254,4 +192,51 @@ $border-color: rgba(98, 219, 184, 0.2);
   color: #f44336;
   display: block;
   text-align: left;
+}
+
+// Step two
+.stepTwo {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid $border-color;
+}
+
+.stepTwoInfo {
+  text-align: center;
+  padding: 12px 16px;
+  background: rgba($primary, 0.1);
+  border: 1px solid rgba($primary, 0.2);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: $primary;
+}
+
+.completeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px 24px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+  color: $background;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba($primary, 0.3);
+
+  &:hover:not(.disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba($primary, 0.4);
+  }
+
+  &.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }

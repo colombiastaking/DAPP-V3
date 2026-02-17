@@ -10,18 +10,16 @@ import axios from 'axios';
 
 import { Action, Submit } from 'components/Action';
 import { network } from 'config';
-
-import styles from '../Delegate/styles.module.scss';
-import stakeColsStyles from './styles.module.scss';
-
 import { fetchClaimableColsAndLockTime } from 'helpers/fetchClaimableCols';
+
+import styles from './styles.module.scss';
 
 const COLS_TOKEN_ID = 'COLS-9d91b7';
 const COLS_TOKEN_ID_HEX = '434f4c532d396439316237';
 const STAKE_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const GAS_LIMIT = 15_000_000;
 const WITHDRAW_GAS_LIMIT = 200_000_000;
-const STAKE_METHOD_HEX = '7374616b65'; // "stake" in hex
+const STAKE_METHOD_HEX = '7374616b65';
 const FIXED_HEX_ADDRESS = '00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787';
 
 function amountToHex(amount: string) {
@@ -55,10 +53,7 @@ export const StakeCols = () => {
   const [error, setError] = useState<string | null>(null);
   const [colsBalance, setColsBalance] = useState<string>('0');
   const [loading, setLoading] = useState<boolean>(true);
-
   const [withdrawPending, setWithdrawPending] = useState(false);
-
-  // New lock time state
   const [lockTimeRaw, setLockTimeRaw] = useState<number | null>(null);
   const [lockTimeFormatted, setLockTimeFormatted] = useState<string>("");
 
@@ -153,61 +148,47 @@ export const StakeCols = () => {
     }
   };
 
-  // Button enabled only if lock time expired or no lock
   const isWithdrawEnabled = lockTimeRaw !== null && lockTimeRaw <= Math.floor(Date.now() / 1000);
+  const isLocked = lockTimeRaw !== null && lockTimeRaw > Math.floor(Date.now() / 1000);
 
   return (
     <div className={styles.wrapper}>
+      {/* Stake COLS Button */}
       <Action
         title="Stake COLS"
-        description="Enter the amount of COLS tokens you want to stake."
+        description="Enter the amount of COLS tokens you want to stake. Staking increases your APR bonus."
         disabled={pending}
         trigger={
           <div
-            className={classNames(styles.trigger, styles.fireButton, {
+            className={classNames(styles.trigger, styles.triggerAccent, {
               [styles.disabled]: pending
             })}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              fontWeight: 700,
-              fontSize: '16px'
-            }}
           >
-            Stake COLS
+            <span className={styles.triggerIcon}>🔥</span>
+            <span className={styles.triggerLabel}>Stake COLS</span>
           </div>
         }
         render={(onClose: () => void) => (
-          <div className={styles.delegate}>
+          <div className={styles.form}>
             <Formik
               enableReinitialize
               validationSchema={object().shape({
                 amount: string()
                   .required('Required')
-                  .test(
-                    'is-positive',
-                    'Amount must be greater than 0',
-                    (value = '') => {
-                      try {
-                        return new BigNumber(value).isGreaterThan(0);
-                      } catch {
-                        return false;
-                      }
+                  .test('is-positive', 'Amount must be greater than 0', (value = '') => {
+                    try {
+                      return new BigNumber(value).isGreaterThan(0);
+                    } catch {
+                      return false;
                     }
-                  )
-                  .test(
-                    'max',
-                    `You cannot stake more than your available COLS balance.`,
-                    (value = '') => {
-                      try {
-                        return new BigNumber(value).lte(colsBalance || '0');
-                      } catch {
-                        return false;
-                      }
+                  })
+                  .test('max', `You cannot stake more than your available COLS balance.`, (value = '') => {
+                    try {
+                      return new BigNumber(value).lte(colsBalance || '0');
+                    } catch {
+                      return false;
                     }
-                  )
+                  })
               })}
               initialValues={{ amount: '1' }}
               onSubmit={({ amount }) => handleStakeSubmit(amount, onClose)}
@@ -227,10 +208,10 @@ export const StakeCols = () => {
                 };
 
                 return (
-                  <form onSubmit={handleSubmit} style={{ position: 'relative' }}>
+                  <form onSubmit={handleSubmit}>
                     <div className={styles.field}>
-                      <label htmlFor="amount">COLS Amount</label>
-                      <div className={styles.group} style={{ position: 'relative' }}>
+                      <label htmlFor="amount" className={styles.label}>COLS Amount</label>
+                      <div className={styles.inputWrapper}>
                         <input
                           type="number"
                           name="amount"
@@ -244,46 +225,27 @@ export const StakeCols = () => {
                           className={classNames(styles.input, {
                             [styles.invalid]: errors.amount && touched.amount
                           })}
+                          placeholder="0.00"
                         />
-                        <a
-                          href="/#"
+                        <button
+                          type="button"
                           onClick={onMax}
-                          className={classNames(styles.max, {
-                            [styles.disabled]: loading || colsBalance === '0'
-                          })}
-                          style={{
-                            position: 'absolute',
-                            right: 5,
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: '#303234',
-                            color: '#fff',
-                            borderRadius: 6,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '10px',
-                            textDecoration: 'none',
-                            maxWidth: '60px',
-                            height: 'auto',
-                            lineHeight: 'normal'
-                          }}
+                          className={styles.maxButton}
+                          disabled={loading || colsBalance === '0'}
                         >
-                          Max
-                        </a>
+                          MAX
+                        </button>
                       </div>
-                      <span className={styles.description}>
-                        <span>Balance:</span> {loading ? '...' : colsBalance} COLS
-                      </span>
+                      <div className={styles.balance}>
+                        Available: <span>{loading ? '...' : colsBalance} COLS</span>
+                      </div>
                       {errors.amount && touched.amount && (
                         <span className={styles.error}>{errors.amount}</span>
                       )}
                     </div>
-                    {error && (
-                      <span className={styles.error}>{error}</span>
-                    )}
+                    {error && <span className={styles.error}>{error}</span>}
                     <Submit
-                      save="Continue"
+                      save="Stake Now"
                       onClose={() => {
                         setFieldValue('amount', '1');
                         setError(null);
@@ -296,26 +258,33 @@ export const StakeCols = () => {
           </div>
         )}
       />
-      <div style={{ marginTop: 16, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <button
-          type="button"
-          className={classNames(stakeColsStyles.trigger, {
-            [stakeColsStyles.disabled]: pending || !isWithdrawEnabled || withdrawPending
-          })}
-          onClick={handleWithdrawClick}
-          disabled={pending || !isWithdrawEnabled || withdrawPending}
-          title={isWithdrawEnabled ? "Withdraw COLS" : `COLS locked. Remaining: ${lockTimeFormatted}`}
-        >
-          Withdraw COLS
-        </button>
-        <div style={{ marginTop: 8, color: '#6ee7c7', fontSize: 14 }}>
-          {lockTimeRaw !== null && lockTimeRaw > Math.floor(Date.now() / 1000) ? (
-            <>Remaining Lock Time: {lockTimeFormatted}</>
-          ) : (
-            <>COLS tokens are unlocked and can be withdrawn</>
-          )}
-        </div>
+
+      {/* Lock Time Info */}
+      <div className={classNames(styles.lockInfo, { [styles.unlocked]: !isLocked })}>
+        {isLocked ? (
+          <span className={styles.lockText}>
+            🔒 Lock Time Remaining: <span className={styles.lockTime}>{lockTimeFormatted}</span>
+          </span>
+        ) : (
+          <span className={styles.lockText}>
+            ✅ <span className={styles.lockTimeUnlocked}>COLS are unlocked</span> - ready to withdraw
+          </span>
+        )}
       </div>
+
+      {/* Withdraw COLS Button */}
+      <button
+        type="button"
+        className={classNames(styles.withdrawButton, {
+          [styles.disabled]: pending || !isWithdrawEnabled || withdrawPending
+        })}
+        onClick={handleWithdrawClick}
+        disabled={pending || !isWithdrawEnabled || withdrawPending}
+        title={isWithdrawEnabled ? "Withdraw COLS" : `COLS locked. Remaining: ${lockTimeFormatted}`}
+      >
+        <span className={styles.triggerIcon}>🔓</span>
+        <span className={styles.triggerLabel}>Withdraw</span>
+      </button>
     </div>
   );
 };

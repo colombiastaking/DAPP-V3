@@ -7,7 +7,7 @@ import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sen
 import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
 
 import { Action, Submit } from 'components/Action';
-import styles from '../Delegate/styles.module.scss';
+import styles from './styles.module.scss';
 
 const WRAP_CONTRACT = 'erd1qqqqqqqqqqqqqpgqhe8t5jewej70zupmh44jurgn29psua5l2jps3ntjj3';
 const WRAP_FUNC = 'wrapEgld';
@@ -15,9 +15,9 @@ const WRAP_GAS_LIMIT = 10000000;
 
 const SWAP_CONTRACT = 'erd1qqqqqqqqqqqqqpgq3r2vzqe89x23lryqmlp9xynf9t46qnpa2jpsrh63az';
 const SWAP_GAS_LIMIT = 150000000;
-const WEGLD_TOKEN_ID = '5745474c442d626434643739'; // hex for WEGLD-bd4d79
-const COLS_TOKEN_ID = '434f4c532d396439316237'; // hex for COLS-9d91b7
-const SWAP_FUNC_HEX = '73776170546f6b656e734669786564496e707574'; // hex for swapTokensFixedInput
+const WEGLD_TOKEN_ID = '5745474c442d626434643739';
+const COLS_TOKEN_ID = '434f4c532d396439316237';
+const SWAP_FUNC_HEX = '73776170546f6b656e734669786564496e707574';
 
 function amountToHex(amount: string) {
   const value = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
@@ -34,14 +34,10 @@ export const BuyCols = () => {
   const [wrapSuccess, setWrapSuccess] = useState(false);
   const [wrapLoading, setWrapLoading] = useState(false);
   const [wrapError, setWrapError] = useState<string | null>(null);
-
   const [swapLoading, setSwapLoading] = useState(false);
   const [swapError, setSwapError] = useState<string | null>(null);
-
-  // Store wrapped amount from user input for swap step
   const [wrappedAmount, setWrappedAmount] = useState<string>('1');
 
-  // Step 1: Wrap eGLD to WEGLD
   const handleWrapSubmit = async (amount: string, onClose: () => void) => {
     setWrapError(null);
     setWrapLoading(true);
@@ -58,7 +54,7 @@ export const BuyCols = () => {
           }
         ]
       });
-      setWrappedAmount(amount); // Save amount for swap
+      setWrappedAmount(amount);
       setWrapSuccess(true);
       onClose();
     } catch (e: any) {
@@ -67,7 +63,6 @@ export const BuyCols = () => {
     setWrapLoading(false);
   };
 
-  // Step 2: Swap WEGLD to COLS using method call with encoded input data
   const handleSwapClick = async () => {
     setSwapError(null);
     setSwapLoading(true);
@@ -99,49 +94,49 @@ export const BuyCols = () => {
   };
 
   return (
-    <div className={styles.wrapper} style={{ marginTop: 24 }}>
+    <div className={styles.buySection}>
+      <div className={styles.swapHeader}>
+        <span className={styles.swapIcon}>💱</span>
+        <div>
+          <h3 className={styles.swapTitle}>Get COLS</h3>
+          <p className={styles.swapDesc}>Swap eGLD for COLS tokens</p>
+        </div>
+      </div>
+
       <Action
         title="Swap eGLD to COLS"
-        description="Enter the amount of eGLD you want to swap to COLS."
+        description="Enter the amount of eGLD you want to swap. This is a 2-step process: wrap eGLD to WEGLD, then swap to COLS."
         disabled={wrapLoading}
         trigger={
           <div
-            className={classNames(styles.trigger, {
+            className={classNames(styles.trigger, styles.triggerSecondary, {
               [styles.disabled]: wrapLoading
             })}
-            style={{ fontWeight: 700, fontSize: 16 }}
           >
-            Swap eGLD to COLS
+            <span className={styles.triggerIcon}>🔄</span>
+            <span className={styles.triggerLabel}>Swap eGLD → COLS</span>
           </div>
         }
         render={(onClose: () => void) => (
-          <div className={styles.delegate}>
+          <div className={styles.form}>
             <Formik
               validationSchema={object().shape({
                 amount: string()
                   .required('Required')
-                  .test(
-                    'is-positive',
-                    'Amount must be greater than 0',
-                    (value = '') => {
-                      try {
-                        return new BigNumber(value).isGreaterThan(0);
-                      } catch {
-                        return false;
-                      }
+                  .test('is-positive', 'Amount must be greater than 0', (value = '') => {
+                    try {
+                      return new BigNumber(value).isGreaterThan(0);
+                    } catch {
+                      return false;
                     }
-                  )
-                  .test(
-                    'max-balance',
-                    `Amount cannot exceed your wallet balance (${balanceEgld} eGLD).`,
-                    (value = '') => {
-                      try {
-                        return new BigNumber(value).lte(balanceEgld);
-                      } catch {
-                        return false;
-                      }
+                  })
+                  .test('max-balance', `Amount cannot exceed your wallet balance (${balanceEgld} eGLD).`, (value = '') => {
+                    try {
+                      return new BigNumber(value).lte(balanceEgld);
+                    } catch {
+                      return false;
                     }
-                  )
+                  })
               })}
               initialValues={{ amount: '1' }}
               onSubmit={({ amount }) => handleWrapSubmit(amount, onClose)}
@@ -161,10 +156,10 @@ export const BuyCols = () => {
                 };
 
                 return (
-                  <form onSubmit={handleSubmit} style={{ position: 'relative' }}>
+                  <form onSubmit={handleSubmit}>
                     <div className={styles.field}>
-                      <label htmlFor="amount">eGLD Amount</label>
-                      <div className={styles.group} style={{ position: 'relative' }}>
+                      <label htmlFor="amount" className={styles.label}>eGLD Amount</label>
+                      <div className={styles.inputWrapper}>
                         <input
                           type="number"
                           name="amount"
@@ -179,37 +174,25 @@ export const BuyCols = () => {
                           className={classNames(styles.input, {
                             [styles.invalid]: errors.amount && touched.amount
                           })}
+                          placeholder="0.00"
                         />
                         <button
                           type="button"
                           onClick={onMaxClick}
                           className={styles.maxButton}
-                          style={{
-                            position: 'absolute',
-                            right: 8,
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: '#303234',
-                            color: '#fff',
-                            borderRadius: 6,
-                            border: 'none',
-                            padding: '6px 12px',
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            fontSize: 14
-                          }}
                           disabled={wrapLoading}
                         >
-                          Max
+                          MAX
                         </button>
+                      </div>
+                      <div className={styles.balance}>
+                        Available: <span>{balanceEgld} eGLD</span>
                       </div>
                       {errors.amount && touched.amount && (
                         <span className={styles.error}>{errors.amount}</span>
                       )}
                     </div>
-                    {wrapError && (
-                      <span className={styles.error}>{wrapError}</span>
-                    )}
+                    {wrapError && <span className={styles.error}>{wrapError}</span>}
                     <Submit
                       save="Swap"
                       onClose={() => {
@@ -224,26 +207,25 @@ export const BuyCols = () => {
           </div>
         )}
       />
+
       {wrapSuccess && (
-        <div style={{ marginTop: 24, textAlign: 'center', display: 'flex', justifyContent: 'center' }}>
+        <div className={styles.stepTwo}>
+          <div className={styles.stepTwoInfo}>
+            <span>✅ Step 1 complete! Now complete the swap:</span>
+          </div>
           <button
             type="button"
-            className={classNames(styles.trigger, {
+            className={classNames(styles.completeButton, {
               [styles.disabled]: swapLoading
             })}
             onClick={handleSwapClick}
             disabled={swapLoading}
-            style={{ fontWeight: 700, fontSize: 16, width: 180 }}
           >
-            {swapLoading ? 'Completing...' : 'Complete Swap'}
+            {swapLoading ? 'Processing...' : 'Complete Swap'}
           </button>
         </div>
       )}
-      {swapError && (
-        <div className={styles.error} style={{ marginTop: 8, textAlign: 'center' }}>
-          {swapError}
-        </div>
-      )}
+      {swapError && <div className={styles.error}>{swapError}</div>}
     </div>
   );
 };
