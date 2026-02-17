@@ -3,8 +3,8 @@ import { Formik } from 'formik';
 import { object, string } from 'yup';
 import BigNumber from 'bignumber.js';
 import classNames from 'classnames';
-import { sendTransactions } from '@multiversx/sdk-dapp/services/transactions/sendTransactions';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { sendTransactions } from 'helpers/sendTransactions';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 
 import { Action, Submit } from 'components/Action';
 import styles from './styles.module.scss';
@@ -27,7 +27,7 @@ function amountToHex(amount: string) {
 }
 
 export const BuyCols = () => {
-  const { account } = useGetAccountInfo();
+  const account = useGetAccount();
   const balanceRaw = account?.balance || '0';
   const balanceEgld = new BigNumber(balanceRaw).dividedBy('1e18').toFixed(6);
 

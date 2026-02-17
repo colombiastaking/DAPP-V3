@@ -1,104 +1,37 @@
-import { useEffect } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
-import { ExtensionLoginButton } from '@multiversx/sdk-dapp/UI/extension/ExtensionLoginButton';
-import { LedgerLoginButton } from '@multiversx/sdk-dapp/UI/ledger/LedgerLoginButton';
-import { WalletConnectLoginButton } from '@multiversx/sdk-dapp/UI/walletConnect/WalletConnectLoginButton';
-import { WebWalletLoginButton } from '@multiversx/sdk-dapp/UI/webWallet/WebWalletLoginButton';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { UnlockPanelManager } from '@multiversx/sdk-dapp/out/managers/UnlockPanelManager';
+import { useGetLoginInfo } from '@multiversx/sdk-dapp/out/react/loginInfo/useGetLoginInfo';
+import { routeNames } from 'routes';
 
-import { Extension } from 'assets/Extension';
-import { Ledger } from 'assets/Ledger';
 import { MultiversX } from 'assets/MultiversX';
-import { Wallet } from 'assets/Wallet';
-import { xPortal } from 'assets/xPortal';
 
 import styles from './styles.module.scss';
 
-import type { ConnectionType } from './types';
-
 export const Unlock = () => {
-  const { address } = useGetAccountInfo();
-
   const navigate = useNavigate();
-  const connects: ConnectionType[] = [
-    {
-      title: 'Desktop',
-      name: 'MultiversX Web Wallet',
-      background: '#1a1a1a',
-      icon: Wallet,
-      component: WebWalletLoginButton,
-      nativeAuth: true
-    },
-    {
-      title: 'Hardware',
-      name: 'Ledger',
-      nativeAuth: true,
-      background: '#1a1a1a',
-      icon: Ledger,
-      component: LedgerLoginButton,
-      innerLedgerComponentsClasses: {
-        ledgerScamPhishingAlertClassName: styles.phishing,
-        ledgerProgressBarClassNames: {},
-        ledgerConnectClassNames: {
-          ledgerModalTitleClassName: styles.title,
-          ledgerModalSubtitleClassName: styles.subtitle,
-          ledgerModalIconClassName: styles.icon
-        },
-        confirmAddressClassNames: {
-          ledgerModalTitleClassName: styles.title,
-          ledgerModalConfirmDescriptionClassName: styles.description,
-          ledgerModalConfirmFooterClassName: styles.footer
-        },
-        addressTableClassNames: {
-          ledgerModalTitleClassName: styles.title,
-          ledgerModalSubtitleClassName: styles.subtitle,
-          ledgerModalTableHeadClassName: styles.head,
-          ledgerModalTableNavigationButtonClassName: styles.navigation,
-          ledgerModalTableSelectedItemClassName: styles.selected
-        },
-        ledgerLoadingClassNames: {
-          ledgerModalTitleClassName: styles.title,
-          ledgerModalSubtitleClassName: styles.subtitle
-        }
-      }
-    },
-    {
-      title: 'Mobile',
-      name: 'xPortal Mobile Wallet',
-      background: 'linear-gradient(135deg, #62dbb8 0%, #d33682 100%)',
-      nativeAuth: true,
-      icon: xPortal,
-      isWalletConnectV2: true,
-      component: WalletConnectLoginButton,
-      innerWalletConnectComponentsClasses: {
-        containerContentClassName: styles.content,
-        containerTitleClassName: styles.title,
-        containerButtonClassName: styles.button,
-        containerSubtitleClassName: styles.subtitle,
-        containerScamPhishingAlertClassName: styles.phishing,
-        walletConnectPairingListClassNames: {
-          leadClassName: styles.lead,
-          buttonClassName: styles.pairing
-        }
-      }
-    },
-    {
-      title: 'Browser',
-      name: 'MultiversX DeFi Wallet',
-      background: 'linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%)',
-      nativeAuth: true,
-      icon: Extension,
-      component: ExtensionLoginButton
-    }
-  ];
+  const { isLoggedIn } = useGetLoginInfo();
+  const [panelOpened, setPanelOpened] = useState(false);
 
-  const redirectConditionally = () => {
-    if (address) {
-      navigate('/user');
+  const unlockPanelManager = UnlockPanelManager.init({
+    loginHandler: () => {
+      navigate(routeNames.dashboard);
+    },
+    onClose: async () => {
+      setPanelOpened(false);
     }
+  });
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate(routeNames.dashboard);
+    }
+  }, [isLoggedIn, navigate]);
+
+  const handleConnect = () => {
+    setPanelOpened(true);
+    unlockPanelManager.openUnlockPanel();
   };
-
-  useEffect(redirectConditionally, [address]);
 
   return (
     <div className={styles.unlock} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -114,27 +47,26 @@ export const Unlock = () => {
             Delegate your eGLD and stake your COLS tokens<br />to the decentralized staking agency
           </div>
         </div>
-        <div className={styles.connects} style={{ justifyContent: 'center', width: '100%' }}>
-          {connects.map((connect) => (
-            <connect.component
-              key={connect.name}
-              callbackRoute='/unlock'
-              logoutRoute='/unlock'
-              {...connect}
-            >
-              <span className={styles.connect}>
-                <span className={styles.title}>{connect.title}</span>
-                <span
-                  className={styles.icon}
-                  style={{ background: connect.background }}
-                >
-                  <connect.icon />
-                </span>
-                <span className={styles.name}>{connect.name}</span>
-              </span>
-            </connect.component>
-          ))}
-        </div>
+        
+        <button
+          onClick={handleConnect}
+          disabled={panelOpened}
+          style={{
+            background: 'linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%)',
+            border: 'none',
+            borderRadius: 12,
+            padding: '16px 48px',
+            fontSize: 18,
+            fontWeight: 600,
+            color: '#1a1a1a',
+            cursor: panelOpened ? 'wait' : 'pointer',
+            transition: 'all 0.2s ease',
+            opacity: panelOpened ? 0.7 : 1
+          }}
+        >
+          {panelOpened ? 'Connecting...' : 'Connect Wallet'}
+        </button>
+        
         <div style={{ marginTop: 36, textAlign: 'center', color: '#a0a0a0', fontWeight: 500, fontSize: 15, maxWidth: 420, lineHeight: 1.6 }}>
           Don't have a MultiversX wallet yet?{' '}
           <a

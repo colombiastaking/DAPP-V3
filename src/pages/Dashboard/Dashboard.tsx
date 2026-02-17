@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { useNavigate } from 'react-router-dom';
 
 import { Withdrawals } from 'components/Withdrawals';
@@ -9,7 +9,8 @@ import styles from './styles.module.scss';
 import useGlobalData from '../../hooks/useGlobalData';
 
 export const Dashboard = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const navigate = useNavigate();
 
   useEffect(() => {

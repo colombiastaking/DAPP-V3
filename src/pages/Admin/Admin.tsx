@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { useNavigate } from 'react-router-dom';
 
 import { Cards } from 'components/Cards';
@@ -15,7 +15,8 @@ import styles from './styles.module.scss';
 import useGlobalData from '../../hooks/useGlobalData';
 
 export const Admin = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { contractDetails } = useGlobalContext();
   const [loading, setLoading] = useState<boolean>(true);
 

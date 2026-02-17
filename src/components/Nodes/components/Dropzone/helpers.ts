@@ -22,8 +22,9 @@ function getPubKey(file: string, indices: any[]) {
 
 export default function decodeFile(file: string, delegationContract?: string) {
   const myKey = ValidatorSecretKey.fromPem(file);
-  const dsc = new Address(delegationContract);
-  const signature = myKey.sign(Buffer.from(dsc.pubkey())).toString('hex');
+  const dsc = new Address(delegationContract || '');
+  const publicKey = dsc.getPublicKey();
+  const signature = myKey.sign(publicKey).toString('hex');
 
   const regex = /-----/gi;
   let result;

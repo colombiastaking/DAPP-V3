@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
 import classNames from 'classnames';
 
 import { useGlobalContext } from 'context';

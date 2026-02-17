@@ -1,5 +1,5 @@
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import classNames from 'classnames';
 import { Formik } from 'formik';
 import { object, string } from 'yup';
@@ -13,7 +13,7 @@ import styles from './styles.module.scss';
 export const Delegate = () => {
   const { onDelegate } = useStakeData();
   const { pending } = useGetActiveTransactionsStatus();
-  const { account } = useGetAccountInfo();
+  const account = useGetAccount();
 
   // Parse eGLD balance from account (string in smallest unit)
   const balanceRaw = account?.balance || '0';

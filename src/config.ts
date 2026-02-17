@@ -62,43 +62,15 @@ export const network: NetworkType = {
     'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'
 };
 
-// Helper: timeout wrapper for fetch
-async function fetchWithTimeout(resource: RequestInfo, options: RequestInit & { timeout?: number } = {}) {
-  const { timeout = 1000 } = options;
-
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(resource, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(id);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    throw error;
-  }
-}
-
-// Robust API health check with response time check
+// Robust API health check
 async function checkApiHealth(url: string): Promise<boolean> {
   try {
-    const start = performance.now();
-    const res = await fetchWithTimeout(
-      `${url}/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7`,
-      { timeout: 1000 }
+    const res = await fetch(
+      `${url}/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7`
     );
-    const duration = performance.now() - start;
 
     if (!res.ok) {
       console.warn(`API check failed: ${url} returned status ${res.status}`);
-      return false;
-    }
-
-    if (duration > 1000) {
-      console.warn(`API check failed: ${url} response time ${duration.toFixed(2)}ms exceeds 1000ms`);
       return false;
     }
 
@@ -133,26 +105,15 @@ async function checkApiHealth(url: string): Promise<boolean> {
   }
 }
 
-// Robust Gateway health check with response time check
+// Robust Gateway health check
 async function checkGatewayHealth(url: string): Promise<boolean> {
   try {
-    const start = performance.now();
-    // Try HEAD request first
-    let res = await fetchWithTimeout(url, { method: 'HEAD', timeout: 1000 });
-    let duration = performance.now() - start;
-
-    if (!res.ok || duration > 1000) {
-      // fallback: try GET root
-      const start2 = performance.now();
-      res = await fetchWithTimeout(url, { method: 'GET', timeout: 1000 });
-      duration = performance.now() - start2;
-      if (!res.ok || duration > 1000) {
-        console.warn(`Gateway check failed: ${url} response time ${duration.toFixed(2)}ms or status ${res.status}`);
-        return false;
-      }
-    }
-
-    return true;
+    // Simple GET to root or health endpoint
+    const res = await fetch(url, { method: 'HEAD' });
+    if (res.ok) return true;
+    // fallback: try GET root
+    const res2 = await fetch(url);
+    return res2.ok;
   } catch (err) {
     console.warn(`Gateway check error for ${url}:`, err);
     return false;
@@ -167,7 +128,7 @@ export async function initNetworkApi(): Promise<void> {
     console.log(`Using primary API: ${PRIMARY_API}`);
   } else {
     network.apiAddress = SECONDARY_API;
-    console.log(`Primary API failed or slow, falling back to secondary API: ${SECONDARY_API}`);
+    console.log(`Primary API failed, falling back to secondary API: ${SECONDARY_API}`);
   }
 
   const primaryGatewayOk = await checkGatewayHealth(PRIMARY_GATEWAY);
@@ -176,7 +137,7 @@ export async function initNetworkApi(): Promise<void> {
     console.log(`Using primary Gateway: ${PRIMARY_GATEWAY}`);
   } else {
     network.gatewayAddress = SECONDARY_GATEWAY;
-    console.log(`Primary Gateway failed or slow, falling back to secondary Gateway: ${SECONDARY_GATEWAY}`);
+    console.log(`Primary Gateway failed, falling back to secondary Gateway: ${SECONDARY_GATEWAY}`);
   }
 }
 

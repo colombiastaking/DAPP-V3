@@ -1,5 +1,5 @@
 import { useColsAprContext } from "../../context/ColsAprContext";
-import { useGetAccountInfo } from "@multiversx/sdk-dapp/hooks/account/useGetAccountInfo";
+import { useGetAccount } from "@multiversx/sdk-dapp/out/react/account/useGetAccount";
 import { useEffect, useState } from "react";
 
 // Types
@@ -56,7 +56,8 @@ const theme = {
 
 export function RankingTable() {
   const { stakers, loading } = useColsAprContext();
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
 
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {

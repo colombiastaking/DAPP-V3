@@ -4,8 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   Address,
   BytesValue,
-  ContractFunction,
-  Query
+  ContractFunction
 } from '@multiversx/sdk-core/out';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers/out';
 import { BLS } from '@multiversx/sdk-wallet';
@@ -13,6 +12,7 @@ import classNames from 'classnames';
 import { useFormikContext, FormikProps } from 'formik';
 import moment from 'moment';
 import { useDropzone } from 'react-dropzone';
+import { createContractQuery } from 'helpers/contractQuery';
 
 import { network, stakingContract } from 'config';
 import { useGlobalContext } from 'context';
@@ -110,10 +110,10 @@ export const Dropzone = () => {
 
   const nodeExistingOnNetwork = (BlsKey: string) => {
     const provider = new ProxyNetworkProvider(network.gatewayAddress);
-    const query = new Query({
-      address: Address.fromBech32(stakingContract),
+    const query = createContractQuery({
+      address: Address.newFromBech32(stakingContract),
       func: new ContractFunction('getBLSKeyStatus'),
-      caller: Address.fromBech32(network.delegationContract),
+      caller: Address.newFromBech32(network.delegationContract),
       args: [BytesValue.fromHex(BlsKey)]
     });
 

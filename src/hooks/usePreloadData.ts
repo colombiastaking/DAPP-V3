@@ -1,12 +1,13 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
-import { useGetSuccessfulTransactions } from '@multiversx/sdk-dapp/hooks/transactions/useGetSuccessfulTransactions';
-import { Address, AddressValue, Query, ContractFunction, decodeBigNumber } from '@multiversx/sdk-core';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
+import { Address, AddressValue, ContractFunction, decodeBigNumber } from '@multiversx/sdk-core';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import { useDispatch } from 'context';
 import { network } from 'config';
 import { fetchClaimableColsAndLockTime } from 'helpers/fetchClaimableCols';
 import { denominated } from 'helpers/denominate';
+import { useGetActiveTransactionsStatus } from './useTransactionStatus';
+import { createContractQuery } from 'helpers/contractQuery';
 
 const CLAIM_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
@@ -19,8 +20,9 @@ const DELEGATION_CONTRACT = 'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqal
  * - eGLD claimable rewards
  */
 export function usePreloadData() {
-  const { address } = useGetAccountInfo();
-  const { hasSuccessfulTransactions } = useGetSuccessfulTransactions();
+  const account = useGetAccount();
+  const address = account.address;
+  const { hasSuccessfulTransactions } = useGetActiveTransactionsStatus();
   const dispatch = useDispatch();
   const hasLoadedRef = useRef(false);
 
@@ -101,7 +103,7 @@ export function usePreloadData() {
 
     try {
       const provider = new ProxyNetworkProvider(network.gatewayAddress);
-      const query = new Query({
+      const query = createContractQuery({
         address: new Address(network.delegationContract),
         func: new ContractFunction('getClaimableRewards'),
         args: [new AddressValue(new Address(address))]

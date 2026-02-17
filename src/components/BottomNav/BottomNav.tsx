@@ -10,7 +10,7 @@ import {
   faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { emitNavTabChange } from 'utils/navEvents';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 
 import styles from './BottomNav.module.scss';
 
@@ -92,7 +92,8 @@ const TABS: TabType[] = [
 export const BottomNav: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
 
   // Hide tabs on unlock page if user not logged in
   if (!address && currentPath === '/unlock') {

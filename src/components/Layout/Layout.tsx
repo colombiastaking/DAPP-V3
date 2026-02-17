@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
-import { AuthenticatedRoutesWrapper } from '@multiversx/sdk-dapp/wrappers';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
+import { AuthenticatedRoutesWrapper } from 'components/AuthenticatedRoutesWrapper';
 
 import { useLocation } from 'react-router-dom';
 import routes, { routeNames } from 'routes';
@@ -11,7 +11,8 @@ import { TelegramBubble } from 'components/TelegramBubble';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { search } = useLocation();
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
 
   return (
     <div className='layout d-flex flex-column flex-fill wrapper'>

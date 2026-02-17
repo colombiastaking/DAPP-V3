@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { useNavigate } from 'react-router-dom';
 import { useColsAprContext } from '../../context/ColsAprContext';
 import { useGlobalContext } from 'context';
@@ -64,7 +64,8 @@ function formatNumber(num: number, decimals = 2): string {
 }
 
 export const Info = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const navigate = useNavigate();
   const { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld } = useColsAprContext();
   const { delegatorCount } = useGlobalContext();

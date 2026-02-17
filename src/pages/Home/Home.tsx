@@ -1,6 +1,7 @@
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { useEffect, useState } from 'react';
-import { decodeBigNumber, Query, ContractFunction, Address, AddressValue } from '@multiversx/sdk-core';
+import { decodeBigNumber, ContractFunction, Address, AddressValue } from '@multiversx/sdk-core';
+import { createContractQuery } from 'helpers/contractQuery';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 
 import { RankingTable } from 'components/Stake/RankingTable';
@@ -30,7 +31,8 @@ function formatCurrency(value: number): string {
 }
 
 export const Home = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { stakers, loading, egldPrice, colsPrice, baseApr } = useColsAprContext();
   
   // Preload all cached data at login
@@ -75,7 +77,7 @@ export const Home = () => {
     async function fetchDelegatedEgld() {
       try {
         const provider = new ProxyNetworkProvider('https://gateway.multiversx.com');
-        const q = new Query({
+        const q = createContractQuery({
           address: new Address('erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'),
           func: new ContractFunction('getUserActiveStake'),
           args: [new AddressValue(new Address(address))]

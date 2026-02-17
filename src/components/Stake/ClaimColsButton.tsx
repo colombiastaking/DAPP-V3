@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { useGetAccountInfo } from "@multiversx/sdk-dapp/hooks/account/useGetAccountInfo";
-import { useGetActiveTransactionsStatus } from "@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus";
+import { useGetAccount } from "@multiversx/sdk-dapp/out/react/account/useGetAccount";
+import { useGetActiveTransactionsStatus } from "hooks/useTransactionStatus";
 import classNames from "classnames";
-import { sendTransactions } from "@multiversx/sdk-dapp/services/transactions/sendTransactions";
+import { sendTransactions } from 'helpers/sendTransactions';
 import { network } from "config";
 import { useGlobalContext, useDispatch } from "context";
 import { fetchClaimableColsAndLockTime } from "helpers/fetchClaimableCols";
@@ -26,7 +26,8 @@ function denominateCols(raw: string) {
 }
 
 export function ClaimColsButton({ onClaimed }: { onClaimed: () => void }) {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { pending, success } = useGetActiveTransactionsStatus();
   const { claimableCols } = useGlobalContext();
   const dispatch = useDispatch();

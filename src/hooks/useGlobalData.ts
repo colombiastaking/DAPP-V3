@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import {
-  Query,
+  
   ContractFunction,
   Address,
   decodeBigNumber,
@@ -9,13 +9,14 @@ import {
   decodeString,
   AddressValue
 } from '@multiversx/sdk-core';
+import { createContractQuery } from 'helpers/contractQuery';
 
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
-import { useGetSuccessfulTransactions } from '@multiversx/sdk-dapp/hooks/transactions/useGetSuccessfulTransactions';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 
 import { network, auctionContract } from 'config';
 import { useDispatch } from 'context';
+import { useGetActiveTransactionsStatus } from './useTransactionStatus';
 
 const PEERME_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const PEERME_ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
@@ -62,9 +63,10 @@ interface globalFetchesType {
 }
 
 const useGlobalData = () => {
-  const { address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { hasSuccessfulTransactions, successfulTransactionsArray } =
-    useGetSuccessfulTransactions();
+    useGetActiveTransactionsStatus();
 
   const dispatch = useDispatch();
   const provider = new ProxyNetworkProvider(network.gatewayAddress);
@@ -73,7 +75,7 @@ const useGlobalData = () => {
       key: 'contractDetails',
       handler: async (): Promise<ContractDetailsType | string> => {
         try {
-          const query = new Query({
+          const query = createContractQuery({
             address: new Address(network.delegationContract),
             func: new ContractFunction('getContractConfig')
           });
@@ -97,7 +99,7 @@ const useGlobalData = () => {
 
           return {
             withDelegationCap: String(withDelegationCap),
-            owner: new Address(address).hex() === ownerAddress.toString('hex'),
+            owner: new Address(address).toHex() === ownerAddress.toString('hex'),
             delegationCap: decodeBigNumber(delegationCap).toFixed(),
             redelegationCap:
               decodeString(redelegationCap) === 'true' ? 'ON' : 'OFF',
@@ -115,7 +117,7 @@ const useGlobalData = () => {
       key: 'nodesNumber',
       handler: async (): Promise<Buffer[] | string> => {
         try {
-          const query = new Query({
+          const query = createContractQuery({
             address: new Address(auctionContract),
             func: new ContractFunction('getBlsKeysStatus'),
             args: [new AddressValue(new Address(network.delegationContract))]
@@ -134,7 +136,7 @@ const useGlobalData = () => {
       key: 'nodesStates',
       handler: async (): Promise<Buffer[] | string> => {
         try {
-          const query = new Query({
+          const query = createContractQuery({
             address: new Address(network.delegationContract),
             func: new ContractFunction('getAllNodeStates')
           });
@@ -152,7 +154,7 @@ const useGlobalData = () => {
       key: 'totalActiveStake',
       handler: async (): Promise<string> => {
         try {
-          const query = new Query({
+          const query = createContractQuery({
             address: new Address(network.delegationContract),
             func: new ContractFunction('getTotalActiveStake')
           });
@@ -170,7 +172,7 @@ const useGlobalData = () => {
       key: 'userActiveStake',
       handler: async (): Promise<string> => {
         try {
-          const query = new Query({
+          const query = createContractQuery({
             address: new Address(network.delegationContract),
             func: new ContractFunction('getUserActiveStake'),
             args: [new AddressValue(new Address(address))]
@@ -204,7 +206,7 @@ const useGlobalData = () => {
       handler: async (): Promise<string> => {
         try {
           if (!address) return '0';
-          const query = new Query({
+          const query = createContractQuery({
             address: new Address(PEERME_COLS_CONTRACT),
             func: new ContractFunction('getEntityUsers'),
             args: [new AddressValue(new Address(PEERME_ENTITY_ADDRESS))]
@@ -213,7 +215,7 @@ const useGlobalData = () => {
           // The return data is a list of addresses and balances (address, amount, address, amount, ...)
           const parts = data.getReturnDataParts();
           for (let i = 0; i < parts.length; i += 2) {
-            const userAddr = new Address(parts[i]).bech32();
+            const userAddr = new Address(parts[i]).toBech32();
             if (userAddr === address) {
               // parts[i+1] is the staked amount (Buffer)
               return decodeBigNumber(parts[i + 1]).toFixed();

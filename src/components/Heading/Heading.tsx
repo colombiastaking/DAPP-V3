@@ -5,7 +5,7 @@ import {
   faEdit
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
 import classNames from 'classnames';
 import { useLocation, useNavigate } from 'react-router-dom';
 

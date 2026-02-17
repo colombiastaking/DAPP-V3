@@ -11,11 +11,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   ContractFunction,
   Address,
-  Query,
   BytesValue
 } from '@multiversx/sdk-core';
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
-import { useGetSuccessfulTransactions } from '@multiversx/sdk-dapp/hooks/transactions/useGetSuccessfulTransactions';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import classNames from 'classnames';
 import { Dropdown } from 'react-bootstrap';
@@ -24,6 +22,7 @@ import { Action } from 'components/Action';
 import { network, auctionContract, stakingContract } from 'config';
 import { useGlobalContext } from 'context';
 import useTransaction from 'helpers/useTransaction';
+import { createContractQuery } from 'helpers/contractQuery';
 
 import { Add } from './components/Add';
 
@@ -112,9 +111,8 @@ const actions: ActionsType[] = [
 export const Nodes = () => {
   const { nodesNumber, nodesStates } = useGlobalContext();
   const { sendTransaction } = useTransaction();
-  const { pending } = useGetActiveTransactionsStatus();
-  const { hasSuccessfulTransactions, successfulTransactionsArray } =
-    useGetSuccessfulTransactions();
+  const { pending, hasSuccessfulTransactions, successfulTransactionsArray } =
+    useGetActiveTransactionsStatus();
 
   const [data, setData] = useState<NodeType[]>([]);
   const isLoading = nodesNumber.status === 'loading';
@@ -138,19 +136,19 @@ export const Nodes = () => {
 
   const fetchQueue = useCallback(async (key: string) => {
     const provider = new ProxyNetworkProvider(network.apiAddress);
-    const query = new Query({
+    const query = createContractQuery({
       address: new Address(stakingContract),
       func: new ContractFunction('getQueueIndex'),
       caller: new Address(auctionContract),
       args: [BytesValue.fromHex(key)]
     });
 
-    const queue = new Query({
+    const queue = createContractQuery({
       address: new Address(stakingContract),
       func: new ContractFunction('getQueueSize')
     });
 
-    const queryContract = async (parameters: Query) => {
+    const queryContract = async (parameters: any) => {
       const decode = (item: string) => Buffer.from(item, 'base64');
       const response = await provider.queryContract(parameters);
 

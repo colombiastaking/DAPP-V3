@@ -3,13 +3,11 @@ import { useEffect, useState } from 'react';
 import {
   Address,
   AddressValue,
-  Query,
   ContractFunction,
   decodeBigNumber
 } from '@multiversx/sdk-core';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
-import { useGetActiveTransactionsStatus } from '@multiversx/sdk-dapp/hooks/transactions/useGetActiveTransactionsStatus';
-import { useGetSuccessfulTransactions } from '@multiversx/sdk-dapp/hooks/transactions/useGetSuccessfulTransactions';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
+import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import BigNumber from 'bignumber.js';
 
@@ -19,6 +17,7 @@ import { denominated } from 'helpers/denominate';
 import getPercentage from 'helpers/getPercentage';
 import { nominateValToHex } from 'helpers/nominate';
 import useTransaction from 'helpers/useTransaction';
+import { createContractQuery } from 'helpers/contractQuery';
 
 export type ActionCallbackType = () => void;
 export interface DelegationPayloadType {
@@ -29,11 +28,11 @@ const useStakeData = () => {
   const dispatch = useDispatch();
   const [check, setCheck] = useState(false);
 
-  const { account, address } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const { sendTransaction } = useTransaction();
-  const { pending } = useGetActiveTransactionsStatus();
-  const { hasSuccessfulTransactions, successfulTransactionsArray } =
-    useGetSuccessfulTransactions();
+  const { pending, hasSuccessfulTransactions, successfulTransactionsArray } =
+    useGetActiveTransactionsStatus();
   const { contractDetails, userClaimableRewards, totalActiveStake } =
     useGlobalContext();
 
@@ -163,7 +162,7 @@ const useStakeData = () => {
 
     try {
       const provider = new ProxyNetworkProvider(network.gatewayAddress);
-      const query = new Query({
+      const query = createContractQuery({
         address: new Address(network.delegationContract),
         func: new ContractFunction('getClaimableRewards'),
         args: [new AddressValue(new Address(address))]

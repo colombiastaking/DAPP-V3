@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { useGetAccountInfo } from '@multiversx/sdk-dapp/hooks/account/useGetAccountInfo';
+import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import axios from 'axios';
 import classNames from 'classnames';
 
@@ -12,7 +12,8 @@ import styles from './styles.module.scss';
 const COLS_TOKEN_ID = 'COLS-9d91b7';
 
 export const Navbar = () => {
-  const { address, account } = useGetAccountInfo();
+  const account = useGetAccount();
+  const address = account.address;
   const [colsBalance, setColsBalance] = useState<string>('0');
   const [loading, setLoading] = useState<boolean>(true);
 
