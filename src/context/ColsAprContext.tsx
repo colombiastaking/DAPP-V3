@@ -8,18 +8,21 @@ export function ColsAprProvider({ children }: { children: any }) {
   const [trigger, setTrigger] = useState(0);
   const { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, targetAvgAprBonus } = useColsApr({ trigger });
 
-  // Use a ref to track if component is mounted to avoid recalculation on mount
-  const mountedRef = useRef(false);
+  // Track if we've already fetched data (don't refetch on tab clicks)
+  const hasLoadedRef = useRef(false);
+  const hasTxListenerRef = useRef(false);
 
   // Call this after user action to force recalc
-  const refresh = useCallback(() => setTrigger(t => t + 1), []);
+  const refresh = useCallback(() => {
+    hasLoadedRef.current = false; // Allow refetch after manual refresh
+    setTrigger(t => t + 1);
+  }, []);
 
-  // Refresh only when a transaction completes
+  // Refresh only when a transaction completes (only set up listener once)
   useEffect(() => {
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      return;
-    }
+    if (hasTxListenerRef.current) return;
+    hasTxListenerRef.current = true;
+    
     const unsubscribe = onTxCompleted(() => {
       refresh();
     });

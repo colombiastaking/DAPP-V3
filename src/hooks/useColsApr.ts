@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   Address,
@@ -202,6 +202,10 @@ export function useColsApr({ trigger }: { trigger: any }) {
 
   const { contractDetails } = useGlobalContext();
 
+  // Track if we've already fetched data
+  const lastTriggerRef = useRef(trigger);
+  const isFetchingRef = useRef(false);
+
   const fetchColsStakers = useCallback(async (mode: ApiMode) => {
     const p = getScProvider(mode);
     const q = createContractQuery({
@@ -330,10 +334,21 @@ export function useColsApr({ trigger }: { trigger: any }) {
       setStakers([]);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [trigger, contractDetails]);
+  }, [contractDetails, fetchColsStakers]);
 
-  useEffect(() => { recalc(); }, [recalc, trigger]);
+  // Only fetch when trigger changes (initial load or after transaction)
+  useEffect(() => {
+    // Skip if already fetched and trigger hasn't changed
+    if (lastTriggerRef.current === trigger && stakers.length > 0) return;
+    // Skip if already fetching
+    if (isFetchingRef.current) return;
+    
+    lastTriggerRef.current = trigger;
+    isFetchingRef.current = true;
+    recalc();
+  }, [trigger, recalc, stakers.length]);
 
   return {
     loading,
