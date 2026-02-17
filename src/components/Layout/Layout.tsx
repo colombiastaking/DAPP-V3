@@ -8,11 +8,17 @@ import routes, { routeNames } from 'routes';
 import { Navbar } from './components/Navbar';
 import { BottomNav } from 'components/BottomNav';
 import { TelegramBubble } from 'components/TelegramBubble';
+import useGlobalData from 'hooks/useGlobalData';
+import { usePreloadData } from 'hooks/usePreloadData';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { search } = useLocation();
   const account = useGetAccount();
   const address = account.address;
+
+  // Pre-fetch all data at login for better UX
+  useGlobalData();
+  usePreloadData();
 
   return (
     <div className='layout d-flex flex-column flex-fill wrapper'>
