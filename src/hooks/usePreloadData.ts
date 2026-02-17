@@ -8,16 +8,20 @@ import { fetchClaimableColsAndLockTime } from 'helpers/fetchClaimableCols';
 import { denominated } from 'helpers/denominate';
 import { useGetActiveTransactionsStatus } from './useTransactionStatus';
 import { createContractQuery } from 'helpers/contractQuery';
+import axios from 'axios';
 
 const CLAIM_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
 const DELEGATION_CONTRACT = 'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf';
+const COLS_TOKEN_ID = 'COLS-9d91b7';
 
 /**
  * Hook to preload and cache all shared data at login:
  * - Delegator count
  * - Claimable COLS and lock time
  * - eGLD claimable rewards
+ * - COLS wallet balance
+ * - User active stake (delegated eGLD)
  */
 export function usePreloadData() {
   const account = useGetAccount();
@@ -130,6 +134,78 @@ export function usePreloadData() {
     }
   }, [address, dispatch]);
 
+  // Fetch COLS wallet balance
+  const fetchColsBalance = useCallback(async () => {
+    if (!address) return;
+
+    dispatch({
+      type: 'getColsBalance',
+      colsBalance: { status: 'loading', data: null, error: null }
+    });
+
+    try {
+      const { data } = await axios.get(
+        `${network.apiAddress}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
+      );
+      let balance = '0';
+      if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
+        // Denominate from 18 decimals
+        const raw = data[0].balance;
+        if (raw && raw !== '0') {
+          const rawStr = raw.toString().padStart(19, '0');
+          const intPart = rawStr.slice(0, -18) || '0';
+          let decPart = rawStr.slice(-18).replace(/0+$/, '');
+          balance = decPart ? `${intPart}.${decPart}` : intPart;
+        }
+      }
+      dispatch({
+        type: 'getColsBalance',
+        colsBalance: { status: 'loaded', data: balance, error: null }
+      });
+    } catch (error) {
+      dispatch({
+        type: 'getColsBalance',
+        colsBalance: { status: 'error', data: '0', error }
+      });
+    }
+  }, [address, dispatch]);
+
+  // Fetch user active stake (delegated eGLD)
+  const fetchUserActiveStake = useCallback(async () => {
+    if (!address) return;
+
+    dispatch({
+      type: 'getUserActiveStake',
+      userActiveStake: { status: 'loading', data: null, error: null }
+    });
+
+    try {
+      const provider = new ProxyNetworkProvider(network.gatewayAddress);
+      const query = createContractQuery({
+        address: new Address(DELEGATION_CONTRACT),
+        func: new ContractFunction('getUserActiveStake'),
+        args: [new AddressValue(new Address(address))]
+      });
+
+      const data = await provider.queryContract(query);
+      const [userStake] = data.getReturnDataParts();
+
+      dispatch({
+        type: 'getUserActiveStake',
+        userActiveStake: {
+          status: 'loaded',
+          error: null,
+          data: userStake ? decodeBigNumber(userStake).toFixed() : '0'
+        }
+      });
+    } catch (error) {
+      dispatch({
+        type: 'getUserActiveStake',
+        userActiveStake: { status: 'error', data: null, error }
+      });
+    }
+  }, [address, dispatch]);
+
   // Preload all data once when user logs in
   useEffect(() => {
     if (!address || hasLoadedRef.current) return;
@@ -138,20 +214,26 @@ export function usePreloadData() {
     fetchDelegatorCount();
     fetchClaimableCols();
     fetchClaimableEgld();
-  }, [address, fetchDelegatorCount, fetchClaimableCols, fetchClaimableEgld]);
+    fetchColsBalance();
+    fetchUserActiveStake();
+  }, [address, fetchDelegatorCount, fetchClaimableCols, fetchClaimableEgld, fetchColsBalance, fetchUserActiveStake]);
 
-  // Refresh claimable data after transactions complete
+  // Refresh data after transactions complete
   useEffect(() => {
     if (hasSuccessfulTransactions) {
       fetchClaimableCols();
       fetchClaimableEgld();
+      fetchColsBalance();
+      fetchUserActiveStake();
     }
-  }, [hasSuccessfulTransactions, fetchClaimableCols, fetchClaimableEgld]);
+  }, [hasSuccessfulTransactions, fetchClaimableCols, fetchClaimableEgld, fetchColsBalance, fetchUserActiveStake]);
 
   return {
     fetchDelegatorCount,
     fetchClaimableCols,
     fetchClaimableEgld,
+    fetchColsBalance,
+    fetchUserActiveStake,
     isLoading: !hasLoadedRef.current
   };
 }

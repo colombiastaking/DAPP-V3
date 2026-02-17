@@ -65,6 +65,10 @@ export type ActionType =
   | {
       type: 'getColsLockTime';
       colsLockTime: StateType['colsLockTime'];
+    }
+  | {
+      type: 'getColsBalance';
+      colsBalance: StateType['colsBalance'];
     };
 
 const reducer = (state: StateType, action: any) => {
@@ -163,6 +167,12 @@ const reducer = (state: StateType, action: any) => {
       return {
         ...state,
         colsLockTime: action.colsLockTime
+      };
+    }
+    case 'getColsBalance': {
+      return {
+        ...state,
+        colsBalance: action.colsBalance
       };
     }
     default: {

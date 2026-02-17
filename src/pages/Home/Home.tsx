@@ -1,19 +1,13 @@
 import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
-import { useEffect, useState } from 'react';
-import { decodeBigNumber, ContractFunction, Address, AddressValue } from '@multiversx/sdk-core';
-import { createContractQuery } from 'helpers/contractQuery';
-import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
-
-import { RankingTable } from 'components/Stake/RankingTable';
+import { useGlobalContext } from 'context';
 import { useColsAprContext } from '../../context/ColsAprContext';
 import { AnimatedDots } from 'components/AnimatedDots';
 import { HelpIcon } from 'components/HelpIcon';
 import { ColsAprTable } from 'components/ColsAprTable';
+import { RankingTable } from 'components/Stake/RankingTable';
 import { usePreloadData } from 'hooks/usePreloadData';
 
 import styles from './styles.module.scss';
-
-const denomination = 1e18;
 
 function formatNumber(amount: number | string, decimals = 6) {
   const num = typeof amount === 'string' ? Number(amount) : amount;
@@ -34,81 +28,33 @@ export const Home = () => {
   const account = useGetAccount();
   const address = account.address;
   const { stakers, loading, egldPrice, colsPrice, baseApr } = useColsAprContext();
+  const { userActiveStake } = useGlobalContext();
   
   // Preload all cached data at login
   usePreloadData();
 
-  const [additionalEgldDelegatedRaw, setAdditionalEgldDelegatedRaw] = useState<string | null>(null);
-  const [loadingAdditionalEgld, setLoadingAdditionalEgld] = useState(false);
-
   // Find user row in stakers
   const userRow = stakers.find((s: any) => s.address === address) ?? null;
 
-  // Current user delegated and staked amounts
-  const egldDelegatedFromApr = userRow?.egldStaked ?? 0;
+  // Get delegated eGLD from context (converted from raw to eGLD)
+  const delegatedEgld = userActiveStake.status === 'loaded' 
+    ? Number(userActiveStake.data || '0') / 1e18 
+    : 0;
+
+  // Use stakers data for eGLD if available (for COLS stakers)
+  const egldDelegatedFromStakers = userRow?.egldStaked ?? 0;
   const colsStaked = userRow?.colsStaked ?? 0;
 
-  // Convert raw value to eGLD decimals
-  const additionalEgldDelegated = additionalEgldDelegatedRaw
-    ? (Number(additionalEgldDelegatedRaw) / denomination).toString()
-    : null;
-
-  const actualEgldDelegated = +colsStaked === 0 && additionalEgldDelegated !== null
-    ? Number(additionalEgldDelegated)
-    : Number(egldDelegatedFromApr);
+  // Prefer stakers data if user has COLS staked, otherwise use context
+  const actualEgldDelegated = colsStaked > 0 
+    ? egldDelegatedFromStakers 
+    : delegatedEgld;
 
   const totalUsd =
     (actualEgldDelegated * Number(egldPrice || 0)) +
     (Number(colsStaked) * Number(colsPrice || 0));
 
   const totalStakers = stakers.length;
-
-  // Fetch delegated eGLD if no COLS staked
-  useEffect(() => {
-    let mounted = true;
-    if (!address || colsStaked > 0) {
-      setAdditionalEgldDelegatedRaw(null);
-      setLoadingAdditionalEgld(false);
-      return () => { mounted = false; };
-    }
-
-    setLoadingAdditionalEgld(true);
-
-    async function fetchDelegatedEgld() {
-      try {
-        const provider = new ProxyNetworkProvider('https://gateway.multiversx.com');
-        const q = createContractQuery({
-          address: new Address('erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'),
-          func: new ContractFunction('getUserActiveStake'),
-          args: [new AddressValue(new Address(address))]
-        });
-
-        const response = await provider.queryContract(q);
-        const parts = response.getReturnDataParts();
-
-        if (parts.length > 0) {
-          const delegatedRaw = decodeBigNumber(parts[0]).toFixed();
-          if (mounted) setAdditionalEgldDelegatedRaw(delegatedRaw);
-        } else {
-          if (mounted) setAdditionalEgldDelegatedRaw('0');
-        }
-      } catch (e) {
-        if (mounted) setAdditionalEgldDelegatedRaw('0');
-      }
-      if (mounted) setLoadingAdditionalEgld(false);
-    }
-
-    fetchDelegatedEgld();
-
-    return () => { mounted = false; };
-  }, [address, colsStaked]);
-
-  const totalAprHelpText = `Total APR represents your annual percentage rate based on your staking position.
-
-• If you have eGLD delegated, the Total APR applies to your eGLD delegation.
-• If you stake COLS tokens, you earn additional APR bonus.
-
-This ensures the APR reflects your actual staking position.`;
 
   const userApr = userRow?.aprTotal !== null && userRow?.aprTotal !== undefined 
     ? Number(userRow.aprTotal) 
@@ -117,6 +63,13 @@ This ensures the APR reflects your actual staking position.`;
   const leagueInfo = userRank && totalStakers > 0 
     ? getLeagueInfo(userRank, totalStakers) 
     : null;
+
+  const totalAprHelpText = `Total APR represents your annual percentage rate based on your staking position.
+
+• If you have eGLD delegated, the Total APR applies to your eGLD delegation.
+• If you stake COLS tokens, you earn additional APR bonus.
+
+This ensures the APR reflects your actual staking position.`;
 
   return (
     <div className={styles.landing}>
@@ -138,7 +91,7 @@ This ensures the APR reflects your actual staking position.`;
             <div className={styles.assetIcon}>💎</div>
             <div className={styles.assetLabel}>eGLD Delegated</div>
             <div className={`${styles.assetValue} ${styles.assetValuePrimary}`}>
-              {loading || loadingAdditionalEgld ? (
+              {loading || userActiveStake.status === 'loading' ? (
                 <><AnimatedDots /></>
               ) : (
                 formatNumber(actualEgldDelegated, 4)
@@ -216,7 +169,7 @@ This ensures the APR reflects your actual staking position.`;
             <div className={styles.statLabel}>Bonus APR</div>
           </div>
           <div className={styles.statItem}>
-            <div className={`${styles.statValue} ${styles.statValueAccent}`}>
+            <div className={`${styles.statValue} ${styles.assetValueAccent}`}>
               {leagueInfo?.name || '—'}
             </div>
             <div className={styles.statLabel}>Your League</div>

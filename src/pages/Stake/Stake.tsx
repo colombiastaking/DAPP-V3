@@ -1,33 +1,17 @@
-import { useEffect, useState } from 'react';
 import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { ClaimColsButton } from 'components/Stake/ClaimColsButton';
 import { StakeCols } from 'components/Stake/components/StakeCols';
 import { BuyCols } from 'components/Stake/components/BuyCols';
 import { useGlobalContext } from 'context';
 import { useColsAprContext } from 'context/ColsAprContext';
-import axios from 'axios';
-import { network } from 'config';
 import { AnimatedDots } from 'components/AnimatedDots';
 import styles from './styles.module.scss';
-
-const COLS_TOKEN_ID = 'COLS-9d91b7';
-
-function denominateCols(raw: string) {
-  if (!raw || raw === '0') return '0';
-  let str = raw.padStart(19, '0');
-  const intPart = str.slice(0, -18) || '0';
-  let decPart = str.slice(-18).replace(/0+$/, '');
-  return decPart ? `${intPart}.${decPart}` : intPart;
-}
 
 export const Stake = () => {
   const account = useGetAccount();
   const address = account.address;
-  const { claimableCols } = useGlobalContext();
+  const { claimableCols, colsBalance } = useGlobalContext();
   const { stakers } = useColsAprContext();
-  
-  const [colsBalance, setColsBalance] = useState<string>('0');
-  const [loading, setLoading] = useState(true);
 
   // Get COLS staked from stakers context
   const userRow = stakers.find((s: any) => s.address === address);
@@ -41,33 +25,10 @@ export const Stake = () => {
     ? Number(claimableColsRaw) / 1e18 
     : 0;
 
-  // Fetch COLS wallet balance
-  useEffect(() => {
-    const fetchColsBalance = async () => {
-      if (!address) {
-        setColsBalance('0');
-        setLoading(false);
-        return;
-      }
-      
-      setLoading(true);
-      try {
-        const { data } = await axios.get(
-          `${network.apiAddress}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
-        );
-        if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
-          setColsBalance(denominateCols(data[0].balance));
-        } else {
-          setColsBalance('0');
-        }
-      } catch {
-        setColsBalance('0');
-      }
-      setLoading(false);
-    };
-
-    fetchColsBalance();
-  }, [address]);
+  // Get COLS balance from context
+  const colsBalanceValue = colsBalance.status === 'loaded' 
+    ? colsBalance.data 
+    : '0';
 
   if (!address) {
     return (
@@ -99,7 +60,7 @@ export const Stake = () => {
           <div className={styles.statIcon}>🪙</div>
           <div className={styles.statLabel}>COLS Staked</div>
           <div className={styles.statValue}>
-            {loading ? <AnimatedDots /> : colsStaked.toFixed(4)}
+            {stakers.length === 0 ? <AnimatedDots /> : colsStaked.toFixed(4)}
           </div>
           <div className={styles.statHint}>Currently staked</div>
         </div>
@@ -107,7 +68,7 @@ export const Stake = () => {
           <div className={styles.statIcon}>🎁</div>
           <div className={styles.statLabel}>Claimable</div>
           <div className={`${styles.statValue} ${styles.statValueAccent}`}>
-            {claimableColsValue.toFixed(4)}
+            {claimableCols.status === 'loading' ? <AnimatedDots /> : claimableColsValue.toFixed(4)}
           </div>
           <div className={styles.statHint}>Rewards ready</div>
         </div>
@@ -119,7 +80,7 @@ export const Stake = () => {
           <div>
             <div className={styles.statLabel}>Wallet Balance</div>
             <div className={styles.statValue}>
-              {loading ? <AnimatedDots /> : Number(colsBalance).toFixed(4)} COLS
+              {colsBalance.status === 'loading' ? <AnimatedDots /> : `${Number(colsBalanceValue).toFixed(4)} COLS`}
             </div>
           </div>
           <div style={{ fontSize: 32 }}>💼</div>

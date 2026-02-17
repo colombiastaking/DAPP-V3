@@ -99,6 +99,11 @@ export interface StateType {
     error: ErrorType;
     data: null | number;
   };
+  colsBalance: {
+    status: StatusType;
+    error: ErrorType;
+    data: null | string;
+  };
 }
 
 export const initializer: StateType = {
@@ -178,6 +183,11 @@ export const initializer: StateType = {
     error: null
   },
   colsLockTime: {
+    status: 'idle',
+    data: null,
+    error: null
+  },
+  colsBalance: {
     status: 'idle',
     data: null,
     error: null

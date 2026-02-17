@@ -1,20 +1,16 @@
-import { useState, useEffect, MouseEvent } from 'react';
-import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
+import { useState, MouseEvent } from 'react';
 import { useGetActiveTransactionsStatus } from 'hooks/useTransactionStatus';
 import { sendTransactions } from 'helpers/sendTransactions';
+import { useGlobalContext } from 'context';
 import classNames from 'classnames';
 import { Formik } from 'formik';
 import { object, string } from 'yup';
 import BigNumber from 'bignumber.js';
-import axios from 'axios';
 
 import { Action, Submit } from 'components/Action';
-import { network } from 'config';
-import { fetchClaimableColsAndLockTime } from 'helpers/fetchClaimableCols';
 
 import styles from './styles.module.scss';
 
-const COLS_TOKEN_ID = 'COLS-9d91b7';
 const COLS_TOKEN_ID_HEX = '434f4c532d396439316237';
 const STAKE_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const GAS_LIMIT = 15_000_000;
@@ -29,14 +25,6 @@ function amountToHex(amount: string) {
   return hex;
 }
 
-function denominateCols(raw: string) {
-  if (!raw || raw === '0') return '0';
-  let str = raw.padStart(19, '0');
-  const intPart = str.slice(0, -18) || '0';
-  let decPart = str.slice(-18).replace(/0+$/, '');
-  return decPart ? `${intPart}.${decPart}` : intPart;
-}
-
 function formatLockTime(lockTimestamp: number) {
   if (lockTimestamp === 0) return 'No lock';
   const now = Math.floor(Date.now() / 1000);
@@ -48,58 +36,18 @@ function formatLockTime(lockTimestamp: number) {
 }
 
 export const StakeCols = () => {
-  const account = useGetAccount();
-  const address = account.address;
   const { pending } = useGetActiveTransactionsStatus();
+  const { colsBalance, colsLockTime } = useGlobalContext();
+  
   const [error, setError] = useState<string | null>(null);
-  const [colsBalance, setColsBalance] = useState<string>('0');
-  const [loading, setLoading] = useState<boolean>(true);
   const [withdrawPending, setWithdrawPending] = useState(false);
-  const [lockTimeRaw, setLockTimeRaw] = useState<number | null>(null);
-  const [lockTimeFormatted, setLockTimeFormatted] = useState<string>("");
 
-  useEffect(() => {
-    const fetchCols = async () => {
-      setLoading(true);
-      try {
-        const { data } = await axios.get(
-          `${network.apiAddress}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
-        );
-        if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
-          setColsBalance(denominateCols(data[0].balance));
-        } else {
-          setColsBalance('0');
-        }
-      } catch {
-        setColsBalance('0');
-      }
-      setLoading(false);
-    };
-
-    const fetchLockTime = async () => {
-      if (!address) {
-        setLockTimeRaw(null);
-        setLockTimeFormatted('');
-        return;
-      }
-      try {
-        const { lockTime } = await fetchClaimableColsAndLockTime({
-          contract: STAKE_CONTRACT,
-          entity: 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0',
-          user: address,
-          providerUrl: network.gatewayAddress
-        });
-        setLockTimeRaw(lockTime);
-        setLockTimeFormatted(formatLockTime(lockTime));
-      } catch {
-        setLockTimeRaw(null);
-        setLockTimeFormatted('');
-      }
-    };
-
-    fetchCols();
-    fetchLockTime();
-  }, [address]);
+  // Get COLS balance from context
+  const colsBalanceValue = colsBalance.status === 'loaded' ? colsBalance.data : '0';
+  
+  // Get lock time from context
+  const lockTimeRaw = colsLockTime.status === 'loaded' ? colsLockTime.data : null;
+  const lockTimeFormatted = lockTimeRaw ? formatLockTime(lockTimeRaw) : '';
 
   const handleWithdrawClick = async () => {
     setError(null);
@@ -185,7 +133,7 @@ export const StakeCols = () => {
                   })
                   .test('max', `You cannot stake more than your available COLS balance.`, (value = '') => {
                     try {
-                      return new BigNumber(value).lte(colsBalance || '0');
+                      return new BigNumber(value).lte(colsBalanceValue || '0');
                     } catch {
                       return false;
                     }
@@ -205,7 +153,7 @@ export const StakeCols = () => {
               }) => {
                 const onMax = (event: MouseEvent) => {
                   event.preventDefault();
-                  setFieldValue('amount', colsBalance);
+                  setFieldValue('amount', colsBalanceValue);
                 };
 
                 return (
@@ -232,13 +180,13 @@ export const StakeCols = () => {
                           type="button"
                           onClick={onMax}
                           className={styles.maxButton}
-                          disabled={loading || colsBalance === '0'}
+                          disabled={colsBalance.status === 'loading' || colsBalanceValue === '0'}
                         >
                           MAX
                         </button>
                       </div>
                       <div className={styles.balance}>
-                        Available: <span>{loading ? '...' : colsBalance} COLS</span>
+                        Available: <span>{colsBalance.status === 'loading' ? '...' : Number(colsBalanceValue).toFixed(4)} COLS</span>
                       </div>
                       {errors.amount && touched.amount && (
                         <span className={styles.error}>{errors.amount}</span>
@@ -262,7 +210,9 @@ export const StakeCols = () => {
 
       {/* Lock Time Info */}
       <div className={classNames(styles.lockInfo, { [styles.unlocked]: !isLocked })}>
-        {isLocked ? (
+        {colsLockTime.status === 'loading' ? (
+          <span className={styles.lockText}>Loading lock time...</span>
+        ) : isLocked ? (
           <span className={styles.lockText}>
             🔒 Lock Time Remaining: <span className={styles.lockTime}>{lockTimeFormatted}</span>
           </span>
