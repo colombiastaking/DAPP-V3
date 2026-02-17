@@ -31,24 +31,24 @@ export class AddressAdapter implements IAddress {
 }
 
 /**
- * Encode a TypedValue to base64 string for contract query
+ * Encode a TypedValue to hex string for contract query
  */
 function encodeTypedValue(value: TypedValue): string {
-  // Handle AddressValue - encode as 32-byte pubkey
+  // Handle AddressValue - encode as 32-byte pubkey in hex
   if (value instanceof AddressValue) {
     const addr = value.valueOf(); // Returns Address
     const pubkey = addr.getPublicKey(); // Returns Buffer (32 bytes)
-    return pubkey.toString('base64');
+    return pubkey.toString('hex');
   }
   
-  // Handle BigUIntValue - encode as big-endian bytes
+  // Handle BigUIntValue - encode as big-endian bytes in hex
   if (value instanceof BigUIntValue) {
     const bn = value.valueOf(); // Returns BigNumber
     // Convert to Buffer with proper encoding
     let hex = bn.toString(16);
     if (hex.length % 2 !== 0) hex = '0' + hex;
     const buffer = Buffer.from(hex, 'hex');
-    return buffer.toString('base64');
+    return buffer.toString('hex');
   }
   
   // Handle U64Value
@@ -58,48 +58,48 @@ function encodeTypedValue(value: TypedValue): string {
     // Pad to 8 bytes (64 bits)
     while (hex.length < 16) hex = '0' + hex;
     const buffer = Buffer.from(hex, 'hex');
-    return buffer.toString('base64');
+    return buffer.toString('hex');
   }
   
   // Handle BytesValue
   if (value instanceof BytesValue) {
     const buffer = value.valueOf(); // Returns Buffer
-    return buffer.toString('base64');
+    return buffer.toString('hex');
   }
   
   // Handle StringValue
   if (value instanceof StringValue) {
     const str = value.valueOf();
-    return Buffer.from(str).toString('base64');
+    return Buffer.from(str).toString('hex');
   }
   
   // Handle BooleanValue
   if (value instanceof BooleanValue) {
     const bool = value.valueOf();
-    return bool ? Buffer.from([1]).toString('base64') : Buffer.from([0]).toString('base64');
+    return bool ? Buffer.from([1]).toString('hex') : Buffer.from([0]).toString('hex');
   }
   
   // Generic fallback: try to get Buffer or convert to bytes
   const raw = value.valueOf();
   if (Buffer.isBuffer(raw)) {
-    return raw.toString('base64');
+    return raw.toString('hex');
   }
   if (raw && typeof raw.getPublicKey === 'function') {
     // It's an Address
-    return raw.getPublicKey().toString('base64');
+    return raw.getPublicKey().toString('hex');
   }
   if (typeof raw === 'string') {
-    return Buffer.from(raw).toString('base64');
+    return Buffer.from(raw).toString('hex');
   }
   if (typeof raw === 'bigint' || typeof raw === 'number') {
     let hex = raw.toString(16);
     if (hex.length % 2 !== 0) hex = '0' + hex;
-    return Buffer.from(hex, 'hex').toString('base64');
+    return Buffer.from(hex, 'hex').toString('hex');
   }
   
   // Last resort - JSON encode
   console.warn('Unknown TypedValue type, using JSON fallback:', value);
-  return Buffer.from(JSON.stringify(raw)).toString('base64');
+  return Buffer.from(JSON.stringify(raw)).toString('hex');
 }
 
 /**
