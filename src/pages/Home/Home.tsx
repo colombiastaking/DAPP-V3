@@ -20,11 +20,20 @@ function formatNumber(amount: number | string, decimals = 6) {
   return num.toLocaleString(undefined, { maximumFractionDigits: decimals });
 }
 
+function formatCurrency(value: number): string {
+  if (value >= 1000000) {
+    return `$${(value / 1000000).toFixed(2)}M`;
+  } else if (value >= 1000) {
+    return `$${(value / 1000).toFixed(1)}K`;
+  }
+  return `$${Math.floor(value).toLocaleString()}`;
+}
+
 export const Home = () => {
   const { address } = useGetAccountInfo();
   const { stakers, loading, egldPrice, colsPrice, baseApr } = useColsAprContext();
   
-  // Preload all cached data at login (delegator count, claimable COLS, etc.)
+  // Preload all cached data at login
   usePreloadData();
 
   const [additionalEgldDelegatedRaw, setAdditionalEgldDelegatedRaw] = useState<string | null>(null);
@@ -33,7 +42,7 @@ export const Home = () => {
   // Find user row in stakers
   const userRow = stakers.find((s: any) => s.address === address) ?? null;
 
-  // Current user delegated and staked amounts (raw numbers)
+  // Current user delegated and staked amounts
   const egldDelegatedFromApr = userRow?.egldStaked ?? 0;
   const colsStaked = userRow?.colsStaked ?? 0;
 
@@ -42,13 +51,17 @@ export const Home = () => {
     ? (Number(additionalEgldDelegatedRaw) / denomination).toString()
     : null;
 
+  const actualEgldDelegated = +colsStaked === 0 && additionalEgldDelegated !== null
+    ? Number(additionalEgldDelegated)
+    : Number(egldDelegatedFromApr);
+
   const totalUsd =
-    (Number(egldDelegatedFromApr) * Number(egldPrice || 0)) +
+    (actualEgldDelegated * Number(egldPrice || 0)) +
     (Number(colsStaked) * Number(colsPrice || 0));
 
   const totalStakers = stakers.length;
 
-  // Conditionally fetch delegated eGLD if no COLS staked
+  // Fetch delegated eGLD if no COLS staked
   useEffect(() => {
     let mounted = true;
     if (!address || colsStaked > 0) {
@@ -63,7 +76,7 @@ export const Home = () => {
       try {
         const provider = new ProxyNetworkProvider('https://gateway.multiversx.com');
         const q = new Query({
-          address: new Address('erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'), // delegation contract
+          address: new Address('erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'),
           func: new ContractFunction('getUserActiveStake'),
           args: [new AddressValue(new Address(address))]
         });
@@ -88,88 +101,160 @@ export const Home = () => {
     return () => { mounted = false; };
   }, [address, colsStaked]);
 
-  const aprColor = '#1976d2';
+  const totalAprHelpText = `Total APR represents your annual percentage rate based on your staking position.
 
-  const totalAprHelpText = `Total APR represents your annual percentage rate based on your staking status:
-- If you have eGLD delegated, the Total APR applies to your eGLD delegation.
-- If you have no eGLD delegated, the Total APR applies to your COLS token stake.
+• If you have eGLD delegated, the Total APR applies to your eGLD delegation.
+• If you stake COLS tokens, you earn additional APR bonus.
+
 This ensures the APR reflects your actual staking position.`;
+
+  const userApr = userRow?.aprTotal !== null && userRow?.aprTotal !== undefined 
+    ? Number(userRow.aprTotal) 
+    : null;
+  const userRank = userRow?.rank;
+  const leagueInfo = userRank && totalStakers > 0 
+    ? getLeagueInfo(userRank, totalStakers) 
+    : null;
 
   return (
     <div className={styles.landing}>
-      <section className={styles.assetGrid}>
-        <div className={styles.assetCard}>
-          <div className={styles.assetLabel}>eGLD Delegated</div>
-          <div className={styles.assetValue}>
-            {
-              loading || loadingAdditionalEgld
-                ? <><AnimatedDots /> </>
-                : (
-                  +colsStaked === 0 && additionalEgldDelegated !== null
-                    ? formatNumber(additionalEgldDelegated)
-                    : formatNumber(egldDelegatedFromApr)
-                )
-            } EGLD
-          </div>
-          <div className={styles.assetUsd}>
-            ≈ ${Math.floor(
-              +colsStaked === 0 && additionalEgldDelegated !== null
-                ? Number(additionalEgldDelegated) * Number(egldPrice || 0)
-                : Number(egldDelegatedFromApr) * Number(egldPrice || 0)
-            )}
+      {/* Hero Section */}
+      <section className={styles.heroSection}>
+        <div className={styles.heroHeader}>
+          <h1 className={styles.heroGreeting}>
+            Welcome, <span>Staker</span> 👋
+          </h1>
+          <div className={styles.heroBadge}>
+            {loading ? <AnimatedDots /> : `${totalStakers.toLocaleString()} Stakers`}
           </div>
         </div>
 
-        <div className={styles.assetCard}>
-          <div className={styles.assetLabel}>COLS Staked</div>
-          <div className={styles.assetValue}>
-            {loading ? <><AnimatedDots /> </> : formatNumber(colsStaked)} COLS
+        {/* Asset Cards Grid */}
+        <div className={styles.assetGrid}>
+          {/* eGLD Card */}
+          <div className={styles.assetCard}>
+            <div className={styles.assetIcon}>💎</div>
+            <div className={styles.assetLabel}>eGLD Delegated</div>
+            <div className={`${styles.assetValue} ${styles.assetValuePrimary}`}>
+              {loading || loadingAdditionalEgld ? (
+                <><AnimatedDots /></>
+              ) : (
+                formatNumber(actualEgldDelegated, 4)
+              )}
+            </div>
+            <div className={styles.assetUsd}>
+              ≈ ${Math.floor(actualEgldDelegated * Number(egldPrice || 0)).toLocaleString()}
+            </div>
           </div>
-          <div className={styles.assetUsd}>
-            ≈ ${(Number(colsStaked) * Number(colsPrice || 0)).toFixed(2)}
-          </div>
-        </div>
 
-        <div className={styles.assetCard} style={{ minWidth: 260 }}>
-          <div className={styles.assetLabel}>Total Value (USD)</div>
-          <div className={styles.totalValue}>
-            ${Number.isFinite(totalUsd) ? Math.floor(totalUsd).toLocaleString() : '0'}
+          {/* COLS Card */}
+          <div className={styles.assetCardAccent}>
+            <div className={styles.assetIconAccent}>🪙</div>
+            <div className={styles.assetLabel}>COLS Staked</div>
+            <div className={`${styles.assetValue} ${styles.assetValueAccent}`}>
+              {loading ? <><AnimatedDots /></> : formatNumber(colsStaked, 2)}
+            </div>
+            <div className={styles.assetUsd}>
+              ≈ ${(Number(colsStaked) * Number(colsPrice || 0)).toFixed(2)}
+            </div>
           </div>
-          <div className={styles.hint}>
-            Prices: COLS ${Number(colsPrice || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} • eGLD ${Number(egldPrice || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+
+          {/* Total Value Card */}
+          <div className={styles.assetCardTotal}>
+            <div className={styles.assetIcon}>💰</div>
+            <div className={styles.assetLabel}>Total Portfolio Value</div>
+            <div className={styles.totalValue}>
+              {Number.isFinite(totalUsd) ? formatCurrency(totalUsd) : '$0'}
+            </div>
+            <div className={styles.hint}>
+              COLS ${Number(colsPrice || 0).toLocaleString(undefined, { maximumFractionDigits: 4 })} 
+              {' '}• eGLD ${Number(egldPrice || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className={styles.aprPanel} style={{ textAlign: 'center' }}>
-        <div className={styles.APRHeader} style={{ fontSize: 24, fontWeight: 700, background: aprColor, color: '#fff', borderRadius: 8, padding: '4px 12px', display: 'inline-block', marginBottom: 8 }}>
-          <span>Total APR&nbsp;&nbsp;</span>
-          <span className={styles.aprValue} style={{ fontSize: 28, fontWeight: 900 }}>
-            {loading ? <><AnimatedDots /> </> : userRow?.aprTotal !== null && userRow?.aprTotal !== undefined ? Number(userRow.aprTotal).toFixed(2) : '—'}%
-          </span>
+      {/* APR Panel */}
+      <section className={styles.aprPanel}>
+        <div className={styles.aprHeader}>
+          Your Total APR
           <HelpIcon text={totalAprHelpText} />
         </div>
-        <div style={{ marginTop: 8, fontWeight: 600, fontSize: 18, color: '#6ee7c7' }}>
-          Base APR: {loading ? <AnimatedDots /> : baseApr.toFixed(2)}%
+
+        <div className={styles.aprCard}>
+          <div className={styles.aprLabel}>Annual Percentage Rate</div>
+          <div className={`${styles.aprValue} ${styles.aprValueLarge}`}>
+            {loading ? <><AnimatedDots /></> : userApr !== null ? `${userApr.toFixed(2)}%` : '—'}
+          </div>
+        </div>
+
+        <div className={styles.baseAprRow}>
+          Base APR: <span className={styles.baseAprValue}>
+            {loading ? <AnimatedDots /> : `${baseApr.toFixed(2)}%`}
+          </span>
           <HelpIcon text="Base APR is the standard annual percentage rate for all delegators, before any COLS bonus." />
         </div>
-        <div className={styles.ranking} style={{ marginTop: 16, fontSize: 20, fontWeight: 700, color: '#fff', background: aprColor, padding: '4px 16px', borderRadius: 8, boxShadow: '0 2px 8px #fff8', display: 'inline-block', margin: '16px auto 0 auto' }}>
-          <span>Your rank: </span>
-          <span>
-            {loading
-              ? '...'
-              : userRow?.rank !== null && userRow?.rank !== undefined
-                ? `${userRow.rank} out of ${totalStakers} COLS stakers`
-                : 'N/A'}
-          </span>
-          <HelpIcon text="Ranking is based on your total APR compared to other stakers. The more COLS you stake (relative to your eGLD), the higher your rank." />
+
+        {/* Ranking Badge */}
+        {userRank !== null && userRank !== undefined && (
+          <div className={styles.rankingBadge}>
+            <span className={styles.rankingBadgeIcon}>{leagueInfo?.icon}</span>
+            <span>
+              Rank <span className={styles.rankingBadgeRank}>#{userRank}</span> of {totalStakers.toLocaleString()}
+            </span>
+          </div>
+        )}
+
+        {/* Stats Row */}
+        <div className={styles.statsRow}>
+          <div className={styles.statItem}>
+            <div className={`${styles.statValue} ${styles.statValuePrimary}`}>
+              {userApr !== null ? `${(userApr - baseApr).toFixed(2)}%` : '—'}
+            </div>
+            <div className={styles.statLabel}>Bonus APR</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={`${styles.statValue} ${styles.statValueAccent}`}>
+              {leagueInfo?.name || '—'}
+            </div>
+            <div className={styles.statLabel}>Your League</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statValue}>
+              {((actualEgldDelegated * Number(egldPrice || 0) + Number(colsStaked) * Number(colsPrice || 0)) > 0)
+                ? `$${Math.floor(actualEgldDelegated * Number(egldPrice || 0) + Number(colsStaked) * Number(colsPrice || 0)).toLocaleString()}`
+                : '$0'}
+            </div>
+            <div className={styles.statLabel}>Est. Yearly Reward</div>
+          </div>
         </div>
       </section>
 
+      {/* Ranking Table */}
       <RankingTable />
+      
+      {/* Admin Table (only visible for target user) */}
       <ColsAprTable />
     </div>
   );
 };
+
+// League info helper
+function getLeagueInfo(rank: number, total: number) {
+  const percentile = (rank / total) * 100;
+  
+  const leagues = [
+    { name: 'Leviathan', icon: '🐉', color: '#9c27b0', range: [0, 1] },
+    { name: 'Whale', icon: '🐋', color: '#2196f3', range: [1, 5] },
+    { name: 'Shark', icon: '🦈', color: '#03a9f4', range: [5, 15] },
+    { name: 'Dolphin', icon: '🐬', color: '#00bcd4', range: [15, 30] },
+    { name: 'Pufferfish', icon: '🐡', color: '#4caf50', range: [30, 50] },
+    { name: 'Fish', icon: '🐟', color: '#8bc34a', range: [50, 70] },
+    { name: 'Crab', icon: '🦀', color: '#ff9800', range: [70, 90] },
+    { name: 'Shrimp', icon: '🦐', color: '#f44336', range: [90, 100] },
+  ];
+
+  return leagues.find(l => percentile > l.range[0] && percentile <= l.range[1]) || leagues[leagues.length - 1];
+}
 
 export default Home;
