@@ -1,5 +1,5 @@
 /**
- * COLS Distribution Scripts - FIXED
+ * COLS Distribution Scripts - CommonJS version for SDK v15
  * 
  * TWO POOLS:
  * 
@@ -18,12 +18,12 @@
  *   node execute_distribution.mjs --all          # Execute both
  */
 
-import * as fs from "fs";
-import corePkg from "@multiversx/sdk-core";
-const { Address, Transaction, TransactionPayload } = corePkg;
-import { ProxyNetworkProvider } from "@multiversx/sdk-network-providers";
-import walletPkg from "@multiversx/sdk-wallet";
-const { UserSecretKey } = walletPkg;
+const fs = require("fs");
+const sdk = require("@multiversx/sdk-core");
+const { ProxyNetworkProvider } = require("@multiversx/sdk-network-providers");
+const { UserSecretKey } = require("@multiversx/sdk-wallet");
+
+const { Address, TransferTransactionsFactory, TransactionsFactoryConfig, TokenTransfer, Transaction, TransactionComputer } = sdk;
 
 // Configuration
 const NETWORK_PROVIDER = "https://gateway.multiversx.com";
@@ -71,30 +71,23 @@ function stringToHex(str) {
   return Buffer.from(str).toString('hex');
 }
 
-// Helper: Address to hex (32 bytes, not string encoding)
-function addressToHex(bech32) {
-  // Convert bech32 address to its 32-byte hex representation
-  const addr = new (corePkg.Address)(bech32);
-  return addr.pubkey().toString('hex');
-}
-
 /**
- * Build DAO distribution transaction
+ * Build DAO distribution transaction using manual transaction construction
  * 
  * Format: ESDTTransfer@TOKEN_HEX@AMOUNT_HEX@FUNCTION_HEX@ENTITY_HEX
  * This calls the distribute() function on the PeerMe claim contract
  * which distributes tokens proportionally to all COLS stakers
  */
 function buildDaoTransaction(sender, amount) {
-  const tokenIdHex = stringToHex(COLS_TOKEN_ID);
+  // Convert amounts
   const amountHex = colsToHex(amount);
-  const functionHex = stringToHex("distribute");  // IMPORTANT: Must be hex-encoded!
-  const entityHex = addressToHex(COLOMBIA_ENTITY);  // Correct: 32 bytes in hex
+  const functionHex = stringToHex("distribute");
+  const entityHex = new Address(COLOMBIA_ENTITY).getPublicKey().toString('hex');
   
-  // Data format: ESDTTransfer@COLS@AMOUNT@function@entity (all hex)
-  const data = `ESDTTransfer@${tokenIdHex}@${amountHex}@${functionHex}@${entityHex}`;
+  // Build data field for contract call with arguments
+  const data = `ESDTTransfer@${stringToHex(COLS_TOKEN_ID)}@${amountHex}@${functionHex}@${entityHex}`;
   
-  console.log(`   Token hex: ${tokenIdHex}`);
+  console.log(`   Token hex: ${stringToHex(COLS_TOKEN_ID)}`);
   console.log(`   Amount hex: ${amountHex}`);
   console.log(`   Function hex: ${functionHex} ("distribute")`);
   console.log(`   Entity hex: ${entityHex}`);
@@ -106,39 +99,102 @@ function buildDaoTransaction(sender, amount) {
     value: 0n,
     gasLimit: GAS_DAO_DISTRIBUTE,
     chainID: CHAIN_ID,
-    data: new TransactionPayload(Buffer.from(data))
+    data: Buffer.from(data)
   });
 }
 
 /**
- * Build BONUS transfer transaction
- * 
- * Format: ESDTTransfer@TOKEN_HEX@AMOUNT_HEX
- * Simple token transfer to individual address
+ * Build BONUS transfer transaction using TransferTransactionsFactory
  */
 function buildBonusTransaction(sender, recipient, amount) {
-  const tokenIdHex = stringToHex(COLS_TOKEN_ID);
-  const amountHex = colsToHex(amount);
+  const config = new TransactionsFactoryConfig({ chainID: CHAIN_ID });
+  const factory = new TransferTransactionsFactory(config);
   
-  const data = `ESDTTransfer@${tokenIdHex}@${amountHex}`;
+  const transfer = TokenTransfer.fungibleFromAmount(COLS_TOKEN_ID, amount, 18);
   
-  return new Transaction({
+  const transaction = factory.createTransactionForESDTTransfer({
     sender: sender,
     receiver: new Address(recipient),
-    value: 0n,
-    gasLimit: GAS_ESDT_TRANSFER,
-    chainID: CHAIN_ID,
-    data: new TransactionPayload(Buffer.from(data))
+    transfers: [transfer]
   });
+  
+  transaction.gasLimit = GAS_ESDT_TRANSFER;
+  
+  return transaction;
 }
 
 /**
- * Sign and send transaction
+ * Sign and send transaction - Manual implementation
  */
 async function signAndSend(provider, tx, secretKey) {
-  const serialized = tx.serializeForSigning();
+  // Get transaction data for signing
+  const plain = tx.toPlainObject();
+  
+  // Serialize fields for signing (same as TransactionComputer)
+  const fields = [];
+  
+  // Nonce (uint64)
+  const nonceBuf = Buffer.alloc(8);
+  nonceBuf.writeBigUInt64BE(plain.nonce);
+  fields.push(nonceBuf);
+  
+  // Value (bigint uint64)
+  const valueBig = BigInt(plain.value);
+  const valueBuf = Buffer.alloc(8);
+  valueBuf.writeBigUInt64BE(valueBig);
+  fields.push(valueBuf);
+  
+  // Receiver (32 bytes)
+  const receiverBytes = new Address(plain.receiver).getPublicKey().valueOf();
+  fields.push(Buffer.from(receiverBytes));
+  
+  // Sender (32 bytes)
+  const senderBytes = new Address(plain.sender).getPublicKey().valueOf();
+  fields.push(Buffer.from(senderBytes));
+  
+  // Gas price (uint64)
+  const gasPriceBuf = Buffer.alloc(8);
+  gasPriceBuf.writeBigUInt64BE(BigInt(plain.gasPrice));
+  fields.push(gasPriceBuf);
+  
+  // Gas limit (uint64)
+  const gasLimitBuf = Buffer.alloc(8);
+  gasLimitBuf.writeBigUInt64BE(BigInt(plain.gasLimit));
+  fields.push(gasLimitBuf);
+  
+  // Data (bytes)
+  const dataBytes = Buffer.from(plain.data, 'base64');
+  const dataLenBuf = Buffer.alloc(4);
+  dataLenBuf.writeUInt32BE(dataBytes.length);
+  fields.push(dataLenBuf);
+  fields.push(dataBytes);
+  
+  // Chain ID
+  const chainBuf = Buffer.from(plain.chainID);
+  const chainLenBuf = Buffer.alloc(4);
+  chainLenBuf.writeUInt32BE(chainBuf.length);
+  fields.push(chainLenBuf);
+  fields.push(chainBuf);
+  
+  // Version (uint32)
+  const versionBuf = Buffer.alloc(4);
+  versionBuf.writeUInt32BE(plain.version);
+  fields.push(versionBuf);
+  
+  // Options (uint32, default 0)
+  const optionsBuf = Buffer.alloc(4);
+  optionsBuf.writeUInt32BE(plain.options || 0);
+  fields.push(optionsBuf);
+  
+  // Concatenate all fields
+  const serialized = Buffer.concat(fields);
+  
+  // Sign
   const signature = secretKey.sign(serialized);
-  tx.applySignature(signature);
+  
+  // Apply signature to transaction
+  tx.signature = signature;
+  
   return await provider.sendTransaction(tx);
 }
 
@@ -160,17 +216,21 @@ async function main() {
   }
   
   console.log("═".repeat(70));
-  console.log("🚀 COLS DISTRIBUTION EXECUTOR (FIXED)");
+  console.log("🚀 COLS DISTRIBUTION EXECUTOR (SDK v15)");
   console.log("═".repeat(70));
   console.log(`Time: ${new Date().toISOString()}`);
   console.log("");
   
   // Setup
-  const provider = new ProxyNetworkProvider(NETWORK_PROVIDER);
+  const provider = new ProxyNetworkProvider(NETWORK_PROVIDER, { timeout: 30000 });
   const secretKey = loadWallet();
-  const senderAddress = secretKey.generatePublicKey().toAddress();
+  const senderPublicKey = secretKey.generatePublicKey();
+  // UserAddress for provider calls, Address for TransactionComputer
+  const senderAddress = senderPublicKey.toAddress();
+  const senderAddressForTx = new Address(senderPublicKey.valueOf());
+  const senderBech32 = senderAddress.bech32();
   
-  console.log(`Wallet: ${senderAddress.bech32()}`);
+  console.log(`Wallet: ${senderBech32}`);
   
   // Check balance
   const account = await provider.getAccount(senderAddress);
@@ -200,7 +260,7 @@ async function main() {
   console.log(`   Total: ${(daoAmount + totalBonus).toFixed(6)} COLS`);
   console.log("");
   
-  let nonce = account.nonce;
+  let nonce = Number(account.nonce);
   const results = { dao: null, bonus: [] };
   
   // =============================================
@@ -218,7 +278,7 @@ async function main() {
     console.log("");
     
     const daoTx = buildDaoTransaction(senderAddress, daoAmount);
-    daoTx.nonce = nonce;
+    daoTx.nonce = BigInt(nonce);
     
     try {
       const hash = await signAndSend(provider, daoTx, secretKey);
@@ -249,7 +309,7 @@ async function main() {
     
     for (const recipient of bonusRecipients) {
       const tx = buildBonusTransaction(senderAddress, recipient.address, recipient.amount);
-      tx.nonce = nonce;
+      tx.nonce = BigInt(nonce);
       
       try {
         const hash = await signAndSend(provider, tx, secretKey);
