@@ -24,11 +24,12 @@ const Root = () => {
   return <App />;
 };
 
-// Configure initApp with walletConnectV2ProjectId
+// Configure initApp with walletConnectV2ProjectId and nativeAuth
 const config: InitAppType = {
   storage: { getStorageCallback: () => sessionStorage },
   dAppConfig: {
     environment: network.id as unknown as EnvironmentsEnum,
+    nativeAuth: true,
     providers: {
       walletConnect: {
         walletConnectV2ProjectId: '9b1a9564f91cb659ffe21b73d5c4e2d8'
