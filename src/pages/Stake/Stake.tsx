@@ -32,9 +32,12 @@ export const Stake = () => {
   const userRow = stakers.find((s: any) => s.address === address);
   const colsStaked = userRow?.colsStaked ? Number(userRow.colsStaked) : 0;
 
-  // Get claimable COLS
-  const claimableColsValue = claimableCols.status === 'loaded' 
-    ? Number(claimableCols.data || '0') 
+  // Get claimable COLS (raw value needs to be divided by 1e18)
+  const claimableColsRaw = claimableCols.status === 'loaded' 
+    ? claimableCols.data 
+    : null;
+  const claimableColsValue = claimableColsRaw 
+    ? Number(claimableColsRaw) / 1e18 
     : 0;
 
   // Fetch COLS wallet balance
