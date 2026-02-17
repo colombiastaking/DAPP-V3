@@ -22,7 +22,7 @@ export const Delegate = () => {
   // Minimum delegation amount is 1 eGLD
   const minAmount = 1;
 
-  // Validation schema: only require number >= 1, no max limit
+  // Validation schema
   const validationSchema = object().shape({
     amount: string()
       .required('Required')
@@ -36,15 +36,16 @@ export const Delegate = () => {
     <div className={`${styles.wrapper} delegate-wrapper`}>
       <Action
         title='Delegate eGLD'
-        description={`Enter the amount of ${network.egldLabel} you want to delegate.`}
+        description={`Enter the amount of ${network.egldLabel} you want to delegate to Colombia Staking.`}
         disabled={pending}
         trigger={
           <div
-            className={classNames(styles.trigger, {
+            className={classNames(styles.trigger, styles.triggerPrimary, {
               [styles.disabled]: pending
             })}
           >
-            Delegate eGLD
+            <span className={styles.triggerIcon}>⚡</span>
+            <span className={styles.triggerLabel}>Delegate</span>
           </div>
         }
         render={(onClose: ActionCallbackType) => (
@@ -73,8 +74,10 @@ export const Delegate = () => {
                 return (
                   <form onSubmit={handleSubmit}>
                     <div className={styles.field}>
-                      <label htmlFor='amount'>{network.egldLabel} Amount</label>
-                      <div className={styles.group} style={{ position: 'relative' }}>
+                      <label htmlFor='amount' className={styles.label}>
+                        {network.egldLabel} Amount
+                      </label>
+                      <div className={styles.inputWrapper}>
                         <input
                           type='number'
                           name='amount'
@@ -88,38 +91,27 @@ export const Delegate = () => {
                           className={classNames(styles.input, {
                             [styles.invalid]: errors.amount && touched.amount
                           })}
+                          placeholder="0.00"
                         />
                         <button
                           type='button'
                           onClick={onMaxClick}
                           className={styles.maxButton}
-                          style={{
-                            position: 'absolute',
-                            right: 8,
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: '#303234',
-                            color: '#fff',
-                            borderRadius: 6,
-                            border: 'none',
-                            padding: '6px 12px',
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            fontSize: 14
-                          }}
                           disabled={pending}
                         >
-                          Max
+                          MAX
                         </button>
                       </div>
-
+                      <div className={styles.balance}>
+                        Available: <span>{balanceEgld.toFixed(6)} {network.egldLabel}</span>
+                      </div>
                       {errors.amount && touched.amount && (
                         <span className={styles.error}>{errors.amount}</span>
                       )}
                     </div>
 
                     <Submit
-                      save='Continue'
+                      save='Delegate Now'
                       onClose={() => {
                         setFieldValue('amount', minAmount.toString());
                       }}

@@ -7,7 +7,7 @@ import { network } from "config";
 import { useGlobalContext } from "context";
 import { AnimatedDots } from "components/AnimatedDots";
 
-// No need for denominateEgld, value is already formatted in context
+import styles from './ClaimEgldButton.module.scss';
 
 export function ClaimEgldButton({ onClaimed }: { onClaimed: () => void }) {
   const { address } = useGetAccountInfo();
@@ -58,53 +58,29 @@ export function ClaimEgldButton({ onClaimed }: { onClaimed: () => void }) {
   };
 
   const isDisabled = pending || txLoading || loading || !address;
+  const hasRewards = claimable !== null && Number(claimable) > 0;
 
   return (
     <button
       type="button"
-      style={{
-        background: "#6ee7c7",
-        color: "#181a1b",
-        fontWeight: 700,
-        borderRadius: 7,
-        padding: "15px 30px",
-        border: "none",
-        marginRight: 0,
-        marginBottom: 0,
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        fontSize: 16,
-        boxShadow: "0 2px 8px #6ee7c7aa"
-      }}
+      className={classNames(
+        styles.button,
+        hasRewards ? styles.buttonAccent : styles.buttonSecondary
+      )}
       onClick={handleClaimEgld}
-      className={classNames("claim-egld-btn")}
       disabled={isDisabled}
     >
-      <span role="img" aria-label="gift">🎁</span>
-      Claim eGLD
+      <span className={styles.icon}>🎁</span>
+      <span className={styles.label}>Claim</span>
       {loading ? (
-        <span style={{ marginLeft: 8, fontSize: 14 }}><AnimatedDots /></span>
+        <span className={styles.badge}><AnimatedDots /></span>
       ) : (
-        <span style={{
-          marginLeft: 8,
-          fontWeight: 900,
-          color: "#1976d2",
-          background: "#fff",
-          borderRadius: 6,
-          padding: "2px 10px",
-          fontSize: 15
-        }}>
-          {claimable !== null ? Number(claimable).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : "—"}
+        <span className={styles.badge}>
+          {claimable !== null ? `${Number(claimable).toFixed(4)} eGLD` : "—"}
         </span>
       )}
-      <span role="img" aria-label="gift">🎁</span>
-      {txLoading && (
-        <span style={{ marginLeft: 8, fontSize: 14 }}><AnimatedDots /></span>
-      )}
-      {error && (
-        <span style={{ color: "#b71c1c", marginLeft: 8, fontSize: 13 }}>{error}</span>
-      )}
+      {txLoading && <span className={styles.loading}><AnimatedDots /></span>}
+      {error && <span className={styles.error}>{error}</span>}
     </button>
   );
 }

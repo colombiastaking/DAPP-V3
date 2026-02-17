@@ -1,101 +1,184 @@
+// Undelegate Component Styles
+// Colombia Staking Theme
+
+$primary: #62dbb8;
+$primary-dark: #4bc9a1;
+$accent: #d33682;
+$warning: #ff9800;
+$background: #0a0a0a;
+$card-bg: #1a1a1a;
+$card-bg-hover: #252525;
+$text-primary: #ffffff;
+$text-secondary: #a0a0a0;
+$text-muted: #6a6a6a;
+$border-color: rgba(98, 219, 184, 0.2);
+
 .wrapper {
+  display: contents;
+}
+
+.trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+  text-decoration: none;
   width: 100%;
 
-  .trigger {
-    background: #303234;
-    justify-content: center;
-    display: flex;
-    align-items: center;
-    padding: 15px 30px;
-    border-radius: 7px;
-    color: white;
-    border: none;
-    font-size: 14px;
-    width: 100%;
-    margin-bottom: 10px;
-
-    @media (min-width: 576px) {
-      width: 150px;
-      margin-bottom: 0;
-    }
-
-    &.disabled {
-      pointer-events: none;
-      color: rgba(white, 0.5);
-      background-color: #303234 !important;
-    }
+  &:hover:not(.disabled) {
+    transform: translateY(-2px);
   }
 
-  @media (max-width: 575px) {
-    button {
-      width: 100%;
-    }
+  &:active:not(.disabled) {
+    transform: translateY(0);
   }
 }
 
+.triggerPrimary {
+  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+  color: $background;
+  box-shadow: 0 4px 15px rgba($primary, 0.3);
+
+  &:hover:not(.disabled) {
+    box-shadow: 0 6px 25px rgba($primary, 0.4);
+  }
+}
+
+.triggerWarning {
+  background: $card-bg-hover;
+  color: $warning;
+  border: 1px solid rgba($warning, 0.3);
+
+  &:hover:not(.disabled) {
+    border-color: $warning;
+    box-shadow: 0 4px 15px rgba($warning, 0.2);
+  }
+}
+
+.triggerIcon {
+  font-size: 24px;
+}
+
+.triggerLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  filter: grayscale(0.5);
+}
+
+// Form styles
 .undelegate {
-  .field {
-    label {
-      text-align: left;
-      display: block;
-      line-height: 1;
-      color: #808ea3;
-      font-size: 12px;
-      margin-bottom: 10px;
-    }
+  width: 100%;
+}
 
-    .group {
-      position: relative;
+.field {
+  margin-bottom: 20px;
+}
 
-      .input {
-        width: 100%;
-        padding: 15px;
-        font-size: 12px;
-        line-height: 1;
-        color: white;
-        background: #202020;
-        border-radius: 6px;
-        border: none;
-        outline: none;
-      }
+.label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-secondary;
+  margin-bottom: 10px;
+  text-align: left;
+}
 
-      .max {
-        position: absolute;
-        display: flex;
-        background: #303234;
-        justify-content: center;
-        line-height: 1;
-        color: white !important;
-        border-radius: 6px;
-        align-items: center;
-        right: 5px;
-        top: 5px;
-        bottom: 5px;
-        text-decoration: none;
-        padding: 10px;
-      }
-    }
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
 
-    .description {
-      line-height: 1;
-      color: white;
-      margin-top: 10px;
-      font-size: 12px;
-      display: block;
-      text-align: left;
+.input {
+  width: 100%;
+  padding: 16px 80px 16px 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: $text-primary;
+  background: $card-bg;
+  border: 1px solid $border-color;
+  border-radius: 12px;
+  outline: none;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
 
-      span {
-        margin-right: 5px;
-        color: #808ea3;
-      }
-    }
+  &::placeholder {
+    color: $text-muted;
   }
 
-  .error {
-    margin-top: 1rem;
-    font-size: 0.75rem;
-    color: #f53855;
-    display: block;
-    line-height: 1;
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba($primary, 0.2);
   }
+
+  &.invalid {
+    border-color: #f44336;
+    box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.2);
+  }
+
+  // Hide number spinners
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  -moz-appearance: textfield;
+}
+
+.maxButton {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+  color: $background;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-50%) scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.balance {
+  margin-top: 8px;
+  font-size: 12px;
+  color: $text-muted;
+  text-align: left;
+
+  span {
+    color: $primary;
+    font-weight: 600;
+  }
+}
+
+.error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #f44336;
+  display: block;
+  text-align: left;
 }

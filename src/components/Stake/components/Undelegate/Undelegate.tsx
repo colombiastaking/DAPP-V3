@@ -16,8 +16,7 @@ export const Undelegate = () => {
   const { pending } = useGetActiveTransactionsStatus();
   const { userActiveStake } = useGlobalContext();
 
-  // Use delegated eGLD amount from global context (string in smallest unit)
-  // Same method as User main tab
+  // Use delegated eGLD amount from global context
   const delegatedRaw = userActiveStake.data || '0';
   let delegatedEgld = 0;
   try {
@@ -27,7 +26,7 @@ export const Undelegate = () => {
     delegatedEgld = 0;
   }
 
-  // Validation schema: require positive number, no max limit
+  // Validation schema
   const validationSchema = object().shape({
     amount: string()
       .required('Required')
@@ -40,16 +39,17 @@ export const Undelegate = () => {
   return (
     <div className={classNames(styles.wrapper, 'undelegate-wrapper')}>
       <Action
-        title='Undelegate Now'
-        description={`Enter the amount of ${network.egldLabel} you want to undelegate.`}
+        title='Undelegate eGLD'
+        description={`Enter the amount of ${network.egldLabel} you want to undelegate. Your funds will be available after the unbonding period.`}
         disabled={pending}
         trigger={
           <div
-            className={classNames(styles.trigger, {
+            className={classNames(styles.trigger, styles.triggerWarning, {
               [styles.disabled]: pending
             })}
           >
-            Undelegate
+            <span className={styles.triggerIcon}>🔓</span>
+            <span className={styles.triggerLabel}>Undelegate</span>
           </div>
         }
         render={(callback: ActionCallbackType) => (
@@ -82,8 +82,10 @@ export const Undelegate = () => {
                 return (
                   <form onSubmit={handleSubmit}>
                     <div className={styles.field}>
-                      <label htmlFor='amount'>{network.egldLabel} Amount</label>
-                      <div className={styles.group} style={{ position: 'relative' }}>
+                      <label htmlFor='amount' className={styles.label}>
+                        {network.egldLabel} Amount to Undelegate
+                      </label>
+                      <div className={styles.inputWrapper}>
                         <input
                           type='number'
                           name='amount'
@@ -97,38 +99,27 @@ export const Undelegate = () => {
                           className={classNames(styles.input, {
                             [styles.invalid]: errors.amount && touched.amount
                           })}
+                          placeholder="0.00"
                         />
                         <button
                           type='button'
                           onClick={onMaxClick}
                           className={styles.maxButton}
-                          style={{
-                            position: 'absolute',
-                            right: 8,
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: '#303234',
-                            color: '#fff',
-                            borderRadius: 6,
-                            border: 'none',
-                            padding: '6px 12px',
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            fontSize: 14
-                          }}
                           disabled={pending || delegatedEgld === 0}
                         >
-                          Max
+                          MAX
                         </button>
                       </div>
-
+                      <div className={styles.balance}>
+                        Delegated: <span>{delegatedEgld.toFixed(6)} {network.egldLabel}</span>
+                      </div>
                       {errors.amount && touched.amount && (
                         <span className={styles.error}>{errors.amount}</span>
                       )}
                     </div>
 
                     <Submit
-                      save='Continue'
+                      save='Undelegate Now'
                       onClose={() => {
                         setFieldValue('amount', '0');
                       }}

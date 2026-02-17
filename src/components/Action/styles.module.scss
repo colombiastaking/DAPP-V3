@@ -1,79 +1,122 @@
+// Action Modal Styles
+// Colombia Staking Theme
+
+$primary: #62dbb8;
+$primary-dark: #4bc9a1;
+$accent: #d33682;
+$background: #0a0a0a;
+$card-bg: #1a1a1a;
+$card-bg-hover: #252525;
+$text-primary: #ffffff;
+$text-secondary: #a0a0a0;
+$text-muted: #6a6a6a;
+$border-color: rgba(98, 219, 184, 0.2);
+
 .action {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: contents;
+}
+
+.trigger {
+  background: none;
+  border: none;
+  padding: 0;
   width: 100%;
+  display: contents;
+  cursor: pointer;
 
-  .trigger {
-    background: none;
-    border: none;
-    padding: 0;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    &.disabled {
-      pointer-events: none;
-    }
+  &.disabled {
+    pointer-events: none;
   }
 }
 
 .modal {
-  padding: 30px;
+  padding: 32px;
   text-align: center;
-  background: #242526;
-  border: 1px solid #49494d;
-  box-shadow: 0px 8px 32px rgba(0, 0, 0, 0.16);
-  border-radius: 12px;
-  max-width: 400px;
+  background: $card-bg;
+  border: 1px solid $border-color;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba($primary, 0.1);
+  border-radius: 24px;
+  max-width: 420px;
   width: 100%;
   margin: 0 auto;
+  position: relative;
+  overflow: hidden;
 
-  .title {
-    margin-bottom: 15px;
-    font-weight: bold;
-    font-size: 18px;
-    line-height: 1;
-    color: #ffffff;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, $primary, $accent);
   }
+}
 
-  .description {
+.title {
+  margin: 0 0 12px 0;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.2;
+  color: $text-primary;
+  font-family: 'Lustria', serif;
+}
+
+.description {
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+  margin: 0 auto 24px;
+  color: $text-secondary;
+  max-width: 320px;
+}
+
+.render {
+  margin-top: 8px;
+}
+
+.buttons {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  .button {
+    flex: 1;
+    background: $card-bg-hover;
+    border: 1px solid $border-color;
+    border-radius: 12px;
+    color: $text-secondary;
+    padding: 14px 20px;
     font-size: 14px;
-    line-height: 1.25;
-    text-align: center;
-    margin: 0 auto;
-    color: #9ba5b4;
-    max-width: 300px;
-  }
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
 
-  .render {
-    margin-top: 30px;
+    &:hover {
+      background: lighten($card-bg-hover, 5%);
+      border-color: rgba($primary, 0.3);
+      color: $text-primary;
+    }
 
-    .buttons {
-      margin-top: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+    &.blue {
+      background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+      border: none;
+      color: $background;
+      font-weight: 700;
+      box-shadow: 0 4px 15px rgba($primary, 0.3);
 
-      .button {
-        width: 100%;
-        background: #303234;
-        border-radius: 7px;
-        color: white;
-        padding: 10px;
-        border: none;
-
-        &.blue {
-          background: #2044f5;
-        }
+      &:hover {
+        box-shadow: 0 6px 25px rgba($primary, 0.4);
+        transform: translateY(-1px);
       }
     }
   }
 }
 
-/* --- MODAL CENTERING FIX --- */
+/* Modal Centering */
 :global(.modal-container),
 :global(.modal-dialog) {
   position: fixed !important;
@@ -86,7 +129,8 @@
   justify-content: center !important;
   margin: 0 !important;
   z-index: 1050 !important;
-  background: none !important;
+  background: rgba($background, 0.8) !important;
+  backdrop-filter: blur(8px) !important;
   pointer-events: auto !important;
 }
 
@@ -101,13 +145,28 @@
 
 :global(.modal-content) {
   margin: 0 auto !important;
-  border-radius: 12px;
+  border-radius: 24px !important;
   background: transparent !important;
-  box-shadow: 0px 8px 32px rgba(0, 0, 0, 0.16);
+  box-shadow: none !important;
+  border: none !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  max-width: 400px;
+  max-width: 420px;
   width: 100%;
   pointer-events: auto !important;
+}
+
+:global(.modal-backdrop) {
+  background: rgba($background, 0.8) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+:global(.modal-header),
+:global(.modal-footer) {
+  display: none !important;
+}
+
+:global(.modal-body) {
+  padding: 0 !important;
 }

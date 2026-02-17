@@ -159,10 +159,17 @@ export const Withdrawals = () => {
     return null;
   }
 
+  const pendingCount = undelegatedStakeList.data?.length || 0;
+
   return (
     <div className={`${styles.withdrawals} withdrawals`}>
       <div className={styles.heading}>
-        <span className={styles.title}>Pending Withdrawals</span>
+        <h3 className={styles.title}>
+          Pending Withdrawals
+          {pendingCount > 0 && (
+            <span className={styles.badge}>{pendingCount}</span>
+          )}
+        </h3>
       </div>
 
       <div className={styles.body}>

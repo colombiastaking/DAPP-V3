@@ -1,47 +1,214 @@
+// Delegate Component Styles
+// Colombia Staking Theme
+
+$primary: #62dbb8;
+$primary-dark: #4bc9a1;
+$accent: #d33682;
+$background: #0a0a0a;
+$card-bg: #1a1a1a;
+$card-bg-hover: #252525;
+$text-primary: #ffffff;
+$text-secondary: #a0a0a0;
+$text-muted: #6a6a6a;
+$border-color: rgba(98, 219, 184, 0.2);
+
 .wrapper {
+  display: contents;
+}
+
+.trigger {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+  text-decoration: none;
   width: 100%;
 
-  @media (min-width: 576px) {
-    margin-left: 10px;
-    align-items: flex-start;
+  &:hover:not(.disabled) {
+    transform: translateY(-2px);
   }
 
-  .trigger {
-    background: #6ee7c7;
-    justify-content: center;
-    display: flex;
-    align-items: center;
-    padding: 15px 30px;
-    border-radius: 8px;
-    color: #181a1b;
-    border: none;
-    font-size: 16px;
-    font-weight: 700;
-    width: 180px;
-    box-shadow: 0 2px 8px #6ee7c7aa;
-    transition: box-shadow 0.2s;
-
-    &:hover:not(.disabled) {
-      box-shadow: 0 4px 16px #4f8cffcc;
-      cursor: pointer;
-    }
-
-    &.disabled {
-      pointer-events: none;
-      color: rgba(24, 26, 27, 0.5);
-      background-color: #303234 !important;
-      box-shadow: none;
-    }
-  }
-
-  @media (max-width: 575px) {
-    button, .trigger {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-    }
+  &:active:not(.disabled) {
+    transform: translateY(0);
   }
 }
+
+.triggerPrimary {
+  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+  color: $background;
+  box-shadow: 0 4px 15px rgba($primary, 0.3);
+
+  &:hover:not(.disabled) {
+    box-shadow: 0 6px 25px rgba($primary, 0.4);
+  }
+}
+
+.triggerSecondary {
+  background: $card-bg-hover;
+  color: $text-primary;
+  border: 1px solid $border-color;
+
+  &:hover:not(.disabled) {
+    border-color: $primary;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.triggerAccent {
+  background: linear-gradient(135deg, $accent 0%, #e85a8a 100%);
+  color: $text-primary;
+  box-shadow: 0 4px 15px rgba($accent, 0.3);
+
+  &:hover:not(.disabled) {
+    box-shadow: 0 6px 25px rgba($accent, 0.4);
+  }
+}
+
+.triggerWarning {
+  background: $card-bg-hover;
+  color: #ff9800;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+
+  &:hover:not(.disabled) {
+    border-color: #ff9800;
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.2);
+  }
+}
+
+.triggerIcon {
+  font-size: 24px;
+}
+
+.triggerLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.triggerBadge {
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  filter: grayscale(0.5);
+}
+
+// Form styles
+.delegate {
+  width: 100%;
+}
+
+.field {
+  margin-bottom: 20px;
+}
+
+.label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-secondary;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: 16px 80px 16px 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: $text-primary;
+  background: $card-bg;
+  border: 1px solid $border-color;
+  border-radius: 12px;
+  outline: none;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+
+  &::placeholder {
+    color: $text-muted;
+  }
+
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba($primary, 0.2);
+  }
+
+  &.invalid {
+    border-color: #f44336;
+    box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.2);
+  }
+
+  // Hide number spinners
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  -moz-appearance: textfield;
+}
+
+.maxButton {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+  color: $background;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-50%) scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.balance {
+  margin-top: 8px;
+  font-size: 12px;
+  color: $text-muted;
+  text-align: left;
+
+  span {
+    color: $primary;
+    font-weight: 600;
+  }
+}
+
+.error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #f44336;
+  display: block;
+  text-align: left;
+}
+
+// Modal styles are in Action/styles.module.scss

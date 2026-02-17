@@ -1,127 +1,193 @@
+// Withdrawal Item Styles
+// Colombia Staking Theme
+
+$primary: #62dbb8;
+$primary-dark: #4bc9a1;
+$accent: #d33682;
+$warning: #ff9800;
+$background: #0a0a0a;
+$card-bg: #1a1a1a;
+$card-bg-hover: #252525;
+$text-primary: #ffffff;
+$text-secondary: #a0a0a0;
+$text-muted: #6a6a6a;
+$border-color: rgba(98, 219, 184, 0.2);
+
 .withdrawal {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  display: flex;
-  background: #242526;
-  border: 1px solid #49494d;
-  border-radius: 8px;
+  background: $card-bg;
+  border: 1px solid $border-color;
+  border-radius: 16px;
+  padding: 16px;
   flex-wrap: wrap;
-  padding: 15px;
+  gap: 12px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba($primary, 0.3);
+    background: $card-bg-hover;
+  }
 
   &:not(:last-child) {
-    margin-bottom: 15px;
+    margin-bottom: 0;
   }
+}
 
-  .left {
-    display: flex;
-    align-items: center;
-    width: 50%;
+.left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
 
-    .icon {
-      flex-shrink: 0;
-      width: 45px;
-      height: 45px;
-      justify-content: center;
-      display: flex;
-      align-items: center;
-      border: 1px solid #49494d;
-      border-radius: 50%;
-      background: #303234;
-      display: none;
+.icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba($primary, 0.2) 0%, rgba($primary, 0.1) 100%);
+  border: 1px solid rgba($primary, 0.3);
+  border-radius: 12px;
 
-      svg {
-        max-width: 20px;
-      }
-    }
-
-    .data {
-      line-height: 1;
-      font-size: 14px;
-
-      .value {
-        margin-bottom: 5px;
-        font-weight: bold;
-        display: block;
-      }
-
-      .amount {
-        color: #808ea3;
-      }
-    }
+  svg {
+    width: 24px;
+    height: 24px;
   }
+}
 
-  .right {
-    width: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    text-align: right;
+.data {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.value {
+  font-size: 18px;
+  font-weight: 700;
+  color: $text-primary;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+
+  &::after {
+    content: 'eGLD';
+    font-size: 12px;
+    font-weight: 500;
+    color: $primary;
+    text-transform: uppercase;
   }
+}
 
-  .withdraw {
-    background: #2044f5;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 6px;
-    color: white;
-    font-size: 14px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
+.amount {
+  font-size: 13px;
+  color: $text-secondary;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 
-    @media (min-width: 576px) {
-      padding: 15px 25px;
-
-      svg {
-        margin-right: 8px;
-      }
-    }
-
-    &.disabled {
-      pointer-events: none;
-      background: #303234;
-      color: rgba(white, 0.5);
-    }
-
-    @media (max-width: 575px) {
-      span {
-        display: none;
-      }
-    }
+  &::before {
+    content: '≈';
+    color: $text-muted;
   }
+}
 
-  .time {
-    line-height: 1;
-    font-size: 14px;
+.right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+
+  @media (max-width: 575px) {
     display: none;
-    margin-top: 15px;
-    text-align: right;
-    white-space: nowrap;
+  }
+}
 
-    @media (min-width: 576px) {
-      display: block;
-      margin-right: 15px;
-      margin-top: 0;
+.date {
+  font-size: 16px;
+  font-weight: 700;
+  color: $warning;
+  font-family: 'Poppins', monospace;
+}
+
+.label {
+  font-size: 11px;
+  color: $text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.withdraw {
+  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+  border: none;
+  padding: 12px 20px;
+  border-radius: 12px;
+  color: $background;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+  box-shadow: 0 2px 10px rgba($primary, 0.3);
+
+  svg {
+    font-size: 12px;
+  }
+
+  &:hover:not(.disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba($primary, 0.4);
+  }
+
+  &.disabled {
+    pointer-events: none;
+    background: $card-bg-hover;
+    color: $text-muted;
+    box-shadow: none;
+  }
+
+  @media (max-width: 575px) {
+    padding: 10px 16px;
+    font-size: 13px;
+
+    span:not(svg) {
+      display: none;
     }
+  }
+}
 
-    &.mobile {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
+.mobile {
+  display: none;
 
-      @media (min-width: 576px) {
-        display: none;
-      }
-    }
+  @media (max-width: 575px) {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid $border-color;
+    margin-top: 4px;
 
     .date {
-      margin-bottom: 5px;
-      font-weight: bold;
-      display: block;
-    }
-
-    .label {
-      color: #808ea3;
+      font-size: 14px;
     }
   }
 }
