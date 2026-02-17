@@ -15,7 +15,7 @@ export const Unlock = () => {
 
   const unlockPanelManager = UnlockPanelManager.init({
     loginHandler: () => {
-      navigate(routeNames.dashboard);
+      navigate(routeNames.user);
     },
     onClose: async () => {
       setPanelOpened(false);
@@ -24,7 +24,7 @@ export const Unlock = () => {
 
   useEffect(() => {
     if (isLoggedIn) {
-      navigate(routeNames.dashboard);
+      navigate(routeNames.user);
     }
   }, [isLoggedIn, navigate]);
 
