@@ -1,0 +1,1 @@
+export { GoldMember } from './GoldMember';

@@ -9,6 +9,7 @@ import { Delegation } from './pages/Delegation';
 import { Stake } from './pages/Stake';
 import { Simulation } from './pages/Simulation';
 import { Info } from './pages/Info';
+import { GoldMember } from './pages/GoldMember';
 
 export interface RouteType {
   path: string;
@@ -25,6 +26,7 @@ export const routeNames = {
   stake: '/stake',
   simulation: '/simulation',
   info: '/info',
+  goldMember: '/gold',
   transaction: '/transaction',
   unlock: '/unlock',
   ledger: '/ledger',
@@ -72,6 +74,12 @@ const routes: RouteType[] = [
     path: routeNames.info,
     title: 'Info',
     component: Info,
+    authenticatedRoute: true
+  },
+  {
+    path: routeNames.goldMember,
+    title: 'Gold Member',
+    component: GoldMember,
     authenticatedRoute: true
   },
   {

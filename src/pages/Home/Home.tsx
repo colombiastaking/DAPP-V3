@@ -2,6 +2,7 @@ import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAcco
 import { Link } from 'react-router-dom';
 import { useGlobalContext } from 'context';
 import { useColsAprContext } from '../../context/ColsAprContext';
+import { useGoldMember, calculateEffectiveApr } from '../../hooks/useGoldMember';
 import { AnimatedDots } from 'components/AnimatedDots';
 import { HelpIcon } from 'components/HelpIcon';
 import { ColsAprTable } from 'components/ColsAprTable';
@@ -30,11 +31,12 @@ export const Home = () => {
   const { stakers, loading, egldPrice, colsPrice, baseApr, aprMax } = useColsAprContext();
   const { userActiveStake } = useGlobalContext();
   
-  // Note: usePreloadData() is already called in Layout.tsx - don't call again here
-
+  // Gold Member detection
+  const { isGoldMember, goldNftCount, goldCapacityEgld } = useGoldMember(address);
+  
   // Find user row in stakers
   const userRow = stakers.find((s: any) => s.address === address) ?? null;
-
+  
   // Get delegated eGLD from context (converted from raw to eGLD)
   const delegatedEgld = userActiveStake.status === 'loaded' 
     ? Number(userActiveStake.data || '0') / 1e18 
@@ -48,6 +50,10 @@ export const Home = () => {
   const actualEgldDelegated = colsStaked > 0 
     ? egldDelegatedFromStakers 
     : delegatedEgld;
+  
+  // Calculate Gold member effective APR
+  const { effectiveApr: goldEffectiveApr, goldBonusApr } = 
+    calculateEffectiveApr(baseApr, actualEgldDelegated, goldCapacityEgld);
 
   const totalUsd =
     (actualEgldDelegated * Number(egldPrice || 0)) +
@@ -67,6 +73,7 @@ export const Home = () => {
 
 • If you have eGLD delegated, the Total APR applies to your eGLD delegation.
 • If you stake COLS tokens, you earn additional APR bonus.
+${isGoldMember ? `\n🌟 GOLD MEMBER: You have ${goldNftCount} Gold NFT(s) giving ${goldCapacityEgld} eGLD at 0% service fee!\n• Gold Bonus APR: +${goldBonusApr.toFixed(2)}%\n• Your effective APR: ${goldEffectiveApr.toFixed(2)}%` : ''}
 
 This ensures the APR reflects your actual staking position.`;
 
@@ -250,6 +257,12 @@ This ensures the APR reflects your actual staking position.`;
 
       {/* APR Panel */}
       <section className={styles.aprPanel}>
+        {isGoldMember && actualEgldDelegated > 0 && (
+          <div className={styles.goldMemberBanner}>
+            <span>👑</span> Gold Member: {goldNftCount} NFT{goldNftCount > 1 ? 's' : ''} • {goldCapacityEgld} eGLD at 0% fee • +{goldBonusApr.toFixed(2)}% APR bonus
+          </div>
+        )}
+        
         <div className={styles.aprHeader}>
           Your Total APR
           <HelpIcon text={totalAprHelpText} />
@@ -259,6 +272,7 @@ This ensures the APR reflects your actual staking position.`;
           <div className={styles.aprLabel}>Annual Percentage Rate</div>
           <div className={`${styles.aprValue} ${styles.aprValueLarge}`}>
             {loading ? <><AnimatedDots /></> : userApr !== null ? `${userApr.toFixed(2)}%` : '—'}
+            {isGoldMember && goldBonusApr > 0 && <span className={styles.goldBonusBadge}> +{goldBonusApr.toFixed(2)}% Gold</span>}
           </div>
         </div>
 

@@ -7,7 +7,8 @@ import {
   faHandshake,
   faUser,
   faCalculator,
-  faInfoCircle
+  faInfoCircle,
+  faCrown
 } from '@fortawesome/free-solid-svg-icons';
 import { emitNavTabChange } from 'utils/navEvents';
 import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
@@ -62,6 +63,17 @@ const TABS: TabType[] = [
       <FontAwesomeIcon
         icon={faUser}
         style={{ color: themeColors.inactiveColor }}
+      />
+    )
+  },
+  {
+    key: 'gold',
+    label: 'Gold',
+    path: '/gold',
+    icon: (
+      <FontAwesomeIcon
+        icon={faCrown}
+        style={{ color: '#fbbf24' }}
       />
     )
   },
