@@ -96,6 +96,39 @@ This ensures the APR reflects your actual staking position.`;
 
   return (
     <div className={styles.landing}>
+      {/* Gold Member Hero Banner - Show for Gold members with holdings */}
+      {isGoldMember && actualEgldDelegated > 0 && !hasNoHoldings && (
+        <section className={styles.goldHeroBanner}>
+          <div className={styles.goldHeroContent}>
+            <div className={styles.goldHeroBadge}>
+              <span className={styles.goldHeroIcon}>👑</span>
+              <span>GOLD MEMBER</span>
+            </div>
+            <h2 className={styles.goldHeroTitle}>Welcome back, Gold Member!</h2>
+            <p className={styles.goldHeroText}>
+              You have <strong>{goldNftCount} Gold NFT{goldNftCount > 1 ? 's' : ''}</strong> giving you 
+              <strong> {goldCapacityEgld} eGLD</strong> at 0% service fee
+            </p>
+            <div className={styles.goldHeroStats}>
+              <div className={styles.goldHeroStat}>
+                <span className={styles.goldHeroStatValue}>+{goldBonusApr.toFixed(2)}%</span>
+                <span className={styles.goldHeroStatLabel}>APR Bonus</span>
+              </div>
+              <div className={styles.goldHeroStatDivider}></div>
+              <div className={styles.goldHeroStat}>
+                <span className={styles.goldHeroStatValue}>{goldEffectiveApr.toFixed(2)}%</span>
+                <span className={styles.goldHeroStatLabel}>Your Effective APR</span>
+              </div>
+              <div className={styles.goldHeroStatDivider}></div>
+              <div className={styles.goldHeroStat}>
+                <span className={styles.goldHeroStatValue}>0%</span>
+                <span className={styles.goldHeroStatLabel}>Service Fee</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Empty State Welcome - for new users */}
       {hasNoHoldings && address && (
         <>
@@ -258,12 +291,6 @@ This ensures the APR reflects your actual staking position.`;
 
       {/* APR Panel */}
       <section className={styles.aprPanel}>
-        {isGoldMember && actualEgldDelegated > 0 && (
-          <div className={styles.goldMemberBanner}>
-            <span>👑</span> Gold Member: {goldNftCount} NFT{goldNftCount > 1 ? 's' : ''} • {goldCapacityEgld} eGLD at 0% fee • +{goldBonusApr.toFixed(2)}% APR bonus
-          </div>
-        )}
-        
         <div className={styles.aprHeader}>
           Your Total APR
           <HelpIcon text={totalAprHelpText} />
