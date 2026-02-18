@@ -6,7 +6,7 @@ import { useGlobalContext } from 'context';
 import { AnimatedDots } from 'components/AnimatedDots';
 import styles from './Info.module.scss';
 
-const NUMBER_OF_NODES = 48;
+const NUMBER_OF_NODES = 50;
 const SOLAR_POWER_KW = 5.75;
 const CPU_CORES = 60;
 const MACHINES = 9;
@@ -466,7 +466,7 @@ export const Info = () => {
               </a>
             </div>
             <p className={styles.footerText}>
-              Colombia Staking — 48 nodes securing the MultiversX network from Colombia 🇨🇴
+              Colombia Staking — 50 nodes securing the MultiversX network from Colombia 🇨🇴
             </p>
           </div>
         </>

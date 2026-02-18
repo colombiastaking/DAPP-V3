@@ -10,8 +10,8 @@ interface LoadingScreenProps {
 const MARKETING_POINTS = [
   {
     icon: '🛡️',
-    title: '48 Nodes',
-    description: 'Most secure delegation agency in the MultiversX ecosystem'
+    title: '50 Nodes',
+    description: 'One of the largest MultiversX delegation agencies'
   },
   {
     icon: '🇨🇴',
@@ -36,7 +36,7 @@ const MARKETING_POINTS = [
   {
     icon: '🌍',
     title: 'Global Community',
-    description: 'Join thousands of delegators worldwide'
+    description: 'Join hundreds of delegators worldwide'
   }
 ];
 
@@ -116,17 +116,17 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, childre
         {/* Stats preview */}
         <div className={styles.statsPreview}>
           <div className={styles.stat}>
-            <span className={styles.statValue}>48</span>
+            <span className={styles.statValue}>50</span>
             <span className={styles.statLabel}>Nodes</span>
           </div>
           <div className={styles.statDivider}></div>
           <div className={styles.stat}>
-            <span className={styles.statValue}>20%+</span>
+            <span className={styles.statValue}>8.5%+</span>
             <span className={styles.statLabel}>APR</span>
           </div>
           <div className={styles.statDivider}></div>
           <div className={styles.stat}>
-            <span className={styles.statValue}>10K+</span>
+            <span className={styles.statValue}>800+</span>
             <span className={styles.statLabel}>Delegators</span>
           </div>
         </div>

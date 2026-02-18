@@ -58,7 +58,7 @@ export const Delegation = () => {
       <div className={styles.strengthsGrid}>
         <div className={styles.strengthCard}>
           <div className={styles.strengthIcon}>🛡️</div>
-          <div className={styles.strengthTitle}>48 Nodes</div>
+          <div className={styles.strengthTitle}>50 Nodes</div>
           <div className={styles.strengthDesc}>Most secure agency</div>
         </div>
         <div className={styles.strengthCard}>

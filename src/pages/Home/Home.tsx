@@ -100,7 +100,7 @@ This ensures the APR reflects your actual staking position.`;
               </p>
               <div className={styles.welcomeBenefits}>
                 <div className={styles.welcomeBenefit}>
-                  <span>🛡️</span> 48 Nodes - Most secure agency
+                  <span>🛡️</span> 50 Nodes - Most secure agency
                 </div>
                 <div className={styles.welcomeBenefit}>
                   <span>🇨🇴</span> Colombian operations

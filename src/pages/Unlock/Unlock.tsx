@@ -9,14 +9,14 @@ import { MultiversX } from 'assets/MultiversX';
 import styles from './styles.module.scss';
 
 const STATS = [
-  { value: '48', label: 'Nodes', icon: '🛡️' },
-  { value: '830+', label: 'Delegators', icon: '👥' },
+  { value: '50', label: 'Nodes', icon: '🛡️' },
+  { value: '800+', label: 'Delegators', icon: '👥' },
   { value: '178K+', label: 'eGLD', icon: '💎' },
-  { value: '7%+', label: 'APY', icon: '📈' }
+  { value: '8.5%+', label: 'APY', icon: '📈' }
 ];
 
 const STRENGTHS = [
-  { icon: '🛡️', title: '48 Nodes', desc: 'Most secure agency' },
+  { icon: '🛡️', title: '50 Nodes', desc: 'Most secure agency' },
   { icon: '🇨🇴', title: 'Colombian', desc: 'Unique positioning' },
   { icon: '📈', title: 'Top 3 APY', desc: 'On MultiversX' },
   { icon: '💪', title: 'Proven', desc: '$10M+ staked' }
