@@ -450,3 +450,280 @@ $glow-accent: 0 0 20px rgba(211, 54, 130, 0.3);
 .unlockLink {
   display: none;
 }
+
+// Welcome Banner - Empty State
+.welcomeBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  background: linear-gradient(135deg, rgba(98, 219, 184, 0.15) 0%, rgba(211, 54, 130, 0.1) 100%);
+  border: 1px solid rgba(98, 219, 184, 0.3);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+  animation: slideIn 0.5s ease-out;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.welcomeIcon {
+  font-size: 48px;
+  flex-shrink: 0;
+}
+
+.welcomeContent {
+  flex: 1;
+}
+
+.welcomeTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: $primary;
+  margin: 0 0 8px 0;
+}
+
+.welcomeText {
+  font-size: 15px;
+  color: $text-secondary;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+
+  strong {
+    color: $primary;
+  }
+}
+
+.welcomeBenefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  @media (max-width: 600px) {
+    justify-content: center;
+  }
+}
+
+.welcomeBenefit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: $text-primary;
+  background: rgba(98, 219, 184, 0.1);
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(98, 219, 184, 0.2);
+
+  span {
+    font-size: 16px;
+  }
+}
+
+// Upsell Banner - Has eGLD but no COLS
+.upsellBanner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 87, 34, 0.1) 100%);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  animation: slideIn 0.5s ease-out;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.upsellIcon {
+  font-size: 36px;
+  flex-shrink: 0;
+}
+
+.upsellContent {
+  flex: 1;
+}
+
+.upsellTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ff9800;
+  margin: 0 0 4px 0;
+}
+
+.upsellText {
+  font-size: 14px;
+  color: $text-secondary;
+  margin: 0;
+  line-height: 1.4;
+
+  strong {
+    color: #ff9800;
+  }
+}
+
+.upsellButton {
+  flex-shrink: 0;
+  display: inline-block;
+  background: linear-gradient(135deg, #ff9800, #ff5722);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+  }
+}
+
+// Upsell Banner - Has some COLS
+.upsellBannerCols {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(211, 54, 130, 0.15) 0%, rgba(156, 39, 176, 0.1) 100%);
+  border: 1px solid rgba(211, 54, 130, 0.3);
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  animation: slideIn 0.5s ease-out;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.upsellButtonCols {
+  flex-shrink: 0;
+  display: inline-block;
+  background: linear-gradient(135deg, $accent, #9c27b0);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(211, 54, 130, 0.4);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Potential Earnings Calculator
+.potentialSection {
+  background: $card-bg;
+  border: 1px solid $border-color;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.potentialTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: $text-primary;
+  text-align: center;
+  margin: 0 0 20px 0;
+}
+
+.potentialGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.potentialCard {
+  background: rgba(98, 219, 184, 0.05);
+  border: 1px solid rgba(98, 219, 184, 0.15);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(98, 219, 184, 0.3);
+    transform: translateY(-2px);
+  }
+}
+
+.potentialLabel {
+  font-size: 12px;
+  color: $text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.potentialStake {
+  font-size: 13px;
+  color: $text-secondary;
+  margin-bottom: 8px;
+}
+
+.potentialReward {
+  font-size: 18px;
+  font-weight: 700;
+  color: $primary;
+  margin-bottom: 4px;
+}
+
+.potentialUsd {
+  font-size: 12px;
+  color: $text-muted;
+}
+
+.potentialBonus {
+  font-size: 11px;
+  font-weight: 600;
+  color: $accent;
+  margin-top: 8px;
+  background: rgba($accent, 0.1);
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.potentialCta {
+  display: block;
+  text-align: center;
+  background: linear-gradient(135deg, $primary, $primary-dark);
+  color: $background;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 14px 24px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba($primary, 0.4);
+  }
+}

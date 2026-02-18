@@ -54,6 +54,30 @@ export const Delegation = () => {
         </p>
       </section>
 
+      {/* Why Delegate Here - Strengths */}
+      <div className={styles.strengthsGrid}>
+        <div className={styles.strengthCard}>
+          <div className={styles.strengthIcon}>🛡️</div>
+          <div className={styles.strengthTitle}>48 Nodes</div>
+          <div className={styles.strengthDesc}>Most secure agency</div>
+        </div>
+        <div className={styles.strengthCard}>
+          <div className={styles.strengthIcon}>🇨🇴</div>
+          <div className={styles.strengthTitle}>Colombian</div>
+          <div className={styles.strengthDesc}>Unique positioning</div>
+        </div>
+        <div className={styles.strengthCard}>
+          <div className={styles.strengthIcon}>📈</div>
+          <div className={styles.strengthTitle}>7%+ APY</div>
+          <div className={styles.strengthDesc}>Top 3 on MultiversX</div>
+        </div>
+        <div className={styles.strengthCard}>
+          <div className={styles.strengthIcon}>⚡</div>
+          <div className={styles.strengthTitle}>Fast</div>
+          <div className={styles.strengthDesc}>Quick rewards distribution</div>
+        </div>
+      </div>
+
       {/* Stats Grid */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>

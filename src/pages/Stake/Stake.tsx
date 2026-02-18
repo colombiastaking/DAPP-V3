@@ -30,6 +30,10 @@ export const Stake = () => {
     ? colsBalance.data 
     : '0';
 
+  // Check user state for conditional messaging
+  const hasNoCols = Number(colsBalanceValue) === 0 && colsStaked === 0;
+  const hasLittleCols = Number(colsBalanceValue) > 0 && Number(colsBalanceValue) < 100;
+
   if (!address) {
     return (
       <div className={styles.stake}>
@@ -53,6 +57,33 @@ export const Stake = () => {
           Stake your COLS tokens to earn additional APR bonus
         </p>
       </section>
+
+      {/* Empty State - No COLS at all */}
+      {hasNoCols && (
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}>💎</div>
+          <h3 className={styles.emptyTitle}>Start Earning Bonus APR!</h3>
+          <p className={styles.emptyText}>
+            Stake COLS tokens to boost your rewards. The more COLS you stake, the higher your bonus APR!
+          </p>
+          <div className={styles.emptyBenefits}>
+            <div className={styles.emptyBenefit}>🚀 Up to +5% bonus APR</div>
+            <div className={styles.emptyBenefit}>🏆 Climb the league leaderboard</div>
+            <div className={styles.emptyBenefit}>💰 Maximize your staking returns</div>
+          </div>
+        </div>
+      )}
+
+      {/* Has COLS but small amount */}
+      {hasLittleCols && (
+        <div className={styles.upsellState}>
+          <div className={styles.upsellIcon}>💪</div>
+          <h3 className={styles.upsellTitle}>Level Up!</h3>
+          <p className={styles.upsellText}>
+            You're on your way! Stake more COLS to unlock higher leagues and earn even more bonus APR.
+          </p>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className={styles.statsGrid}>

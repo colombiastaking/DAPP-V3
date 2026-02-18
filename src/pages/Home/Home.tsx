@@ -71,8 +71,105 @@ export const Home = () => {
 
 This ensures the APR reflects your actual staking position.`;
 
+  // Check if user has no holdings
+  const hasNoHoldings = actualEgldDelegated === 0 && Number(colsStaked) === 0;
+  const hasEgldButNoCols = actualEgldDelegated > 0 && Number(colsStaked) === 0;
+  const hasColsButLittle = Number(colsStaked) > 0 && Number(colsStaked) < 100;
+
+  // Potential rewards calculator for new users
+  const potentialExamples = [
+    { egld: 100, cols: 0, desc: 'Starter' },
+    { egld: 500, cols: 0, desc: 'Regular' },
+    { egld: 1000, cols: 100, desc: 'With COLS' },
+  ];
+
   return (
     <div className={styles.landing}>
+      {/* Empty State Welcome - for new users */}
+      {hasNoHoldings && address && (
+        <>
+          <section className={styles.welcomeBanner}>
+            <div className={styles.welcomeIcon}>🚀</div>
+            <div className={styles.welcomeContent}>
+              <h2 className={styles.welcomeTitle}>Welcome to Colombia Staking!</h2>
+              <p className={styles.welcomeText}>
+                You're not staking yet. Start earning <strong>7%+ APY</strong> on your eGLD today!
+              </p>
+              <div className={styles.welcomeBenefits}>
+                <div className={styles.welcomeBenefit}>
+                  <span>🛡️</span> 48 Nodes - Most secure agency
+                </div>
+                <div className={styles.welcomeBenefit}>
+                  <span>🇨🇴</span> Colombian operations
+                </div>
+                <div className={styles.welcomeBenefit}>
+                  <span>💎</span> Top 3 APY on MultiversX
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Potential Earnings Calculator */}
+          <section className={styles.potentialSection}>
+            <h3 className={styles.potentialTitle}>💰 What Could You Earn?</h3>
+            <div className={styles.potentialGrid}>
+              {potentialExamples.map((example, i) => {
+                const yearlyEgld = example.egld * (baseApr / 100);
+                const yearlyBonus = example.cols > 0 ? example.egld * 0.05 : 0;
+                const totalYearly = yearlyEgld + yearlyBonus;
+                const egldPriceNum = Number(egldPrice) || 0;
+                return (
+                  <div key={i} className={styles.potentialCard}>
+                    <div className={styles.potentialLabel}>{example.desc}</div>
+                    <div className={styles.potentialStake}>
+                      {example.egld.toLocaleString()} eGLD + {example.cols} COLS
+                    </div>
+                    <div className={styles.potentialReward}>
+                      +{totalYearly.toFixed(1)} eGLD/year
+                    </div>
+                    <div className={styles.potentialUsd}>
+                      ≈ ${(totalYearly * egldPriceNum).toFixed(0)}/year
+                    </div>
+                    {example.cols > 0 && (
+                      <div className={styles.potentialBonus}>+5% COLS bonus!</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <a href="/delegate" className={styles.potentialCta}>
+              Start Earning Now →</a>
+          </section>
+        </>
+      )}
+
+      {/* Upsell Banner - has eGLD but no COLS */}
+      {hasEgldButNoCols && address && (
+        <section className={styles.upsellBanner}>
+          <div className={styles.upsellIcon}>🔥</div>
+          <div className={styles.upsellContent}>
+            <h3 className={styles.upsellTitle}>Boost Your APR!</h3>
+            <p className={styles.upsellText}>
+              Stake COLS tokens to earn up to <strong>+5% bonus APR</strong> on your eGLD delegation.
+            </p>
+          </div>
+          <a href="/stake" className={styles.upsellButton}>Stake COLS →</a>
+        </section>
+      )}
+
+      {/* Upsell Banner - has some COLS but not enough */}
+      {hasColsButLittle && address && (
+        <section className={styles.upsellBannerCols}>
+          <div className={styles.upsellIcon}>💎</div>
+          <div className={styles.upsellContent}>
+            <h3 className={styles.upsellTitle}>Level Up Your Staking!</h3>
+            <p className={styles.upsellText}>
+              Stake more COLS to unlock the <strong>Diamond League</strong> and earn even higher rewards!
+            </p>
+          </div>
+          <a href="/stake" className={styles.upsellButtonCols}>Stake More →</a>
+        </section>
+      )}
       {/* Hero Section */}
       <section className={styles.heroSection}>
         <div className={styles.heroHeader}>

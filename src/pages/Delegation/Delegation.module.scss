@@ -257,3 +257,47 @@ $border-color: rgba(98, 219, 184, 0.2);
     border-radius: 16px;
   }
 }
+
+// Strengths Grid - Why Delegate Here
+.strengthsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.strengthCard {
+  background: rgba(98, 219, 184, 0.05);
+  border: 1px solid rgba(98, 219, 184, 0.15);
+  border-radius: 14px;
+  padding: 16px 12px;
+  text-align: center;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(98, 219, 184, 0.3);
+    transform: translateY(-2px);
+    background: rgba(98, 219, 184, 0.1);
+  }
+}
+
+.strengthIcon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.strengthTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: 2px;
+}
+
+.strengthDesc {
+  font-size: 11px;
+  color: $text-muted;
+}

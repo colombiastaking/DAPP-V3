@@ -9,10 +9,17 @@ import { MultiversX } from 'assets/MultiversX';
 import styles from './styles.module.scss';
 
 const STATS = [
-  { value: '48', label: 'Nodes' },
-  { value: '830+', label: 'Delegators' },
-  { value: '178K+', label: 'eGLD' },
-  { value: '7%+', label: 'APY' }
+  { value: '48', label: 'Nodes', icon: '🛡️' },
+  { value: '830+', label: 'Delegators', icon: '👥' },
+  { value: '178K+', label: 'eGLD', icon: '💎' },
+  { value: '7%+', label: 'APY', icon: '📈' }
+];
+
+const STRENGTHS = [
+  { icon: '🛡️', title: '48 Nodes', desc: 'Most secure agency' },
+  { icon: '🇨🇴', title: 'Colombian', desc: 'Unique positioning' },
+  { icon: '📈', title: 'Top 3 APY', desc: 'On MultiversX' },
+  { icon: '💪', title: 'Proven', desc: '$10M+ staked' }
 ];
 
 const SOCIAL_LINKS = {
@@ -99,13 +106,30 @@ export const Unlock = () => {
         </div>
         
         {/* Stats Row */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 40, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 40, flexWrap: 'wrap' }}>
           {STATS.map((stat, i) => (
-            <div key={i} style={{ textAlign: 'center', padding: '12px 16px', background: 'rgba(98, 219, 184, 0.08)', borderRadius: 12, border: '1px solid rgba(98, 219, 184, 0.2)', minWidth: 70 }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#62dbb8' }}>{stat.value}</div>
+            <div key={i} style={{ textAlign: 'center', padding: '14px 18px', background: 'rgba(98, 219, 184, 0.08)', borderRadius: 14, border: '1px solid rgba(98, 219, 184, 0.2)', minWidth: 80 }}>
+              <div style={{ fontSize: 24, marginBottom: 4 }}>{stat.icon}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#62dbb8' }}>{stat.value}</div>
               <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase' }}>{stat.label}</div>
             </div>
           ))}
+        </div>
+        
+        {/* Why Colombia Staking - Strengths */}
+        <div style={{ marginTop: 32, textAlign: 'center' }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#a0a0a0', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1 }}>
+            Why Choose Colombia Staking?
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap', maxWidth: 500, margin: '0 auto' }}>
+            {STRENGTHS.map((strength, i) => (
+              <div key={i} style={{ textAlign: 'center', padding: '12px 16px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.08)', flex: '1 1 120px', maxWidth: 140 }}>
+                <div style={{ fontSize: 24, marginBottom: 6 }}>{strength.icon}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{strength.title}</div>
+                <div style={{ fontSize: 11, color: '#888' }}>{strength.desc}</div>
+              </div>
+            ))}
+          </div>
         </div>
         
         {/* Social Links */}
