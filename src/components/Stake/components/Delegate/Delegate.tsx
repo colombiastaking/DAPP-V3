@@ -68,7 +68,9 @@ export const Delegate = () => {
               }) => {
                 const onMaxClick = (event: React.MouseEvent<HTMLButtonElement>) => {
                   event.preventDefault();
-                  setFieldValue('amount', balanceEgld.toFixed(6));
+                  // Use toFixed(6) but ensure it's a plain string with period (no commas)
+                  const maxAmount = balanceEgld.toFixed(6).replace(',', '.');
+                  setFieldValue('amount', maxAmount);
                 };
 
                 return (

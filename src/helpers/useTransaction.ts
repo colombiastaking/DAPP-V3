@@ -19,8 +19,14 @@ interface TransactionParametersType {
 }
 
 // Convert eGLD amount to smallest unit (wei)
-function egldToWei(amount: string): bigint {
-  const [whole, fraction = ''] = amount.split('.');
+function egldToWei(amount: string | number | bigint): bigint {
+  // Ensure amount is a string
+  let amountStr = String(amount);
+  
+  // Replace comma with period for international decimal support
+  amountStr = amountStr.replace(',', '.');
+  
+  const [whole, fraction = ''] = amountStr.split('.');
   const paddedFraction = fraction.padEnd(18, '0').slice(0, 18);
   return BigInt(whole + paddedFraction);
 }

@@ -144,7 +144,8 @@ export const Undelegate = () => {
 
                 const onMaxClick = (event: React.MouseEvent<HTMLButtonElement>) => {
                   event.preventDefault();
-                  setFieldValue('amount', delegatedEgld.toFixed(6));
+                  // Ensure period is used for decimals (not comma)
+                  setFieldValue('amount', delegatedEgld.toFixed(6).replace(',', '.'));
                 };
 
                 return (
