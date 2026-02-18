@@ -6,7 +6,6 @@ import { Withdrawals } from 'components/Withdrawals';
 import { PriceBanner } from 'components/PriceBanner';
 
 import styles from './styles.module.scss';
-import useGlobalData from '../../hooks/useGlobalData';
 
 export const Dashboard = () => {
   const account = useGetAccount();
@@ -19,7 +18,7 @@ export const Dashboard = () => {
     }
   }, [address, navigate]);
 
-  useGlobalData();
+  // Note: useGlobalData() is already called in Layout.tsx - don't call again here
 
   return (
     <div className={styles.dashboard}>

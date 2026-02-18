@@ -5,7 +5,6 @@ import { AnimatedDots } from 'components/AnimatedDots';
 import { HelpIcon } from 'components/HelpIcon';
 import { ColsAprTable } from 'components/ColsAprTable';
 import { RankingTable } from 'components/Stake/RankingTable';
-import { usePreloadData } from 'hooks/usePreloadData';
 
 import styles from './styles.module.scss';
 
@@ -30,8 +29,7 @@ export const Home = () => {
   const { stakers, loading, egldPrice, colsPrice, baseApr, aprMax } = useColsAprContext();
   const { userActiveStake } = useGlobalContext();
   
-  // Preload all cached data at login
-  usePreloadData();
+  // Note: usePreloadData() is already called in Layout.tsx - don't call again here
 
   // Find user row in stakers
   const userRow = stakers.find((s: any) => s.address === address) ?? null;

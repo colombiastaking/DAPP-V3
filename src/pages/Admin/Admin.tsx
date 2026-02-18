@@ -12,7 +12,6 @@ import { Toggles } from 'components/Toggles';
 import { useGlobalContext } from 'context';
 
 import styles from './styles.module.scss';
-import useGlobalData from '../../hooks/useGlobalData';
 
 export const Admin = () => {
   const account = useGetAccount();
@@ -37,7 +36,7 @@ export const Admin = () => {
   };
 
   useEffect(handleRedirect, [address, contractDetails.data]);
-  useGlobalData();
+  // Note: useGlobalData() is already called in Layout.tsx - don't call again here
 
   if (loading) {
     return (
