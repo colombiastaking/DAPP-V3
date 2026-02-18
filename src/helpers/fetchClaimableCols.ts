@@ -6,6 +6,27 @@ import {
 import { ProxyNetworkProvider } from '@multiversx/sdk-network-providers';
 import { createContractQuery } from 'helpers/contractQuery';
 
+// Cache for fetch results - prevents re-fetching on tab switches
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 60000; // 1 minute cache
+
+function getCacheKey(contract: string, user: string): string {
+  return `${contract}:${user}`;
+}
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+    return entry.data as T;
+  }
+  cache.delete(key);
+  return null;
+}
+
+function setCache<T>(key: string, data: T): void {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
 /**
  * Fetches claimable COLS and lock time from the PeerMe contract
  */
@@ -20,6 +41,13 @@ export async function fetchClaimableColsAndLockTime({
   user: string;
   providerUrl: string;
 }): Promise<{ claimable: string; lockTime: number }> {
+  // Check cache first
+  const cacheKey = getCacheKey(contract, user);
+  const cached = getCached<{ claimable: string; lockTime: number }>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   try {
     const provider = new ProxyNetworkProvider(providerUrl);
     const query = createContractQuery({
@@ -102,10 +130,15 @@ export async function fetchClaimableColsAndLockTime({
 
     console.log("Parsed claimable:", claimable, "lockTime:", stakeLockedUntil);
 
-    return { 
+    const result = { 
       claimable, 
       lockTime: stakeLockedUntil 
     };
+    
+    // Cache the result
+    setCache(cacheKey, result);
+    
+    return result;
   } catch (error) {
     console.error("Error fetching claimable COLS:", error);
     return { claimable: "0", lockTime: 0 };
