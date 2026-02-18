@@ -11,7 +11,7 @@ export const Stake = () => {
   const account = useGetAccount();
   const address = account.address;
   const { claimableCols, colsBalance } = useGlobalContext();
-  const { stakers } = useColsAprContext();
+  const { stakers, baseApr, aprMax } = useColsAprContext();
 
   // Get COLS staked from stakers context
   const userRow = stakers.find((s: any) => s.address === address);
@@ -64,10 +64,10 @@ export const Stake = () => {
           <div className={styles.emptyIcon}>💎</div>
           <h3 className={styles.emptyTitle}>Start Earning Bonus APR!</h3>
           <p className={styles.emptyText}>
-            Stake COLS tokens to boost your rewards. The more COLS you stake, the higher your bonus APR!
+            Stake COLS tokens to boost your rewards. Your bonus APR scales from <strong>0.5% to +{aprMax}%</strong> based on your COLS/eGLD ratio.
           </p>
           <div className={styles.emptyBenefits}>
-            <div className={styles.emptyBenefit}>🚀 Up to +5% bonus APR</div>
+            <div className={styles.emptyBenefit}>🚀 {baseApr.toFixed(1)}% base + up to +{aprMax}% bonus</div>
             <div className={styles.emptyBenefit}>🏆 Climb the league leaderboard</div>
             <div className={styles.emptyBenefit}>💰 Maximize your staking returns</div>
           </div>

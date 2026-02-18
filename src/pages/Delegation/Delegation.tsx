@@ -14,7 +14,7 @@ export const Delegation = () => {
   const address = account.address;
   const { onRedelegate } = useStakeData();
   const { userClaimableRewards, userActiveStake } = useGlobalContext();
-  const { stakers } = useColsAprContext();
+  const { stakers, baseApr } = useColsAprContext();
 
   // Get delegated eGLD from context (fallback to stakers data if user has COLS staked)
   const userRow = stakers.find((s: any) => s.address === address);
@@ -68,13 +68,13 @@ export const Delegation = () => {
         </div>
         <div className={styles.strengthCard}>
           <div className={styles.strengthIcon}>📈</div>
-          <div className={styles.strengthTitle}>7%+ APY</div>
-          <div className={styles.strengthDesc}>Top 3 on MultiversX</div>
+          <div className={styles.strengthTitle}>Base {baseApr.toFixed(1)}%</div>
+          <div className={styles.strengthDesc}>+ up to 15% COLS bonus</div>
         </div>
         <div className={styles.strengthCard}>
           <div className={styles.strengthIcon}>⚡</div>
           <div className={styles.strengthTitle}>Fast</div>
-          <div className={styles.strengthDesc}>Quick rewards distribution</div>
+          <div className={styles.strengthDesc}>Quick rewards</div>
         </div>
       </div>
 

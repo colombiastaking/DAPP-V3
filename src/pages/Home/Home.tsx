@@ -78,10 +78,13 @@ This ensures the APR reflects your actual staking position.`;
 
   // Potential rewards calculator for new users
   const potentialExamples = [
-    { egld: 100, cols: 0, desc: 'Starter' },
-    { egld: 500, cols: 0, desc: 'Regular' },
-    { egld: 1000, cols: 100, desc: 'With COLS' },
+    { egld: 100, cols: 0, desc: 'eGLD Only', apr: baseApr },
+    { egld: 100, cols: 50, desc: 'With COLS', apr: baseApr + 2 },
+    { egld: 100, cols: 200, desc: 'COLS Boost', apr: baseApr + 5 },
   ];
+
+  // Get realistic APR range from the context
+  const aprBonusMax = 15; // Max bonus from COLS staking
 
   return (
     <div className={styles.landing}>
@@ -93,7 +96,7 @@ This ensures the APR reflects your actual staking position.`;
             <div className={styles.welcomeContent}>
               <h2 className={styles.welcomeTitle}>Welcome to Colombia Staking!</h2>
               <p className={styles.welcomeText}>
-                You're not staking yet. Start earning <strong>7%+ APY</strong> on your eGLD today!
+                You're not staking yet. Start earning <strong>{baseApr.toFixed(1)}% APY</strong> on your eGLD today — and up to <strong>{baseApr + aprBonusMax}%</strong> with COLS!
               </p>
               <div className={styles.welcomeBenefits}>
                 <div className={styles.welcomeBenefit}>
@@ -103,7 +106,7 @@ This ensures the APR reflects your actual staking position.`;
                   <span>🇨🇴</span> Colombian operations
                 </div>
                 <div className={styles.welcomeBenefit}>
-                  <span>💎</span> Top 3 APY on MultiversX
+                  <span>💎</span> Up to +{aprBonusMax}% COLS bonus
                 </div>
               </div>
             </div>
@@ -112,26 +115,30 @@ This ensures the APR reflects your actual staking position.`;
           {/* Potential Earnings Calculator */}
           <section className={styles.potentialSection}>
             <h3 className={styles.potentialTitle}>💰 What Could You Earn?</h3>
+            <p className={styles.potentialSubtitle}>
+              Base APR: {baseApr.toFixed(1)}% • COLS bonus: up to +{aprBonusMax}%
+            </p>
             <div className={styles.potentialGrid}>
               {potentialExamples.map((example, i) => {
-                const yearlyEgld = example.egld * (baseApr / 100);
-                const yearlyBonus = example.cols > 0 ? example.egld * 0.05 : 0;
-                const totalYearly = yearlyEgld + yearlyBonus;
+                const yearlyEgld = example.egld * (example.apr / 100);
                 const egldPriceNum = Number(egldPrice) || 0;
                 return (
                   <div key={i} className={styles.potentialCard}>
                     <div className={styles.potentialLabel}>{example.desc}</div>
                     <div className={styles.potentialStake}>
-                      {example.egld.toLocaleString()} eGLD + {example.cols} COLS
+                      {example.egld} eGLD + {example.cols} COLS
                     </div>
                     <div className={styles.potentialReward}>
-                      +{totalYearly.toFixed(1)} eGLD/year
+                      +{yearlyEgld.toFixed(1)} eGLD/year
                     </div>
                     <div className={styles.potentialUsd}>
-                      ≈ ${(totalYearly * egldPriceNum).toFixed(0)}/year
+                      ≈ ${(yearlyEgld * egldPriceNum).toFixed(0)}/year
+                    </div>
+                    <div className={styles.potentialApr}>
+                      {example.apr.toFixed(1)}% APR
                     </div>
                     {example.cols > 0 && (
-                      <div className={styles.potentialBonus}>+5% COLS bonus!</div>
+                      <div className={styles.potentialBonus}>+COLS bonus!</div>
                     )}
                   </div>
                 );
@@ -150,7 +157,7 @@ This ensures the APR reflects your actual staking position.`;
           <div className={styles.upsellContent}>
             <h3 className={styles.upsellTitle}>Boost Your APR!</h3>
             <p className={styles.upsellText}>
-              Stake COLS tokens to earn up to <strong>+5% bonus APR</strong> on your eGLD delegation.
+              Stake COLS tokens to earn up to <strong>+{aprBonusMax}% bonus APR</strong> on your eGLD delegation. The more COLS you stake relative to eGLD, the higher your bonus!
             </p>
           </div>
           <a href="/stake" className={styles.upsellButton}>Stake COLS →</a>

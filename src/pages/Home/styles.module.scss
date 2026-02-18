@@ -646,6 +646,13 @@ $glow-accent: 0 0 20px rgba(211, 54, 130, 0.3);
   font-weight: 600;
   color: $text-primary;
   text-align: center;
+  margin: 0 0 8px 0;
+}
+
+.potentialSubtitle {
+  font-size: 13px;
+  color: $text-muted;
+  text-align: center;
   margin: 0 0 20px 0;
 }
 
@@ -708,6 +715,13 @@ $glow-accent: 0 0 20px rgba(211, 54, 130, 0.3);
   background: rgba($accent, 0.1);
   padding: 4px 8px;
   border-radius: 8px;
+}
+
+.potentialApr {
+  font-size: 12px;
+  font-weight: 600;
+  color: $primary;
+  margin-top: 6px;
 }
 
 .potentialCta {
