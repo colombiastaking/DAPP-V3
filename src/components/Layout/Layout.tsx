@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useRef } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { AuthenticatedRoutesWrapper } from 'components/AuthenticatedRoutesWrapper';
 import { LoadingScreen } from 'components/LoadingScreen';
@@ -17,55 +17,49 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const account = useGetAccount();
   const address = account.address;
   
-  // Comprehensive loading tracking - counts active data fetches
-  const [fetchCount, setFetchCount] = useState(0);
-  const hasLoadedRef = useRef(false);
+  // Track if user is logged in and data loading state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [lastAddress, setLastAddress] = useState('');
 
   // Pre-fetch all data at login
   useGlobalData();
   const { isLoading: preloaderLoading } = usePreloadData();
 
-  // Track when address changes - increment fetch count to show loading
+  // Check for new login
   useEffect(() => {
-    if (address) {
-      // New login - show loading
-      setFetchCount(1);
-      hasLoadedRef.current = false;
+    if (address && address !== lastAddress) {
+      setLastAddress(address);
+      setIsLoggedIn(true);
+      setDataLoaded(false);
     }
-  }, [address]);
+  }, [address, lastAddress]);
 
-  // Show loading if:
-  // 1. preloader is still loading, OR
-  // 2. we just logged in and fetch count > 0
-  const showLoading = Boolean(address) && (
-    preloaderLoading === true || 
-    fetchCount > 0
-  );
-
-  // When preloader finishes, decrement our counter
+  // Track when data is done loading
   useEffect(() => {
-    if (address && preloaderLoading === false && fetchCount > 0 && !hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-      // Keep loading screen a bit longer for other data to settle
+    if (isLoggedIn && preloaderLoading === false) {
+      // Give extra time for other data to load
       const settleTimer = setTimeout(() => {
-        setFetchCount(0);
-      }, 2000);
+        setDataLoaded(true);
+      }, 3000);
       
       return () => clearTimeout(settleTimer);
     }
-  }, [address, preloaderLoading, fetchCount]);
+  }, [isLoggedIn, preloaderLoading]);
 
-  // Force hide after 10 seconds max (fallback)
+  // Force complete after 10 seconds
   useEffect(() => {
-    if (!address || hasLoadedRef.current) return;
-    
-    const timeoutFallback = setTimeout(() => {
-      hasLoadedRef.current = true;
-      setFetchCount(0);
-    }, 10000);
-    
-    return () => clearTimeout(timeoutFallback);
-  }, [address]);
+    if (isLoggedIn && !dataLoaded) {
+      const timeout = setTimeout(() => {
+        setDataLoaded(true);
+      }, 10000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [isLoggedIn, dataLoaded]);
+
+  // Show loading screen while logged in but data not yet loaded
+  const showLoading = isLoggedIn && !dataLoaded;
 
   return (
     <LoadingScreen isLoading={showLoading}>
