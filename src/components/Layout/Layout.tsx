@@ -17,7 +17,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const account = useGetAccount();
   const address = account.address;
   
-  // Track if initial data is loading
+  // Track if initial data is loading - wait for data to actually be ready
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const hasLoadedRef = useRef(false);
 
@@ -25,25 +25,26 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   useGlobalData();
   const { isLoading: preloaderLoading } = usePreloadData();
 
-  // Check if data has been loaded at least once (allow transition after first load)
+  // Check if all critical data is loaded
   useEffect(() => {
-    if (!address) return;
+    if (!address || hasLoadedRef.current) return;
     
-    // Also allow transition after a timeout even if loading state is uncertain
-    // This prevents getting stuck forever
+    // Only hide loading screen when preloader confirms data is loaded
+    // OR after a reasonable timeout (now 15 seconds)
     const timeoutFallback = setTimeout(() => {
       if (isInitialLoading) {
         setIsInitialLoading(false);
       }
-    }, 10000); // 10 second max wait
+    }, 15000); // 15 second max wait
     
-    if (!hasLoadedRef.current && preloaderLoading === false) {
+    // Only mark as ready when preloader says it's done loading
+    if (preloaderLoading === false) {
       hasLoadedRef.current = true;
       clearTimeout(timeoutFallback);
       // Add a small delay for smooth transition
       const timer = setTimeout(() => {
         setIsInitialLoading(false);
-      }, 500);
+      }, 1000); // 1 second delay to let data settle
       
       return () => {
         clearTimeout(timer);
@@ -62,8 +63,11 @@ export const Layout = ({ children }: { children: ReactNode }) => {
     }
   }, [address]);
 
+  // Show loading while any critical data is loading
+  const showLoading = isInitialLoading && Boolean(address);
+
   return (
-    <LoadingScreen isLoading={isInitialLoading && Boolean(address)}>
+    <LoadingScreen isLoading={showLoading}>
       <div className='layout d-flex flex-column flex-fill wrapper'>
         {Boolean(address) && <Navbar />}
 
