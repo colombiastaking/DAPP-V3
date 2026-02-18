@@ -1,4 +1,5 @@
 import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
+import { Link } from 'react-router-dom';
 import { useGlobalContext } from 'context';
 import { useColsAprContext } from '../../context/ColsAprContext';
 import { AnimatedDots } from 'components/AnimatedDots';
@@ -143,8 +144,8 @@ This ensures the APR reflects your actual staking position.`;
                 );
               })}
             </div>
-            <a href="/delegate" className={styles.potentialCta}>
-              Start Earning Now →</a>
+            <Link to="/delegate" className={styles.potentialCta}>
+              Start Earning Now →</Link>
           </section>
         </>
       )}
@@ -159,7 +160,7 @@ This ensures the APR reflects your actual staking position.`;
               Stake COLS tokens to earn up to <strong>+{aprBonusMax}% bonus APR</strong> on your eGLD delegation. The more COLS you stake relative to eGLD, the higher your bonus!
             </p>
           </div>
-          <a href="/stake" className={styles.upsellButton}>Stake COLS →</a>
+          <Link to="/stake" className={styles.upsellButton}>Stake COLS →</Link>
         </section>
       )}
 
@@ -173,7 +174,7 @@ This ensures the APR reflects your actual staking position.`;
               Stake more COLS to unlock the <strong>Diamond League</strong> and earn even higher rewards!
             </p>
           </div>
-          <a href="/stake" className={styles.upsellButtonCols}>Stake More →</a>
+          <Link to="/stake" className={styles.upsellButtonCols}>Stake More →</Link>
         </section>
       )}
 
@@ -187,7 +188,7 @@ This ensures the APR reflects your actual staking position.`;
               You have COLS staked earning <strong>DAO rewards</strong>. Delegate eGLD to also earn base APR + bonus on your eGLD!
             </p>
           </div>
-          <a href="/delegate" className={styles.colsOnlyButton}>Delegate eGLD →</a>
+          <Link to="/delegate" className={styles.colsOnlyButton}>Delegate eGLD →</Link>
         </section>
       )}
 
