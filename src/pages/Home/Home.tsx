@@ -2,7 +2,7 @@ import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAcco
 import { Link } from 'react-router-dom';
 import { useGlobalContext } from 'context';
 import { useColsAprContext } from '../../context/ColsAprContext';
-import { useGoldMember, calculateEffectiveApr } from '../../hooks/useGoldMember';
+import { useGoldMember, calculateEffectiveApr, getRawApr } from '../../hooks/useGoldMember';
 import { AnimatedDots } from 'components/AnimatedDots';
 import { HelpIcon } from 'components/HelpIcon';
 import { ColsAprTable } from 'components/ColsAprTable';
@@ -51,10 +51,18 @@ export const Home = () => {
     ? egldDelegatedFromStakers 
     : delegatedEgld;
   
-  // Calculate Gold member effective APR
-  const { effectiveApr: goldEffectiveApr, goldBonusApr } = 
-    calculateEffectiveApr(baseApr, actualEgldDelegated, goldCapacityEgld);
-  const regularApr = baseApr * 0.9; // Standard APR with 10% fee
+  // Calculate Gold member effective APR (without service fee = bruto)
+  // For Gold members: raw APR + Gold Bonus
+  const rawBaseApr = getRawApr(baseApr);
+  const { goldBonusApr } = calculateEffectiveApr(baseApr, actualEgldDelegated, goldCapacityEgld);
+  
+  // Get user's total APR from stakers (includes Base + COLS Bonus + DAO)
+  const userBaseApr = userRow?.aprTotal !== null && userRow?.aprTotal !== undefined 
+    ? Number(userRow.aprTotal) 
+    : null;
+  
+  // Gold member total: user's APR components + Gold Bonus (shown as raw/bruto APR)
+  const goldBrutoApr = userBaseApr !== null ? userBaseApr + goldBonusApr : null;
 
   const totalUsd =
     (actualEgldDelegated * Number(egldPrice || 0)) +
@@ -62,9 +70,10 @@ export const Home = () => {
 
   const totalStakers = stakers.length;
 
-  const userApr = userRow?.aprTotal !== null && userRow?.aprTotal !== undefined 
-    ? Number(userRow.aprTotal) + goldBonusApr  // Add Gold bonus if applicable
-    : (isGoldMember && goldBonusApr > 0 ? regularApr + goldBonusApr : null);
+  // Total APR shown in main panel (includes Gold bonus if applicable)
+  const userApr = userBaseApr !== null 
+    ? userBaseApr + goldBonusApr  // Add Gold bonus to base APR components
+    : (isGoldMember && goldBonusApr > 0 ? rawBaseApr + goldBonusApr : null);
   const userRank = userRow?.rank;
   const leagueInfo = userRank && totalStakers > 0 
     ? getLeagueInfo(userRank, totalStakers) 
@@ -74,7 +83,7 @@ export const Home = () => {
 
 • If you have eGLD delegated, the Total APR applies to your eGLD delegation.
 • If you stake COLS tokens, you earn additional APR bonus.
-${isGoldMember ? `\n🌟 GOLD MEMBER: You have ${goldNftCount} Gold NFT(s) giving ${goldCapacityEgld} eGLD at 0% service fee!\n• Gold Bonus APR: +${goldBonusApr.toFixed(2)}%\n• Your effective APR: ${goldEffectiveApr.toFixed(2)}%` : ''}
+${isGoldMember ? `\n🌟 GOLD MEMBER: You have ${goldNftCount} Gold NFT(s) giving ${goldCapacityEgld} eGLD at 0% service fee!\n• Gold Bonus APR: +${goldBonusApr.toFixed(2)}%\n• Your Bruto APR: ${goldBrutoApr !== null ? goldBrutoApr.toFixed(2) + '%' : '—'}` : ''}
 
 This ensures the APR reflects your actual staking position.`;
 
@@ -116,7 +125,7 @@ This ensures the APR reflects your actual staking position.`;
               </div>
               <div className={styles.goldHeroStatDivider}></div>
               <div className={styles.goldHeroStat}>
-                <span className={styles.goldHeroStatValue}>{goldEffectiveApr.toFixed(2)}%</span>
+                <span className={styles.goldHeroStatValue}>{goldBrutoApr !== null ? goldBrutoApr.toFixed(2) + '%' : '—'}</span>
                 <span className={styles.goldHeroStatLabel}>Your Effective APR</span>
               </div>
               <div className={styles.goldHeroStatDivider}></div>

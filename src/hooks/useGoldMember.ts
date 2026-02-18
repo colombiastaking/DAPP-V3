@@ -72,6 +72,11 @@ export const calculateGoldBonusApr = (
   return fullBonus * ratio;
 };
 
+// Get raw APR without service fee
+export const getRawApr = (baseApr: number, serviceFee: number = 0.10): number => {
+  return baseApr / (1 - serviceFee);
+};
+
 // Calculate effective APR for user with Gold membership
 // Gold member gets: regular APR (base * 0.9) + gold bonus
 // The bonus is: baseApr * serviceFee * min(1, goldCapacity/userEgld)
