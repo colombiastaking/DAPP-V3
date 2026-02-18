@@ -11,49 +11,53 @@ import { BottomNav } from 'components/BottomNav';
 import { TelegramBubble } from 'components/TelegramBubble';
 import useGlobalData from 'hooks/useGlobalData';
 import { usePreloadData } from 'hooks/usePreloadData';
-import { useGlobalContext } from 'context';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { search } = useLocation();
   const account = useGetAccount();
   const address = account.address;
   
-  const { delegatorCount, claimableCols, userActiveStake } = useGlobalContext();
-  
   // Track if initial data is loading
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const hasCheckedRef = useRef(false);
+  const hasLoadedRef = useRef(false);
 
   // Pre-fetch all data at login for better UX
   useGlobalData();
   const { isLoading: preloaderLoading } = usePreloadData();
 
-  // Check if all critical data is loaded
+  // Check if data has been loaded at least once (allow transition after first load)
   useEffect(() => {
-    if (!address || hasCheckedRef.current) return;
+    if (!address) return;
     
-    // Wait for all data to be loaded
-    const dataLoaded = 
-      delegatorCount.status === 'loaded' ||
-      claimableCols.status === 'loaded' ||
-      userActiveStake.status === 'loaded' ||
-      preloaderLoading === false;
+    // Also allow transition after a timeout even if loading state is uncertain
+    // This prevents getting stuck forever
+    const timeoutFallback = setTimeout(() => {
+      if (isInitialLoading) {
+        setIsInitialLoading(false);
+      }
+    }, 5000); // 5 second max wait
     
-    if (dataLoaded) {
-      hasCheckedRef.current = true;
+    if (!hasLoadedRef.current && preloaderLoading === false) {
+      hasLoadedRef.current = true;
+      clearTimeout(timeoutFallback);
       // Add a small delay for smooth transition
       const timer = setTimeout(() => {
         setIsInitialLoading(false);
-      }, 800);
+      }, 500);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(timeoutFallback);
+      };
     }
-  }, [address, delegatorCount.status, claimableCols.status, userActiveStake.status, preloaderLoading]);
+    
+    return () => clearTimeout(timeoutFallback);
+  }, [address, preloaderLoading, isInitialLoading]);
 
   // Reset loading state on address change (new login)
   useEffect(() => {
     if (address) {
-      hasCheckedRef.current = false;
+      hasLoadedRef.current = false;
       setIsInitialLoading(true);
     }
   }, [address]);
