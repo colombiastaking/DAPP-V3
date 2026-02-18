@@ -199,6 +199,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
   const [agencyLockedEgld, setAgencyLockedEgld] = useState(0);
   const [aprMax, setAprMax] = useState(15);
   const [targetAvgAprBonus, setTargetAvgAprBonus] = useState(0);
+  const [totalColsStaked, setTotalColsStaked] = useState(0);
 
   const { contractDetails } = useGlobalContext();
 
@@ -316,14 +317,31 @@ export function useColsApr({ trigger }: { trigger: any }) {
       setAprMax(best);
 
       const sumCols = table.reduce((s, r) => s + r.colsStaked, 0);
+      setTotalColsStaked(sumCols);
 
+      // Calculate DAO APR for ALL users with COLS (not just those with eGLD)
+      // DAO distribution is based on user's share of total COLS staked
       table.forEach(r => {
-        if (r.egldStaked && r.colsStaked) {
+        if (r.colsStaked && sumCols > 0) {
           r.dao =
             ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * r.colsStaked)
-              / sumCols / r.egldStaked) * 100;
+              / sumCols) * 100;
         }
-        r.aprTotal = safe(pA + safe(r.aprBonus) + safe(r.dao));
+        
+        // Total APR calculation:
+        // - If user has eGLD + COLS: base APR + bonus APR + DAO APR
+        // - If user has only COLS (no eGLD): DAO APR only (their reward is in COLS)
+        // - If user has only eGLD: base APR only
+        if (r.egldStaked && r.colsStaked) {
+          // Both eGLD and COLS: full calculation
+          r.aprTotal = safe(pA + safe(r.aprBonus) + safe(r.dao));
+        } else if (r.colsStaked && !r.egldStaked) {
+          // COLS only: show DAO APR (this is their return on COLS)
+          r.aprTotal = safe(r.dao);
+        } else {
+          // eGLD only (no COLS): base APR
+          r.aprTotal = safe(pA);
+        }
       });
 
       const sorted = [...table].sort((a, b) => safe(b.aprTotal) - safe(a.aprTotal));
@@ -359,6 +377,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
     agencyLockedEgld,
     aprMax,
     targetAvgAprBonus,
+    totalColsStaked,
     recalc
   };
 }

@@ -27,7 +27,7 @@ function formatCurrency(value: number): string {
 export const Home = () => {
   const account = useGetAccount();
   const address = account.address;
-  const { stakers, loading, egldPrice, colsPrice, baseApr } = useColsAprContext();
+  const { stakers, loading, egldPrice, colsPrice, baseApr, aprMax } = useColsAprContext();
   const { userActiveStake } = useGlobalContext();
   
   // Preload all cached data at login
@@ -75,6 +75,7 @@ This ensures the APR reflects your actual staking position.`;
   const hasNoHoldings = actualEgldDelegated === 0 && Number(colsStaked) === 0;
   const hasEgldButNoCols = actualEgldDelegated > 0 && Number(colsStaked) === 0;
   const hasColsButLittle = Number(colsStaked) > 0 && Number(colsStaked) < 100;
+  const hasColsOnly = Number(colsStaked) > 0 && actualEgldDelegated === 0;
 
   // Potential rewards calculator for new users
   const potentialExamples = [
@@ -84,7 +85,7 @@ This ensures the APR reflects your actual staking position.`;
   ];
 
   // Get realistic APR range from the context
-  const aprBonusMax = 15; // Max bonus from COLS staking
+  const aprBonusMax = aprMax; // Max bonus from COLS staking
 
   return (
     <div className={styles.landing}>
@@ -177,6 +178,21 @@ This ensures the APR reflects your actual staking position.`;
           <a href="/stake" className={styles.upsellButtonCols}>Stake More →</a>
         </section>
       )}
+
+      {/* COLS-Only Banner - has COLS but no eGLD */}
+      {hasColsOnly && address && (
+        <section className={styles.colsOnlyBanner}>
+          <div className={styles.colsOnlyIcon}>🎯</div>
+          <div className={styles.colsOnlyContent}>
+            <h3 className={styles.colsOnlyTitle}>Maximize Your Rewards!</h3>
+            <p className={styles.colsOnlyText}>
+              You have COLS staked earning <strong>DAO rewards</strong>. Delegate eGLD to also earn base APR + bonus on your eGLD!
+            </p>
+          </div>
+          <a href="/delegate" className={styles.colsOnlyButton}>Delegate eGLD →</a>
+        </section>
+      )}
+
       {/* Hero Section */}
       <section className={styles.heroSection}>
         <div className={styles.heroHeader}>

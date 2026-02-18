@@ -6,7 +6,7 @@ const ColsAprContext = createContext<any>(null);
 
 export function ColsAprProvider({ children }: { children: any }) {
   const [trigger, setTrigger] = useState(0);
-  const { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, targetAvgAprBonus } = useColsApr({ trigger });
+  const { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, targetAvgAprBonus, totalColsStaked } = useColsApr({ trigger });
 
   // Track if we've already fetched data (don't refetch on tab clicks)
   const hasLoadedRef = useRef(false);
@@ -31,7 +31,7 @@ export function ColsAprProvider({ children }: { children: any }) {
 
   return (
     <ColsAprContext.Provider value={{
-      loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, targetAvgAprBonus, refresh
+      loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, targetAvgAprBonus, totalColsStaked, refresh
     }}>
       {children}
     </ColsAprContext.Provider>

@@ -741,3 +741,66 @@ $glow-accent: 0 0 20px rgba(211, 54, 130, 0.3);
     box-shadow: 0 4px 15px rgba($primary, 0.4);
   }
 }
+
+// COLS-Only Banner - has COLS but no eGLD
+.colsOnlyBanner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(0, 188, 212, 0.1) 100%);
+  border: 1px solid rgba(33, 150, 243, 0.3);
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  animation: slideIn 0.5s ease-out;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.colsOnlyIcon {
+  font-size: 36px;
+  flex-shrink: 0;
+}
+
+.colsOnlyContent {
+  flex: 1;
+}
+
+.colsOnlyTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2196f3;
+  margin: 0 0 4px 0;
+}
+
+.colsOnlyText {
+  font-size: 14px;
+  color: $text-secondary;
+  margin: 0;
+  line-height: 1.4;
+
+  strong {
+    color: #2196f3;
+  }
+}
+
+.colsOnlyButton {
+  flex-shrink: 0;
+  display: inline-block;
+  background: linear-gradient(135deg, #2196f3, #00bcd4);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);
+  }
+}
