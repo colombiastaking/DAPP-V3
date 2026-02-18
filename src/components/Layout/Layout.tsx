@@ -11,6 +11,7 @@ import { BottomNav } from 'components/BottomNav';
 import { TelegramBubble } from 'components/TelegramBubble';
 import useGlobalData from 'hooks/useGlobalData';
 import { usePreloadData } from 'hooks/usePreloadData';
+import { useColsAprContext } from 'context/ColsAprContext';
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { search } = useLocation();
@@ -25,6 +26,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   // Pre-fetch all data at login
   useGlobalData();
   const { isLoading: preloaderLoading } = usePreloadData();
+  const { loading: colsLoading } = useColsAprContext();
 
   // Check for new login
   useEffect(() => {
@@ -35,9 +37,9 @@ export const Layout = ({ children }: { children: ReactNode }) => {
     }
   }, [address, lastAddress]);
 
-  // Track when data is done loading
+  // Track when data is done loading - include COLS stakers data
   useEffect(() => {
-    if (isLoggedIn && preloaderLoading === false) {
+    if (isLoggedIn && preloaderLoading === false && colsLoading === false) {
       // Give extra time for other data to load
       const settleTimer = setTimeout(() => {
         setDataLoaded(true);
@@ -45,7 +47,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       
       return () => clearTimeout(settleTimer);
     }
-  }, [isLoggedIn, preloaderLoading]);
+  }, [isLoggedIn, preloaderLoading, colsLoading]);
 
   // Force complete after 10 seconds
   useEffect(() => {
