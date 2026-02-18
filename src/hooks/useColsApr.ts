@@ -357,6 +357,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
   }, [contractDetails, fetchColsStakers]);
 
   // Only fetch when trigger changes (initial load or after transaction)
+  // Never re-fetch on tab switches - data should be cached
   useEffect(() => {
     // Skip if already fetched and trigger hasn't changed
     if (lastTriggerRef.current === trigger && stakers.length > 0) return;
@@ -366,7 +367,7 @@ export function useColsApr({ trigger }: { trigger: any }) {
     lastTriggerRef.current = trigger;
     isFetchingRef.current = true;
     recalc();
-  }, [trigger, recalc, stakers.length]);
+  }, [trigger, recalc]);
 
   return {
     loading,
