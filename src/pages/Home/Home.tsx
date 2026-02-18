@@ -54,6 +54,7 @@ export const Home = () => {
   // Calculate Gold member effective APR
   const { effectiveApr: goldEffectiveApr, goldBonusApr } = 
     calculateEffectiveApr(baseApr, actualEgldDelegated, goldCapacityEgld);
+  const regularApr = baseApr * 0.9; // Standard APR with 10% fee
 
   const totalUsd =
     (actualEgldDelegated * Number(egldPrice || 0)) +
@@ -62,8 +63,8 @@ export const Home = () => {
   const totalStakers = stakers.length;
 
   const userApr = userRow?.aprTotal !== null && userRow?.aprTotal !== undefined 
-    ? Number(userRow.aprTotal) 
-    : null;
+    ? Number(userRow.aprTotal) + goldBonusApr  // Add Gold bonus if applicable
+    : (isGoldMember && goldBonusApr > 0 ? regularApr + goldBonusApr : null);
   const userRank = userRow?.rank;
   const leagueInfo = userRank && totalStakers > 0 
     ? getLeagueInfo(userRank, totalStakers) 
