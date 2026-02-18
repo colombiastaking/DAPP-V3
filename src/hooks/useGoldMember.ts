@@ -52,18 +52,21 @@ export const useGoldMember = (address: string | undefined) => {
 };
 
 // Calculate Gold member APR bonus
-// Formula: GoldBonus = baseApr × serviceFee × min(1, goldCapacity / userEgld)
-// - If user has ≤ goldCapacity: full bonus = baseApr × serviceFee
-// - If user has > goldCapacity: prorated bonus = baseApr × serviceFee × (goldCapacity / userEgld)
+// Formula: GoldBonus = rawBaseApr * serviceFee * min(1, goldCapacity / userEgld)
+// - rawBaseApr = baseApr / (1 - serviceFee) = baseApr / 0.9 (APR before fee)
+// - If user has ≤ goldCapacity: full bonus = rawBaseApr * serviceFee
+// - If user has > goldCapacity: prorated bonus
 export const calculateGoldBonusApr = (
-  baseApr: number,
+  baseApr: number,  // APR with fee already deducted (e.g., 8.41%)
   userEgldStaked: number,
   goldCapacityEgld: number,
   serviceFee: number = 0.10
 ): number => {
   if (userEgldStaked <= 0 || goldCapacityEgld <= 0) return 0;
   
-  const fullBonus = baseApr * serviceFee;
+  // Calculate raw APR before service fee: baseApr / (1 - fee)
+  const rawBaseApr = baseApr / (1 - serviceFee);
+  const fullBonus = rawBaseApr * serviceFee;
   const ratio = Math.min(1, goldCapacityEgld / userEgldStaked);
   
   return fullBonus * ratio;
