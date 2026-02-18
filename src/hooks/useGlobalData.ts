@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import {
   
@@ -70,6 +70,10 @@ const useGlobalData = () => {
 
   const dispatch = useDispatch();
   const provider = new ProxyNetworkProvider(network.gatewayAddress);
+  
+  // Track loaded state to prevent re-fetching on tab switches
+  const hasLoadedRef = useRef(false);
+  const lastAddressRef = useRef<string | null>(null);
   const criticalFetches: globalFetchesType = {
     getContractDetails: {
       key: 'contractDetails',
@@ -263,7 +267,13 @@ const useGlobalData = () => {
     fetchData();
   };
 
-  useEffect(fetchCriticalData, []);
+  useEffect(() => {
+    // Skip if already loaded or same address (tab switch)
+    if (hasLoadedRef.current || lastAddressRef.current === address) return;
+    lastAddressRef.current = address;
+    hasLoadedRef.current = true;
+    fetchCriticalData();
+  }, []);
   useEffect(() => {
     if (hasSuccessfulTransactions && successfulTransactionsArray.length > 0) {
       fetchCriticalData();

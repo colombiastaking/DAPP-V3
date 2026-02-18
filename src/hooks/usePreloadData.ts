@@ -29,6 +29,7 @@ export function usePreloadData() {
   const { hasSuccessfulTransactions } = useGetActiveTransactionsStatus();
   const dispatch = useDispatch();
   const hasLoadedRef = useRef(false);
+  const lastAddressRef = useRef<string | null>(null);
 
   // Fetch delegator count
   const fetchDelegatorCount = useCallback(async () => {
@@ -206,10 +207,12 @@ export function usePreloadData() {
     }
   }, [address, dispatch]);
 
-  // Preload all data once when user logs in
+  // Preload all data once when user logs in (and only re-fetch if address changes)
   useEffect(() => {
-    if (!address || hasLoadedRef.current) return;
+    // Skip if no address, already loaded, or same address (tab switch)
+    if (!address || hasLoadedRef.current || lastAddressRef.current === address) return;
     
+    lastAddressRef.current = address;
     hasLoadedRef.current = true;
     fetchDelegatorCount();
     fetchClaimableCols();
