@@ -29,36 +29,31 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!address || hasLoadedRef.current) return;
     
-    const minShowTime = 4000; // Show for at least 4 seconds
+    // If preloader is still loading, keep showing loading screen
+    // Only hide when: preloader finishes OR 10 seconds timeout
+    if (preloaderLoading === true) {
+      // Still loading - keep showing, will re-check
+    }
     
-    // After minimum time, check if preloader is done - if not, keep showing
-    const checkDataReady = setTimeout(() => {
-      if (preloaderLoading === false) {
-        // Data loaded, hide loading screen
-        hasLoadedRef.current = true;
-        setIsInitialLoading(false);
-      }
-      // If preloader still loading, don't hide - keep showing until it finishes or timeout
-    }, minShowTime);
-    
-    // Max wait time
+    // Max wait time - always hide after 10 seconds
     const timeoutFallback = setTimeout(() => {
       hasLoadedRef.current = true;
       setIsInitialLoading(false);
-    }, 10000); // 10 second max
+    }, 10000);
     
-    // Also watch for preloader to finish after minimum time
-    if (preloaderLoading === false && hasLoadedRef.current === false) {
-      clearTimeout(checkDataReady);
+    // Check if done - if so hide immediately
+    if (preloaderLoading === false) {
       hasLoadedRef.current = true;
+      clearTimeout(timeoutFallback);
       setIsInitialLoading(false);
     }
     
-    return () => {
-      clearTimeout(checkDataReady);
-      clearTimeout(timeoutFallback);
-    };
+    return () => clearTimeout(timeoutFallback);
   }, [address, preloaderLoading, isInitialLoading]);
+
+  // Show loading while preloader is still loading AND we have an address
+  // Will auto-hide when preloader finishes OR 10s timeout
+  const showLoading = isInitialLoading && preloaderLoading === true && Boolean(address);
 
   // Reset loading state on address change (new login)
   useEffect(() => {
@@ -67,9 +62,6 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       setIsInitialLoading(true);
     }
   }, [address]);
-
-  // Show loading while any critical data is loading
-  const showLoading = isInitialLoading && Boolean(address);
 
   return (
     <LoadingScreen isLoading={showLoading}>
