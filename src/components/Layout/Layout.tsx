@@ -17,50 +17,54 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   const account = useGetAccount();
   const address = account.address;
   
-  // Track if initial data is loading - wait for data to actually be ready
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  // Comprehensive loading tracking - counts active data fetches
+  const [fetchCount, setFetchCount] = useState(0);
   const hasLoadedRef = useRef(false);
 
-  // Pre-fetch all data at login for better UX
+  // Pre-fetch all data at login
   useGlobalData();
   const { isLoading: preloaderLoading } = usePreloadData();
 
-  // Check if all critical data is loaded
+  // Track when address changes - increment fetch count to show loading
+  useEffect(() => {
+    if (address) {
+      // New login - show loading
+      setFetchCount(1);
+      hasLoadedRef.current = false;
+    }
+  }, [address]);
+
+  // Show loading if:
+  // 1. preloader is still loading, OR
+  // 2. we just logged in and fetch count > 0
+  const showLoading = Boolean(address) && (
+    preloaderLoading === true || 
+    fetchCount > 0
+  );
+
+  // When preloader finishes, decrement our counter
+  useEffect(() => {
+    if (address && preloaderLoading === false && fetchCount > 0 && !hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      // Keep loading screen a bit longer for other data to settle
+      const settleTimer = setTimeout(() => {
+        setFetchCount(0);
+      }, 2000);
+      
+      return () => clearTimeout(settleTimer);
+    }
+  }, [address, preloaderLoading, fetchCount]);
+
+  // Force hide after 10 seconds max (fallback)
   useEffect(() => {
     if (!address || hasLoadedRef.current) return;
     
-    // If preloader is still loading, keep showing loading screen
-    // Only hide when: preloader finishes OR 10 seconds timeout
-    if (preloaderLoading === true) {
-      // Still loading - keep showing, will re-check
-    }
-    
-    // Max wait time - always hide after 10 seconds
     const timeoutFallback = setTimeout(() => {
       hasLoadedRef.current = true;
-      setIsInitialLoading(false);
+      setFetchCount(0);
     }, 10000);
     
-    // Check if done - if so hide immediately
-    if (preloaderLoading === false) {
-      hasLoadedRef.current = true;
-      clearTimeout(timeoutFallback);
-      setIsInitialLoading(false);
-    }
-    
     return () => clearTimeout(timeoutFallback);
-  }, [address, preloaderLoading, isInitialLoading]);
-
-  // Show loading while preloader is still loading AND we have an address
-  // Will auto-hide when preloader finishes OR 10s timeout
-  const showLoading = isInitialLoading && preloaderLoading === true && Boolean(address);
-
-  // Reset loading state on address change (new login)
-  useEffect(() => {
-    if (address) {
-      hasLoadedRef.current = false;
-      setIsInitialLoading(true);
-    }
   }, [address]);
 
   return (
