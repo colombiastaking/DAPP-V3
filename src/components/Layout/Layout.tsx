@@ -35,7 +35,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       if (isInitialLoading) {
         setIsInitialLoading(false);
       }
-    }, 15000); // 15 second max wait
+    }, 10000); // 10 second max wait
     
     // Only mark as ready when preloader says it's done loading
     if (preloaderLoading === false) {
