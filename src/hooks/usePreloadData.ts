@@ -237,6 +237,6 @@ export function usePreloadData() {
     fetchClaimableEgld,
     fetchColsBalance,
     fetchUserActiveStake,
-    isLoading: !hasLoadedRef.current
+    isLoading: hasLoadedRef.current === false
   };
 }
