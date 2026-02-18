@@ -4,7 +4,27 @@ import { UnlockPanelManager } from '@multiversx/sdk-dapp/out/managers/UnlockPane
 import { useGetLoginInfo } from '@multiversx/sdk-dapp/out/react/loginInfo/useGetLoginInfo';
 import { routeNames } from 'routes';
 
+import { MultiversX } from 'assets/MultiversX';
+
 import styles from './styles.module.scss';
+
+const STATS = [
+  { value: '48', label: 'Nodes' },
+  { value: '830+', label: 'Delegators' },
+  { value: '178K+', label: 'eGLD' },
+  { value: '7%+', label: 'APY' }
+];
+
+const SOCIAL_LINKS = {
+  telegram: [
+    { name: '📢 Announcements', url: 'https://t.me/ColombiaStakingAnn' },
+    { name: '💬 English', url: 'https://t.me/ColombiaStakingChat' },
+    { name: '🇪🇸 Spanish', url: 'https://t.me/colombiastakingesp' },
+    { name: '🇫🇷 French', url: 'https://t.me/colmbiastakingfr' }
+  ],
+  x: 'https://x.com/ColombiaStaking',
+  website: 'https://colombia-staking.com'
+};
 
 export const Unlock = () => {
   const navigate = useNavigate();
@@ -35,11 +55,7 @@ export const Unlock = () => {
     <div className={styles.unlock} style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className={styles.wrapper} style={{ maxWidth: 520, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <div className={styles.logo} style={{ marginBottom: 28 }}>
-          <img 
-            src="/colombia-staking-logo.png" 
-            alt="Colombia Staking" 
-            style={{ width: 48, height: 48, objectFit: 'contain' }}
-          />
+          <MultiversX />
         </div>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <strong className={styles.heading} style={{ fontSize: 28, color: '#62dbb8', display: 'block', marginBottom: 14, fontFamily: 'Lustria, serif' }}>
@@ -80,6 +96,30 @@ export const Unlock = () => {
             Get the xPortal Wallet here
           </a>
           {' '}and start staking today!
+        </div>
+        
+        {/* Stats Row */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 40, flexWrap: 'wrap' }}>
+          {STATS.map((stat, i) => (
+            <div key={i} style={{ textAlign: 'center', padding: '12px 16px', background: 'rgba(98, 219, 184, 0.08)', borderRadius: 12, border: '1px solid rgba(98, 219, 184, 0.2)', minWidth: 70 }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#62dbb8' }}>{stat.value}</div>
+              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase' }}>{stat.label}</div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Social Links */}
+        <div style={{ marginTop: 36, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <a href={SOCIAL_LINKS.x} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#000', color: '#fff', padding: '10px 18px', borderRadius: 25, textDecoration: 'none', fontSize: 13, fontWeight: 600, border: '1px solid #333' }}>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            X
+          </a>
+          <a href={SOCIAL_LINKS.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(98, 219, 184, 0.1)', color: '#62dbb8', padding: '10px 18px', borderRadius: 25, textDecoration: 'none', fontSize: 13, fontWeight: 600, border: '1px solid rgba(98, 219, 184, 0.3)' }}>
+            🌐 Website
+          </a>
+          <a href="https://t.me/ColombiaStakingChat" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg, #0088cc, #00a8e8)', color: '#fff', padding: '10px 18px', borderRadius: 25, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
+            💬 Telegram
+          </a>
         </div>
       </div>
     </div>
