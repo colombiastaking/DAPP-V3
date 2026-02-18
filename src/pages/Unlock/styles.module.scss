@@ -1,3 +1,349 @@
+.landing {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0d1512 100%);
+  padding-bottom: 40px;
+}
+
+// Hero Section
+.hero {
+  position: relative;
+  padding: 80px 20px 60px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 10;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.logoContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.logoImg {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 20px rgba(98, 219, 184, 0.4));
+}
+
+.heroTitle {
+  font-family: 'Lustria', serif;
+  font-size: clamp(32px, 6vw, 52px);
+  color: #ffffff;
+  margin: 0 0 20px;
+  line-height: 1.2;
+  
+  .highlight {
+    color: #62dbb8;
+  }
+}
+
+.heroSubtitle {
+  font-size: clamp(16px, 2.5vw, 20px);
+  color: #a0a0a0;
+  line-height: 1.6;
+  margin: 0 0 40px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+// Stats Grid
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 50px;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat {
+  background: rgba(98, 219, 184, 0.08);
+  border: 1px solid rgba(98, 219, 184, 0.2);
+  border-radius: 16px;
+  padding: 20px 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    border-color: #62dbb8;
+    box-shadow: 0 10px 30px rgba(98, 219, 184, 0.15);
+  }
+}
+
+.statValue {
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 700;
+  color: #62dbb8;
+  margin-bottom: 5px;
+}
+
+.statLabel {
+  font-size: 13px;
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// CTA Button
+.ctaButton {
+  background: linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%);
+  border: none;
+  border-radius: 16px;
+  padding: 20px 50px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0a0a0a;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 30px rgba(98, 219, 184, 0.4);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(98, 219, 184, 0.5);
+  }
+  
+  &:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+}
+
+.ctaNote {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #666;
+}
+
+// Background Glows
+.bgGlow {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(98, 219, 184, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bgGlow2 {
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(98, 219, 184, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+// Features Section
+.features {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+  
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featureCard {
+  background: rgba(26, 26, 26, 0.8);
+  border: 1px solid rgba(98, 219, 184, 0.15);
+  border-radius: 20px;
+  padding: 30px 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: rgba(98, 219, 184, 0.4);
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.featureIcon {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 15px;
+}
+
+.featureTitle {
+  font-family: 'Lustria', serif;
+  font-size: 18px;
+  color: #ffffff;
+  margin: 0 0 10px;
+}
+
+.featureDesc {
+  font-size: 14px;
+  color: #888;
+  line-height: 1.5;
+  margin: 0;
+}
+
+// Social Section
+.socialSection {
+  text-align: center;
+  margin-top: 60px;
+  padding: 0 20px;
+}
+
+.socialTitle {
+  font-size: 18px;
+  color: #a0a0a0;
+  margin-bottom: 20px;
+}
+
+.socialLinks {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.socialX {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #000;
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  border: 1px solid #333;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: #62dbb8;
+    transform: translateY(-2px);
+  }
+}
+
+.telegramDropdown {
+  position: relative;
+}
+
+.socialTelegram {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #0088cc 0%, #00a8e8 100%);
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 136, 204, 0.4);
+  }
+}
+
+.dropdownArrow {
+  font-size: 10px;
+  margin-left: 5px;
+}
+
+.telegramMenu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  border: 1px solid rgba(98, 219, 184, 0.3);
+  border-radius: 16px;
+  padding: 10px;
+  min-width: 200px;
+  z-index: 100;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.telegramChannel {
+  display: block;
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(98, 219, 184, 0.15);
+  }
+}
+
+.socialWeb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(98, 219, 184, 0.1);
+  color: #62dbb8;
+  padding: 14px 24px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  border: 1px solid rgba(98, 219, 184, 0.3);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(98, 219, 184, 0.2);
+    transform: translateY(-2px);
+  }
+}
+
+// Footer
+.footer {
+  text-align: center;
+  margin-top: 50px;
+  color: #666;
+  font-size: 14px;
+  padding: 0 20px;
+}
+
+.walletLink {
+  color: #62dbb8;
+  text-decoration: none;
+  font-weight: 600;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Original unlock styles
 .unlock {
   display: flex;
   align-items: center;
