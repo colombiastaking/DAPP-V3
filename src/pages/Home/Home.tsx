@@ -176,8 +176,8 @@ This ensures the APR reflects your actual staking position.`;
           </div>
           <div className={styles.statItem}>
             <div className={styles.statValue}>
-              {((actualEgldDelegated * Number(egldPrice || 0) + Number(colsStaked) * Number(colsPrice || 0)) > 0)
-                ? `$${Math.floor(actualEgldDelegated * Number(egldPrice || 0) + Number(colsStaked) * Number(colsPrice || 0)).toLocaleString()}`
+              {((actualEgldDelegated * Number(egldPrice || 0) + Number(colsStaked) * Number(colsPrice || 0)) > 0 && baseApr)
+                ? `$${Math.floor((actualEgldDelegated * Number(egldPrice || 0) + Number(colsStaked) * Number(colsPrice || 0)) * (Number(baseApr) / 100)).toLocaleString()}`
                 : '$0'}
             </div>
             <div className={styles.statLabel}>Est. Yearly Reward</div>

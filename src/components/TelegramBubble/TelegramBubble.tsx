@@ -5,6 +5,11 @@ import styles from './TelegramBubble.module.scss';
 const SOCIAL_CHANNELS = {
   telegram: [
     {
+      name: 'Announcements',
+      flag: '📢',
+      url: 'https://t.me/ColombiaStakingAnn'
+    },
+    {
       name: 'English',
       flag: '🇬🇧',
       url: 'https://t.me/ColombiaStakingChat'
