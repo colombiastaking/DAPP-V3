@@ -29,30 +29,35 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!address || hasLoadedRef.current) return;
     
-    // Only hide loading screen when preloader confirms data is loaded
-    // OR after a reasonable timeout (now 15 seconds)
-    const timeoutFallback = setTimeout(() => {
-      if (isInitialLoading) {
+    const minShowTime = 4000; // Show for at least 4 seconds
+    
+    // After minimum time, check if preloader is done - if not, keep showing
+    const checkDataReady = setTimeout(() => {
+      if (preloaderLoading === false) {
+        // Data loaded, hide loading screen
+        hasLoadedRef.current = true;
         setIsInitialLoading(false);
       }
-    }, 10000); // 10 second max wait
+      // If preloader still loading, don't hide - keep showing until it finishes or timeout
+    }, minShowTime);
     
-    // Only mark as ready when preloader says it's done loading
-    if (preloaderLoading === false) {
+    // Max wait time
+    const timeoutFallback = setTimeout(() => {
       hasLoadedRef.current = true;
-      clearTimeout(timeoutFallback);
-      // Add a small delay for smooth transition
-      const timer = setTimeout(() => {
-        setIsInitialLoading(false);
-      }, 1000); // 1 second delay to let data settle
-      
-      return () => {
-        clearTimeout(timer);
-        clearTimeout(timeoutFallback);
-      };
+      setIsInitialLoading(false);
+    }, 10000); // 10 second max
+    
+    // Also watch for preloader to finish after minimum time
+    if (preloaderLoading === false && hasLoadedRef.current === false) {
+      clearTimeout(checkDataReady);
+      hasLoadedRef.current = true;
+      setIsInitialLoading(false);
     }
     
-    return () => clearTimeout(timeoutFallback);
+    return () => {
+      clearTimeout(checkDataReady);
+      clearTimeout(timeoutFallback);
+    };
   }, [address, preloaderLoading, isInitialLoading]);
 
   // Reset loading state on address change (new login)
