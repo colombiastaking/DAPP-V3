@@ -35,7 +35,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       if (isInitialLoading) {
         setIsInitialLoading(false);
       }
-    }, 5000); // 5 second max wait
+    }, 10000); // 10 second max wait
     
     if (!hasLoadedRef.current && preloaderLoading === false) {
       hasLoadedRef.current = true;
