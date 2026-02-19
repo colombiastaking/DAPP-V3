@@ -65,9 +65,8 @@ export const network: NetworkType = {
 // Robust API health check
 async function checkApiHealth(url: string): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${url}/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7`
-    );
+    // Use /economics endpoint - works on both public API and Colombia API
+    const res = await fetch(`${url}/economics`);
 
     if (!res.ok) {
       console.warn(`API check failed: ${url} returned status ${res.status}`);
@@ -76,17 +75,12 @@ async function checkApiHealth(url: string): Promise<boolean> {
 
     const data = await res.json();
 
-    if (!Array.isArray(data)) {
-      console.warn(`API check failed: ${url} returned non-array data`);
+    if (!data || typeof data !== 'object') {
+      console.warn(`API check failed: ${url} returned non-object data`);
       return false;
     }
 
-    if (data.length === 0) {
-      console.warn(`API check failed: ${url} returned empty array`);
-      return false;
-    }
-
-    const price = data[0].price;
+    const price = data.price;
 
     if (typeof price !== 'number') {
       console.warn(`API check failed: ${url} returned price of type ${typeof price}`);

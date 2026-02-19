@@ -163,9 +163,9 @@ async function fetchEgldDelegators() {
 // ════════════════════════════════════════════════════════════════════════════
 
 async function fetchColsStakers() {
-  // Convert entity address to hex for query
+  // Convert entity address to hex for query (gateway expects hex, not base64!)
   const entityAddress = new Address(PEERME_ENTITY_ADDRESS);
-  const entityHex = entityAddress.hex();
+  const entityHex = entityAddress.toHex(); // e.g., "00000000000000000500f5ae3a400dae272bd254689fd5a44f88e3f2949e5787"
   
   // Try primary gateway first, then backup
   const gateways = [PRIMARY_GATEWAY, BACKUP_GATEWAY];
@@ -199,7 +199,7 @@ async function fetchColsStakers() {
           const amountBuf = Buffer.from(returnData[i + 1], "base64");
           
           // Convert to address using SDK (exact match to dapp)
-          const addr = new Address(addrBuf).bech32();
+          const addr = new Address(addrBuf).toBech32();
           const amount = Number(decodeBigNumber(amountBuf)) / 1e18;
           stakers.push({ address: addr, colsStaked: amount });
         } catch {}
