@@ -144,31 +144,36 @@ export function usePreloadData() {
       colsBalance: { status: 'loading', data: null, error: null }
     });
 
-    try {
-      const { data } = await axios.get(
-        `${network.apiAddress}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
-      );
-      let balance = '0';
-      if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
-        // Denominate from 18 decimals
-        const raw = data[0].balance;
-        if (raw && raw !== '0') {
-          const rawStr = raw.toString().padStart(19, '0');
-          const intPart = rawStr.slice(0, -18) || '0';
-          let decPart = rawStr.slice(-18).replace(/0+$/, '');
-          balance = decPart ? `${intPart}.${decPart}` : intPart;
+    const PUBLIC_API = 'https://api.multiversx.com';
+    const apis = [network.apiAddress, PUBLIC_API];
+
+    let balance = '0';
+
+    for (const api of apis) {
+      try {
+        const { data } = await axios.get(
+          `${api}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
+        );
+        if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
+          // Denominate from 18 decimals
+          const raw = data[0].balance;
+          if (raw && raw !== '0') {
+            const rawStr = raw.toString().padStart(19, '0');
+            const intPart = rawStr.slice(0, -18) || '0';
+            let decPart = rawStr.slice(-18).replace(/0+$/, '');
+            balance = decPart ? `${intPart}.${decPart}` : intPart;
+          }
+          break; // Got valid data
         }
+      } catch {
+        // Continue to next API
       }
-      dispatch({
-        type: 'getColsBalance',
-        colsBalance: { status: 'loaded', data: balance, error: null }
-      });
-    } catch (error) {
-      dispatch({
-        type: 'getColsBalance',
-        colsBalance: { status: 'error', data: '0', error }
-      });
     }
+
+    dispatch({
+      type: 'getColsBalance',
+      colsBalance: { status: balance !== '0' ? 'loaded' : 'error', data: balance, error: null }
+    });
   }, [address, dispatch]);
 
   // Fetch user active stake (delegated eGLD)
