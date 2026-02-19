@@ -146,7 +146,6 @@ export function usePreloadData() {
 
     const PUBLIC_API = 'https://api.multiversx.com';
     const apis = [network.apiAddress, PUBLIC_API];
-
     let balance = '0';
 
     for (const api of apis) {
@@ -163,10 +162,10 @@ export function usePreloadData() {
             let decPart = rawStr.slice(-18).replace(/0+$/, '');
             balance = decPart ? `${intPart}.${decPart}` : intPart;
           }
-          break; // Got valid data
+          break;
         }
       } catch {
-        // Continue to next API
+        // Try next API
       }
     }
 
