@@ -219,8 +219,8 @@ async function main() {
     }
     
     // Calculate daily service fee rebate in eGLD
-    // Formula: eGLD × rawApr × serviceFee / 365
-    const dailyServiceFeeEgld = goldEligibleEgld * rawApr * SERVICE_FEE / DAYS_IN_YEAR;
+    // Formula: eGLD × (rawApr/100) × serviceFee / 365
+    const dailyServiceFeeEgld = goldEligibleEgld * (rawApr / 100) * SERVICE_FEE / DAYS_IN_YEAR;
     
     // Convert to COLS
     const dailyServiceFeeCols = dailyServiceFeeEgld * (finalEgldPrice / finalColsPrice);

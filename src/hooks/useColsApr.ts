@@ -134,11 +134,16 @@ async function fetchEgldBulkPrimary(): Promise<Record<string, number>> {
       PRIMARY_PROVIDER_ACCOUNTS,
       BACKUP_ACCOUNTS_API
     );
-    if (!r?.accounts?.length) throw new Error();
+    
+    // Handle both API response formats:
+    // - Your API: { "accounts": [{ "address": "...", "stake": "..." }] }
+    // - Public API: [{ "address": "...", "stake": "..." }]
+    const accounts = Array.isArray(r) ? r : (r?.accounts || []);
+    if (!accounts.length) throw new Error();
 
     const out: Record<string, number> = {};
-    r.accounts.forEach((a: any) => {
-      const v = Number(a.activeStake || a.delegationActiveStake || 0);
+    accounts.forEach((a: any) => {
+      const v = Number(a.activeStake || a.delegationActiveStake || a.stake || 0);
       out[a.address] = v > 1e12 ? v / 1e18 : v;
     });
     return out;
