@@ -160,7 +160,7 @@ async function fetchStake_All(addresses: string[], mode: ApiMode) {
 /*───────────────────────────────────────────────
   MAIN HOOK
 ─────────────────────────────────────────────────*/
-export function useColsApr({ trigger, userActiveStakeRaw }: { trigger: any; userActiveStakeRaw?: string | null }) {
+export function useColsApr({ trigger, userActiveStakeRaw, userAddress }: { trigger: any; userActiveStakeRaw?: string | null; userAddress?: string }) {
   const [loading, setLoading] = useState(true);
   const [stakers, setStakers] = useState<ColsStakerRow[]>([]);
   const [egldPrice, setEgldPrice] = useState(0);
@@ -227,7 +227,7 @@ export function useColsApr({ trigger, userActiveStakeRaw }: { trigger: any; user
         address: u.address,
         colsStaked: u.colsStaked,
         // If this is the current user and we have context data, use it (more reliable)
-        egldStaked: (userActiveStakeRaw && u.address.toLowerCase() === users[0]?.address?.toLowerCase()) 
+        egldStaked: (userActiveStakeRaw && userAddress && u.address.toLowerCase() === userAddress.toLowerCase()) 
           ? Number(userActiveStakeRaw) / 1e18 
           : (egldMap[u.address] || 0),
         ratio: null,
