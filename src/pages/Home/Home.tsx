@@ -50,10 +50,11 @@ export const Home = () => {
   const colsStaked = userRow?.colsStaked ?? 0;
 
   // Priority for eGLD:
-  // 1. If user has COLS staked AND stakers data has valid eGLD → use stakers
-  // 2. Otherwise → use context data (most reliable source)
-  // This handles: Gold members, users without COLS, users with only COLS
-  const actualEgldDelegated = (colsStaked > 0 && egldDelegatedFromStakers > 0) 
+  // 1. If user in stakers and has valid eGLD → use stakers
+  // 2. If user in stakers but eGLD = 0 (failed query) → use context
+  // 3. If user not in stakers → use context
+  // This handles ALL cases: Gold members, eGLD only, COLS only, COLS+EGLD, nothing
+  const actualEgldDelegated = (userRow && egldDelegatedFromStakers > 0) 
     ? egldDelegatedFromStakers 
     : delegatedEgld;
   
