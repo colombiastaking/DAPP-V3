@@ -20,9 +20,11 @@ export const Navbar = () => {
   useEffect(() => {
     const fetchCols = async () => {
       setLoading(true);
+      // Use public API - Colombia API doesn't index COLS tokens
+      const PUBLIC_API = 'https://api.multiversx.com';
       try {
         const { data } = await axios.get(
-          `${network.apiAddress}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
+          `${PUBLIC_API}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
         );
         if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
           let raw = data[0].balance.padStart(19, '0');
