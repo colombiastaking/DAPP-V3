@@ -122,60 +122,80 @@ async function fetchColsPrice(mode: ApiMode) {
 }
 
 /*───────────────────────────────────────────────
-  INDIVIDUAL EGLD FETCH (NO BULK)
-  Query each address individually via API
+  INDIVIDUAL EGLD FETCH (RELIABLE MODE)
+  Sequential queries with retries - slower but guaranteed
 ─────────────────────────────────────────────────*/
 async function fetchEgldForAddress(
   address: string,
-  mode: ApiMode
+  mode: ApiMode,
+  retryCount = 2
 ): Promise<number> {
-  // Try primary API first
   const primaryUrl = `${PRIMARY_PROVIDER_API}/accounts/${address}`;
   const backupUrl = `${BACKUP_PROVIDER_API}/accounts/${address}`;
 
-  // Try primary
-  try {
-    const { data } = await axios.get(primaryUrl, { timeout: 4000 });
-    if (data?.activeStake) {
-      const stake = Number(data.activeStake);
-      return stake > 1e12 ? stake / 1e18 : stake;
+  // Helper to try fetching with retries
+  const tryFetch = async (url: string, timeout: number): Promise<number | null> => {
+    for (let attempt = 0; attempt <= retryCount; attempt++) {
+      try {
+        const { data } = await axios.get(url, { timeout });
+        if (data?.activeStake) {
+          const stake = Number(data.activeStake);
+          return stake > 1e12 ? stake / 1e18 : stake;
+        }
+        // Got response but no activeStake - return 0 (not staked)
+        return 0;
+      } catch (e) {
+        if (attempt < retryCount) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); // Wait before retry
+        }
+      }
     }
-  } catch {}
+    return null;
+  };
+
+  // Try primary API
+  const primaryResult = await tryFetch(primaryUrl, 4000);
+  if (primaryResult !== null) return primaryResult;
 
   // Fallback to public API
-  try {
-    const { data } = await axios.get(backupUrl, { timeout: 6000 });
-    if (data?.activeStake) {
-      const stake = Number(data.activeStake);
-      return stake > 1e12 ? stake / 1e18 : stake;
-    }
-  } catch {}
+  const backupResult = await tryFetch(backupUrl, 6000);
+  if (backupResult !== null) return backupResult;
 
-  // Final fallback: smart contract query
-  return fetchStakeContract(address, mode);
+  // Final fallback: smart contract query with retries
+  return fetchStakeContractWithRetry(address, mode, retryCount);
 }
 
 /*───────────────────────────────────────────────
-  SMART CONTRACT STAKE (FALLBACK)
+  SMART CONTRACT STAKE (WITH RETRIES)
 ─────────────────────────────────────────────────*/
-async function fetchStakeContract(addr: string, mode: ApiMode) {
+async function fetchStakeContractWithRetry(
+  addr: string,
+  mode: ApiMode,
+  retryCount = 2
+): Promise<number> {
   const gateways =
     mode === 'main'
       ? [MAIN_GATEWAY, BACKUP_GATEWAY]
       : [BACKUP_GATEWAY];
 
   for (const gw of gateways) {
-    try {
-      const provider = new ProxyNetworkProvider(gw);
-      const q = createContractQuery({
-        address: new Address(network.delegationContract),
-        func: new ContractFunction('getUserActiveStake'),
-        args: [new AddressValue(new Address(addr))]
-      });
-      const r = await provider.queryContract(q);
-      const [raw] = r.getReturnDataParts();
-      if (raw) return Number(decodeBigNumber(raw)) / 1e18;
-    } catch {}
+    for (let attempt = 0; attempt <= retryCount; attempt++) {
+      try {
+        const provider = new ProxyNetworkProvider(gw);
+        const q = createContractQuery({
+          address: new Address(network.delegationContract),
+          func: new ContractFunction('getUserActiveStake'),
+          args: [new AddressValue(new Address(addr))]
+        });
+        const r = await provider.queryContract(q);
+        const [raw] = r.getReturnDataParts();
+        if (raw) return Number(decodeBigNumber(raw)) / 1e18;
+      } catch {
+        if (attempt < retryCount) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        }
+      }
+    }
   }
   return 0;
 }
@@ -183,15 +203,36 @@ async function fetchStakeContract(addr: string, mode: ApiMode) {
 async function fetchStake_All(addresses: string[], mode: ApiMode) {
   const out: Record<string, number> = {};
   
-  // Query each address individually (parallel, not bulk)
-  const results = await Promise.allSettled(
-    addresses.map(addr => fetchEgldForAddress(addr, mode))
-  );
+  // Sequential processing for maximum reliability
+  // Process in batches of 10 to avoid overwhelming the API
+  const BATCH_SIZE = 10;
+  const DELAY_BETWEEN_BATCHES = 500; // ms
   
-  results.forEach((x, i) => {
-    out[addresses[i]] = x.status === 'fulfilled' ? x.value as number : 0;
-  });
+  console.log(`🔄 Fetching eGLD for ${addresses.length} addresses...`);
   
+  for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
+    const batch = addresses.slice(i, i + BATCH_SIZE);
+    
+    // Process batch in parallel
+    const results = await Promise.allSettled(
+      batch.map(addr => fetchEgldForAddress(addr, mode))
+    );
+    
+    results.forEach((x, idx) => {
+      out[batch[idx]] = x.status === 'fulfilled' ? x.value as number : 0;
+    });
+    
+    // Progress log
+    const done = Math.min(i + BATCH_SIZE, addresses.length);
+    console.log(`📊 Progress: ${done}/${addresses.length} addresses`);
+    
+    // Small delay between batches
+    if (i + BATCH_SIZE < addresses.length) {
+      await new Promise(r => setTimeout(r, DELAY_BETWEEN_BATCHES));
+    }
+  }
+  
+  console.log(`✅ Completed fetching eGLD for ${addresses.length} addresses`);
   return out;
 }
 
