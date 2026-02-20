@@ -46,8 +46,9 @@ export const Home = () => {
   const egldDelegatedFromStakers = userRow?.egldStaked ?? 0;
   const colsStaked = userRow?.colsStaked ?? 0;
 
-  // Prefer stakers data if user has COLS staked, otherwise use context
-  const actualEgldDelegated = colsStaked > 0 
+  // Prefer stakers data if user has COLS staked AND bulk API returned valid data, 
+  // otherwise use context (which queries SC directly) as fallback
+  const actualEgldDelegated = (colsStaked > 0 && egldDelegatedFromStakers > 0) 
     ? egldDelegatedFromStakers 
     : delegatedEgld;
   
