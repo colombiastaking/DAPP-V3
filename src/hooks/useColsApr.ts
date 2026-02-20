@@ -138,7 +138,8 @@ async function fetchEgldBulkPrimary(): Promise<Record<string, number>> {
 
     const out: Record<string, number> = {};
     r.accounts.forEach((a: any) => {
-      const v = Number(a.activeStake || a.delegationActiveStake || 0);
+      // API returns "stake" field (not "activeStake")
+      const v = Number(a.stake || a.activeStake || a.delegationActiveStake || 0);
       out[a.address] = v > 1e12 ? v / 1e18 : v;
     });
     return out;
