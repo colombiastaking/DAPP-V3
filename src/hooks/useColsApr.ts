@@ -121,48 +121,72 @@ async function fetchColsPrice(mode: ApiMode) {
 }
 
 /*───────────────────────────────────────────────
-  BULK EGLD FETCH WITH FALLBACK
+  BULK EGLD FETCH WITH SC FALLBACK
 ─────────────────────────────────────────────────*/
-async function fetchEgldBulkWithFallback(): Promise<Record<string, number>> {
-  // Try backup API first (more reliable)
+// SC query for single address
+async function fetchStakeContract(addr: string): Promise<number> {
+  const gateways = [MAIN_GATEWAY, BACKUP_GATEWAY];
+  for (const gw of gateways) {
+    try {
+      const provider = new ProxyNetworkProvider(gw);
+      const q = createContractQuery({
+        address: new Address(network.delegationContract),
+        func: new ContractFunction('getUserActiveStake'),
+        args: [new AddressValue(new Address(addr))]
+      });
+      const r = await provider.queryContract(q);
+      const [raw] = r.getReturnDataParts();
+      if (raw) return Number(decodeBigNumber(raw)) / 1e18;
+    } catch {}
+  }
+  return 0;
+}
+
+async function fetchEgldWithFallback(addresses: string[]): Promise<Record<string, number>> {
+  // First try bulk API
   const backupUrl = `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
+  const primaryUrl = `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}/accounts?size=10000`;
   
+  let bulkMap: Record<string, number> = {};
+  
+  // Try backup bulk first
   try {
     const { data } = await axios.get(backupUrl, { timeout: 30000 });
     const accounts = Array.isArray(data) ? data : (data?.accounts || []);
-    const out: Record<string, number> = {};
     for (const a of accounts) {
       const v = Number(a.activeStake || a.delegationActiveStake || a.stake || 0);
-      out[a.address] = v > 1e12 ? v / 1e18 : v;
+      bulkMap[a.address] = v > 1e12 ? v / 1e18 : v;
     }
-    if (Object.keys(out).length > 0) {
-      console.log(`✅ Bulk EGLD fetched: ${Object.keys(out).length} accounts`);
-      return out;
-    }
+    console.log(`✅ Bulk fetched: ${Object.keys(bulkMap).length} accounts`);
   } catch (e) {
-    console.warn('⚠️ Backup bulk API failed');
+    console.warn('⚠️ Backup bulk failed');
   }
   
-  // Try primary
-  const primaryUrl = `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}/accounts?size=10000`;
-  try {
-    const { data } = await axios.get(primaryUrl, { timeout: 30000 });
-    const accounts = Array.isArray(data) ? data : (data?.accounts || []);
-    const out: Record<string, number> = {};
-    for (const a of accounts) {
-      const v = Number(a.activeStake || a.delegationActiveStake || a.stake || 0);
-      out[a.address] = v > 1e12 ? v / 1e18 : v;
+  // If bulk returned nothing, try primary
+  if (Object.keys(bulkMap).length === 0) {
+    try {
+      const { data } = await axios.get(primaryUrl, { timeout: 30000 });
+      const accounts = Array.isArray(data) ? data : (data?.accounts || []);
+      for (const a of accounts) {
+        const v = Number(a.activeStake || a.delegationActiveStake || a.stake || 0);
+        bulkMap[a.address] = v > 1e12 ? v / 1e18 : v;
+      }
+      console.log(`✅ Primary bulk fetched: ${Object.keys(bulkMap).length} accounts`);
+    } catch (e) {
+      console.warn('⚠️ Primary bulk failed');
     }
-    if (Object.keys(out).length > 0) {
-      console.log(`✅ Primary bulk EGLD fetched: ${Object.keys(out).length} accounts`);
-      return out;
-    }
-  } catch (e) {
-    console.warn('⚠️ Primary bulk API failed');
   }
   
-  console.error('❌ All bulk APIs failed, returning empty');
-  return {};
+  // For addresses not in bulk, do SC queries
+  const missing = addresses.filter(a => !bulkMap[a]);
+  if (missing.length > 0) {
+    console.log(`🔄 SC fallback for ${missing.length} addresses...`);
+    for (const addr of missing) {
+      bulkMap[addr] = await fetchStakeContract(addr);
+    }
+  }
+  
+  return bulkMap;
 }
 
 /*───────────────────────────────────────────────
@@ -226,7 +250,7 @@ export function useColsApr({ trigger, userActiveStakeRaw, userAddress }: { trigg
       setBaseApr(pA);
       setAgencyLockedEgld(pL);
 
-      const egldMap = await fetchEgldBulkWithFallback();
+      const egldMap = await fetchEgldWithFallback(users.map(u => u.address));
 
       const table: ColsStakerRow[] = users.map(u => ({
         address: u.address,
