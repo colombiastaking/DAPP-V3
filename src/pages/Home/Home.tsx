@@ -31,6 +31,9 @@ export const Home = () => {
   const { stakers, loading, egldPrice, colsPrice, baseApr, aprMax } = useColsAprContext();
   const { userActiveStake } = useGlobalContext();
   
+  // Combined loading state: data is ready when BOTH ColsAprContext AND userActiveStake are loaded
+  const isDataReady = !loading && userActiveStake.status === 'loaded';
+  
   // Gold Member detection
   const { isGoldMember, goldNftCount, goldCapacityEgld } = useGoldMember(address);
   
@@ -274,7 +277,7 @@ This ensures the APR reflects your actual staking position.`;
             <div className={styles.assetIcon}>💎</div>
             <div className={styles.assetLabel}>eGLD Delegated</div>
             <div className={`${styles.assetValue} ${styles.assetValuePrimary}`}>
-              {loading || userActiveStake.status === 'loading' ? (
+              {!isDataReady ? (
                 <><AnimatedDots /></>
               ) : (
                 formatNumber(actualEgldDelegated, 4)
@@ -290,7 +293,7 @@ This ensures the APR reflects your actual staking position.`;
             <div className={styles.assetIconAccent}>🪙</div>
             <div className={styles.assetLabel}>COLS Staked</div>
             <div className={`${styles.assetValue} ${styles.assetValueAccent}`}>
-              {loading ? <><AnimatedDots /></> : formatNumber(colsStaked, 2)}
+              {!isDataReady ? <><AnimatedDots /></> : formatNumber(colsStaked, 2)}
             </div>
             <div className={styles.assetUsd}>
               ≈ ${(Number(colsStaked) * Number(colsPrice || 0)).toFixed(2)}
@@ -322,14 +325,14 @@ This ensures the APR reflects your actual staking position.`;
         <div className={styles.aprCard}>
           <div className={styles.aprLabel}>Annual Percentage Rate</div>
           <div className={`${styles.aprValue} ${styles.aprValueLarge}`}>
-            {loading ? <><AnimatedDots /></> : userApr !== null ? `${userApr.toFixed(2)}%` : '—'}
-            {isGoldMember && goldBonusApr > 0 && <span className={styles.goldBonusBadge}> +{goldBonusApr.toFixed(2)}% Gold</span>}
+            {!isDataReady ? <><AnimatedDots /></> : userApr !== null ? `${userApr.toFixed(2)}%` : '—'}
+            {isDataReady && isGoldMember && goldBonusApr > 0 && <span className={styles.goldBonusBadge}> +{goldBonusApr.toFixed(2)}% Gold</span>}
           </div>
         </div>
 
         <div className={styles.baseAprRow}>
           Base APR: <span className={styles.baseAprValue}>
-            {loading ? <AnimatedDots /> : `${baseApr.toFixed(2)}%`}
+            {!isDataReady ? <AnimatedDots /> : `${baseApr.toFixed(2)}%`}
           </span>
           <HelpIcon text="Base APR is the standard annual percentage rate for all delegators, before any COLS bonus." />
         </div>
