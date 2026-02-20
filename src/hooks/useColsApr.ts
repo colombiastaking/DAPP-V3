@@ -160,15 +160,15 @@ async function fetchEgldForAddress(
     return null;
   };
 
-  // Fast path: Try main API first (fewer retries, shorter delays)
+  // Priority 1: SC query (your own nodes - most reliable)
+  const scResult = await fetchStakeContractWithRetry(address, mode, retryCount);
+  if (scResult > 0) return scResult;
+
+  // Priority 2: Main API (your local API)
   const primaryResult = await tryFetch(primaryUrl, 4000);
   if (primaryResult !== null) return primaryResult;
 
-  // Fallback: try SC query (your own nodes - reliable)
-  const scResult = await fetchStakeContractWithRetry(address, mode, 1);
-  if (scResult > 0) return scResult;
-
-  // Final fallback: public API
+  // Priority 3: Public API as final fallback
   const backupResult = await tryFetch(backupUrl, 6000);
   if (backupResult !== null) return backupResult;
 
