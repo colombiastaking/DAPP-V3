@@ -131,15 +131,28 @@ async function fetchEgldForAddress(
   retryCount = 2
 ): Promise<number> {
   const primaryUrl = `${PRIMARY_PROVIDER_API}/accounts/${address}`;
-  const backupUrl = `${BACKUP_PROVIDER_API}/accounts/${address}`;
+  
+  // For backup, use the public MultiversX API directly (different endpoint format)
+  // The /providers/{contract}/accounts/{address} endpoint only exists on your local API
+  const backupUrl = `https://api.multiversx.com/accounts/${address}`;
 
   // Helper to try fetching with retries
   const tryFetch = async (url: string, timeout: number): Promise<number | null> => {
     for (let attempt = 0; attempt <= retryCount; attempt++) {
       try {
         const { data } = await axios.get(url, { timeout });
-        if (data?.activeStake) {
-          const stake = Number(data.activeStake);
+        
+        // Handle different API response formats
+        let stake = 0;
+        if (url.includes('api.multiversx.com/accounts')) {
+          // Public API: check delegation data
+          stake = Number(data?.delegation?.activeStake || 0);
+        } else {
+          // Local API: check activeStake directly
+          stake = Number(data?.activeStake || 0);
+        }
+        
+        if (stake > 0) {
           return stake > 1e12 ? stake / 1e18 : stake;
         }
         // Got response but no activeStake - return 0 (not staked)
@@ -153,11 +166,11 @@ async function fetchEgldForAddress(
     return null;
   };
 
-  // Try primary API
+  // Try primary API (your local API)
   const primaryResult = await tryFetch(primaryUrl, 4000);
   if (primaryResult !== null) return primaryResult;
 
-  // Fallback to public API
+  // Fallback to public MultiversX API
   const backupResult = await tryFetch(backupUrl, 6000);
   if (backupResult !== null) return backupResult;
 
