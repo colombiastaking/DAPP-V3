@@ -2,7 +2,6 @@ import { createRoot } from 'react-dom/client';
 import { initApp } from '@multiversx/sdk-dapp/out/methods/initApp/initApp';
 import type { InitAppType } from '@multiversx/sdk-dapp/out/methods/initApp/initApp.types';
 import { EnvironmentsEnum } from '@multiversx/sdk-dapp/out/types/enums.types';
-import { defineCustomElements } from '@multiversx/sdk-dapp/out/lib/sdkDappUi';
 
 import { App } from './App';
 import './index.css';
@@ -29,9 +28,6 @@ const config: InitAppType = {
     }
   }
 };
-
-// Register web components (UnlockPanel, etc.) before initializing
-defineCustomElements();
 
 initApp(config).then(() => {
   const container = document.getElementById('root');
