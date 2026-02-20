@@ -106,8 +106,11 @@ export function usePreloadData() {
       userClaimableRewards: { status: 'loading', data: null, error: null }
     });
 
+    // Use public gateway - local gateway may have issues with queries
+    const PUBLIC_GATEWAY = 'https://gateway.multiversx.com';
+
     try {
-      const provider = new ProxyNetworkProvider(network.gatewayAddress);
+      const provider = new ProxyNetworkProvider(PUBLIC_GATEWAY);
       const query = createContractQuery({
         address: new Address(network.delegationContract),
         func: new ContractFunction('getClaimableRewards'),
@@ -183,8 +186,11 @@ export function usePreloadData() {
       userActiveStake: { status: 'loading', data: null, error: null }
     });
 
+    // Use public gateway - local gateway may have issues with queries
+    const PUBLIC_GATEWAY = 'https://gateway.multiversx.com';
+
     try {
-      const provider = new ProxyNetworkProvider(network.gatewayAddress);
+      const provider = new ProxyNetworkProvider(PUBLIC_GATEWAY);
       const query = createContractQuery({
         address: new Address(DELEGATION_CONTRACT),
         func: new ContractFunction('getUserActiveStake'),
