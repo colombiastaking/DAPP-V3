@@ -130,49 +130,8 @@ async function fetchEgldForAddress(
   mode: ApiMode,
   retryCount = 2
 ): Promise<number> {
-  const primaryUrl = `${PRIMARY_PROVIDER_API}/accounts/${address}`;
-  const backupUrl = `https://api.multiversx.com/accounts/${address}`;
-
-  // Helper to try fetching with retries - stops early if stake found
-  const tryFetch = async (url: string, timeout: number): Promise<number | null> => {
-    for (let attempt = 0; attempt <= retryCount; attempt++) {
-      try {
-        const { data } = await axios.get(url, { timeout });
-        
-        // Handle different API response formats
-        let stake = 0;
-        if (url.includes('api.multiversx.com/accounts')) {
-          stake = Number(data?.delegation?.activeStake || 0);
-        } else {
-          stake = Number(data?.activeStake || 0);
-        }
-        
-        if (stake > 0) {
-          return stake > 1e12 ? stake / 1e18 : stake;
-        }
-        return 0;
-      } catch (e) {
-        if (attempt < retryCount) {
-          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
-        }
-      }
-    }
-    return null;
-  };
-
-  // Priority 1: SC query (your own nodes - most reliable)
-  const scResult = await fetchStakeContractWithRetry(address, mode, retryCount);
-  if (scResult > 0) return scResult;
-
-  // Priority 2: Main API (your local API)
-  const primaryResult = await tryFetch(primaryUrl, 4000);
-  if (primaryResult !== null) return primaryResult;
-
-  // Priority 3: Public API as final fallback
-  const backupResult = await tryFetch(backupUrl, 6000);
-  if (backupResult !== null) return backupResult;
-
-  return 0;
+  // ONLY use SC queries - no API calls for eGLD
+  return fetchStakeContractWithRetry(address, mode, retryCount);
 }
 
 /*───────────────────────────────────────────────
@@ -213,11 +172,11 @@ async function fetchStakeContractWithRetry(
 async function fetchStake_All(addresses: string[], mode: ApiMode) {
   const out: Record<string, number> = {};
   
-  // Process in batches of 20 for better parallelism
-  const BATCH_SIZE = 20;
-  const DELAY_BETWEEN_BATCHES = 300; // ms
+  // Process in batches of 30 for better parallelism
+  const BATCH_SIZE = 30;
+  const DELAY_BETWEEN_BATCHES = 200; // ms
   
-  console.log(`🔄 Fetching eGLD for ${addresses.length} addresses...`);
+  console.log(`🔄 Fetching eGLD for ${addresses.length} addresses via SC...`);
   
   for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
     const batch = addresses.slice(i, i + BATCH_SIZE);
