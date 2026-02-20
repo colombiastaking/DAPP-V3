@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { initApp } from '@multiversx/sdk-dapp/out/methods/initApp/initApp';
 import type { InitAppType } from '@multiversx/sdk-dapp/out/methods/initApp/initApp.types';
 import { EnvironmentsEnum } from '@multiversx/sdk-dapp/out/types/enums.types';
+import { defineCustomElements } from '@multiversx/sdk-dapp/out/lib/sdkDappUi';
 
 import { App } from './App';
 import './index.css';
@@ -30,6 +31,9 @@ const config: InitAppType = {
 };
 
 initApp(config).then(() => {
+  // Register web components (wallet unlock panel) after init
+  defineCustomElements();
+  
   const container = document.getElementById('root');
   const root = createRoot(container as HTMLElement);
 
