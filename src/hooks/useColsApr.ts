@@ -26,13 +26,9 @@ const BONUS_BUYBACK_FACTOR = 0.66;
 
 const PRIMARY_PROVIDER_API =
   `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}`;
-const PRIMARY_PROVIDER_ACCOUNTS =
-  `${PRIMARY_PROVIDER_API}/accounts?size=10000`;
 
 const BACKUP_PROVIDER_API =
   `https://api.multiversx.com/providers/${network.delegationContract}`;
-const BACKUP_ACCOUNTS_API =
-  `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
 
 const MAIN_GATEWAY = network.gatewayAddress;
 const BACKUP_GATEWAY = 'https://gateway.multiversx.com';
@@ -126,30 +122,41 @@ async function fetchColsPrice(mode: ApiMode) {
 }
 
 /*───────────────────────────────────────────────
-  BULK EGLD FETCH
+  INDIVIDUAL EGLD FETCH (NO BULK)
+  Query each address individually via API
 ─────────────────────────────────────────────────*/
-async function fetchEgldBulkPrimary(): Promise<Record<string, number>> {
-  try {
-    const r = await fetchWithBackup<any>(
-      PRIMARY_PROVIDER_ACCOUNTS,
-      BACKUP_ACCOUNTS_API
-    );
-    if (!r?.accounts?.length) throw new Error();
+async function fetchEgldForAddress(
+  address: string,
+  mode: ApiMode
+): Promise<number> {
+  // Try primary API first
+  const primaryUrl = `${PRIMARY_PROVIDER_API}/accounts/${address}`;
+  const backupUrl = `${BACKUP_PROVIDER_API}/accounts/${address}`;
 
-    const out: Record<string, number> = {};
-    r.accounts.forEach((a: any) => {
-      const v = Number(a.activeStake || a.delegationActiveStake || 0);
-      out[a.address] = v > 1e12 ? v / 1e18 : v;
-    });
-    return out;
-  } catch {
-    console.warn('⚠️ Bulk EGLD failed → SC fallback');
-    return {};
-  }
+  // Try primary
+  try {
+    const { data } = await axios.get(primaryUrl, { timeout: 4000 });
+    if (data?.activeStake) {
+      const stake = Number(data.activeStake);
+      return stake > 1e12 ? stake / 1e18 : stake;
+    }
+  } catch {}
+
+  // Fallback to public API
+  try {
+    const { data } = await axios.get(backupUrl, { timeout: 6000 });
+    if (data?.activeStake) {
+      const stake = Number(data.activeStake);
+      return stake > 1e12 ? stake / 1e18 : stake;
+    }
+  } catch {}
+
+  // Final fallback: smart contract query
+  return fetchStakeContract(address, mode);
 }
 
 /*───────────────────────────────────────────────
-  SMART CONTRACT STAKE (MODE AWARE)
+  SMART CONTRACT STAKE (FALLBACK)
 ─────────────────────────────────────────────────*/
 async function fetchStakeContract(addr: string, mode: ApiMode) {
   const gateways =
@@ -174,16 +181,17 @@ async function fetchStakeContract(addr: string, mode: ApiMode) {
 }
 
 async function fetchStake_All(addresses: string[], mode: ApiMode) {
-  const bulk = await fetchEgldBulkPrimary();
-  if (Object.keys(bulk).length) return bulk;
-
   const out: Record<string, number> = {};
-  const r = await Promise.allSettled(
-    addresses.map(a => fetchStakeContract(a, mode))
+  
+  // Query each address individually (parallel, not bulk)
+  const results = await Promise.allSettled(
+    addresses.map(addr => fetchEgldForAddress(addr, mode))
   );
-  r.forEach((x, i) => {
+  
+  results.forEach((x, i) => {
     out[addresses[i]] = x.status === 'fulfilled' ? x.value as number : 0;
   });
+  
   return out;
 }
 
