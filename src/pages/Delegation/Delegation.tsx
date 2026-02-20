@@ -16,14 +16,15 @@ export const Delegation = () => {
   const { userClaimableRewards, userActiveStake } = useGlobalContext();
   const { stakers, baseApr, aprMax } = useColsAprContext();
 
-  // Get delegated eGLD from context (fallback to stakers data if user has COLS staked)
+  // Get delegated eGLD: prioritize stakers data if user has COLS staked
+  // This ensures correct eGLD display even when SC query returns 0
   const userRow = stakers.find((s: any) => s.address === address);
   const delegatedEgldFromStakers = userRow?.egldStaked ? Number(userRow.egldStaked) : 0;
   
-  // Use userActiveStake from context, or fallback to stakers data for COLS stakers
-  const delegatedEgld = userActiveStake.status === 'loaded' 
-    ? Number(userActiveStake.data || '0') / 1e18 
-    : delegatedEgldFromStakers;
+  // Use stakers data first if available, otherwise use SC query result
+  const delegatedEgld = delegatedEgldFromStakers > 0 
+    ? delegatedEgldFromStakers 
+    : (userActiveStake.status === 'loaded' ? Number(userActiveStake.data || '0') / 1e18 : 0);
 
   // Get claimable rewards
   const claimableRewards = userClaimableRewards.status === 'loaded' 

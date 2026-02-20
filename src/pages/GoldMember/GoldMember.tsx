@@ -18,7 +18,13 @@ export const GoldMember = () => {
   const account = useGetAccount();
   const address = account.address;
   const { baseApr } = useColsAprContext();
-  const { userActiveStake, claimableCols } = useGlobalContext();
+  const { userActiveStake, claimableCols, stakers: stakersFromContext } = useGlobalContext();
+  const { stakers } = useColsAprContext();
+  
+  // Get stakers from both sources to ensure we have the data
+  const allStakers = stakers?.length > 0 ? stakers : stakersFromContext?.data;
+  const userRow = allStakers?.find((s: any) => s.address === address);
+  const delegatedEgldFromStakers = userRow?.egldStaked ? Number(userRow.egldStaked) : 0;
   
   const { isGoldMember, goldNftCount, goldCapacityEgld, isLoading: goldLoading } = useGoldMember(address);
   
@@ -44,9 +50,10 @@ export const GoldMember = () => {
     fetchColsPrice();
   }, []);
   
-  const delegatedEgld = userActiveStake.status === 'loaded' 
-    ? Number(userActiveStake.data || '0') / 1e18 
-    : 0;
+  // Use stakers data first if available, otherwise use SC query result
+  const delegatedEgld = delegatedEgldFromStakers > 0 
+    ? delegatedEgldFromStakers 
+    : (userActiveStake.status === 'loaded' ? Number(userActiveStake.data || '0') / 1e18 : 0);
     
   const { effectiveApr, goldBonusApr, goldEligibleEgld, regularEligibleEgld } = 
     calculateEffectiveApr(baseApr, delegatedEgld, goldCapacityEgld);
