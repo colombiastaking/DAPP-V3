@@ -20,24 +20,30 @@ export const Navbar = () => {
   useEffect(() => {
     const fetchCols = async () => {
       setLoading(true);
-      // Use public API - Colombia API doesn't index COLS tokens
+      // Try Colombia API first, fallback to public
+      const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
       const PUBLIC_API = 'https://api.multiversx.com';
-      try {
-        const { data } = await axios.get(
-          `${PUBLIC_API}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
-        );
-        if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
-          let raw = data[0].balance.padStart(19, '0');
-          const intPart = raw.slice(0, -18) || '0';
-          let decPart = raw.slice(-18).replace(/0+$/, '');
-          const formattedCols = decPart ? `${intPart}.${decPart}` : intPart;
-          setColsBalance(formattedCols);
-        } else {
-          setColsBalance('0');
+      const apis = [PRIMARY_API, PUBLIC_API];
+      let balance = '0';
+
+      for (const api of apis) {
+        try {
+          const { data } = await axios.get(
+            `${api}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
+          );
+          if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
+            let raw = data[0].balance.padStart(19, '0');
+            const intPart = raw.slice(0, -18) || '0';
+            let decPart = raw.slice(-18).replace(/0+$/, '');
+            balance = decPart ? `${intPart}.${decPart}` : intPart;
+            break;
+          }
+        } catch {
+          // Try next API
         }
-      } catch {
-        setColsBalance('0');
       }
+
+      setColsBalance(balance);
       setLoading(false);
     };
 

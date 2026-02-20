@@ -106,34 +106,45 @@ export function usePreloadData() {
       userClaimableRewards: { status: 'loading', data: null, error: null }
     });
 
-    // Use public gateway - local gateway may have issues with queries
+    // Try primary gateway first, fallback to public
+    const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gateway';
     const PUBLIC_GATEWAY = 'https://gateway.multiversx.com';
+    const gateways = [PRIMARY_GATEWAY, PUBLIC_GATEWAY];
+    let success = false;
 
-    try {
-      const provider = new ProxyNetworkProvider(PUBLIC_GATEWAY);
-      const query = createContractQuery({
-        address: new Address(network.delegationContract),
-        func: new ContractFunction('getClaimableRewards'),
-        args: [new AddressValue(new Address(address))]
-      });
+    for (const gateway of gateways) {
+      try {
+        const provider = new ProxyNetworkProvider(gateway);
+        const query = createContractQuery({
+          address: new Address(network.delegationContract),
+          func: new ContractFunction('getClaimableRewards'),
+          args: [new AddressValue(new Address(address))]
+        });
 
-      const data = await provider.queryContract(query);
-      const [claimableRewards] = data.getReturnDataParts();
+        const data = await provider.queryContract(query);
+        const [claimableRewards] = data.getReturnDataParts();
 
+        dispatch({
+          type: 'getUserClaimableRewards',
+          userClaimableRewards: {
+            status: 'loaded',
+            error: null,
+            data: claimableRewards
+              ? denominated(decodeBigNumber(claimableRewards).toFixed(), { decimals: 4 })
+              : '0'
+          }
+        });
+        success = true;
+        break;
+      } catch {
+        // Try next gateway
+      }
+    }
+
+    if (!success) {
       dispatch({
         type: 'getUserClaimableRewards',
-        userClaimableRewards: {
-          status: 'loaded',
-          error: null,
-          data: claimableRewards
-            ? denominated(decodeBigNumber(claimableRewards).toFixed(), { decimals: 4 })
-            : '0'
-        }
-      });
-    } catch (error) {
-      dispatch({
-        type: 'getUserClaimableRewards',
-        userClaimableRewards: { status: 'error', data: null, error }
+        userClaimableRewards: { status: 'error', data: null, error: new Error('All gateways failed') }
       });
     }
   }, [address, dispatch]);
@@ -147,34 +158,36 @@ export function usePreloadData() {
       colsBalance: { status: 'loading', data: null, error: null }
     });
 
-    // Use public API - Colombia API doesn't index COLS tokens
+    // Try Colombia API first, fallback to public
+    const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
     const PUBLIC_API = 'https://api.multiversx.com';
+    const apis = [PRIMARY_API, PUBLIC_API];
+    let balance = '0';
 
-    try {
-      const { data } = await axios.get(
-        `${PUBLIC_API}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
-      );
-      let balance = '0';
-      if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
-        // Denominate from 18 decimals
-        const raw = data[0].balance;
-        if (raw && raw !== '0') {
-          const rawStr = raw.toString().padStart(19, '0');
-          const intPart = rawStr.slice(0, -18) || '0';
-          let decPart = rawStr.slice(-18).replace(/0+$/, '');
-          balance = decPart ? `${intPart}.${decPart}` : intPart;
+    for (const api of apis) {
+      try {
+        const { data } = await axios.get(
+          `${api}/accounts/${address}/tokens?identifier=${COLS_TOKEN_ID}`
+        );
+        if (Array.isArray(data) && data.length > 0 && data[0].identifier === COLS_TOKEN_ID) {
+          const raw = data[0].balance;
+          if (raw && raw !== '0') {
+            const rawStr = raw.toString().padStart(19, '0');
+            const intPart = rawStr.slice(0, -18) || '0';
+            let decPart = rawStr.slice(-18).replace(/0+$/, '');
+            balance = decPart ? `${intPart}.${decPart}` : intPart;
+          }
+          break;
         }
+      } catch {
+        // Try next API
       }
-      dispatch({
-        type: 'getColsBalance',
-        colsBalance: { status: 'loaded', data: balance, error: null }
-      });
-    } catch (error) {
-      dispatch({
-        type: 'getColsBalance',
-        colsBalance: { status: 'error', data: '0', error }
-      });
     }
+
+    dispatch({
+      type: 'getColsBalance',
+      colsBalance: { status: balance !== '0' ? 'loaded' : 'error', data: balance, error: null }
+    });
   }, [address, dispatch]);
 
   // Fetch user active stake (delegated eGLD)
@@ -186,32 +199,43 @@ export function usePreloadData() {
       userActiveStake: { status: 'loading', data: null, error: null }
     });
 
-    // Use public gateway - local gateway may have issues with queries
+    // Try primary gateway first, fallback to public
+    const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gateway';
     const PUBLIC_GATEWAY = 'https://gateway.multiversx.com';
+    const gateways = [PRIMARY_GATEWAY, PUBLIC_GATEWAY];
+    let success = false;
 
-    try {
-      const provider = new ProxyNetworkProvider(PUBLIC_GATEWAY);
-      const query = createContractQuery({
-        address: new Address(DELEGATION_CONTRACT),
-        func: new ContractFunction('getUserActiveStake'),
-        args: [new AddressValue(new Address(address))]
-      });
+    for (const gateway of gateways) {
+      try {
+        const provider = new ProxyNetworkProvider(gateway);
+        const query = createContractQuery({
+          address: new Address(DELEGATION_CONTRACT),
+          func: new ContractFunction('getUserActiveStake'),
+          args: [new AddressValue(new Address(address))]
+        });
 
-      const data = await provider.queryContract(query);
-      const [userStake] = data.getReturnDataParts();
+        const data = await provider.queryContract(query);
+        const [userStake] = data.getReturnDataParts();
 
+        dispatch({
+          type: 'getUserActiveStake',
+          userActiveStake: {
+            status: 'loaded',
+            error: null,
+            data: userStake ? decodeBigNumber(userStake).toFixed() : '0'
+          }
+        });
+        success = true;
+        break;
+      } catch {
+        // Try next gateway
+      }
+    }
+
+    if (!success) {
       dispatch({
         type: 'getUserActiveStake',
-        userActiveStake: {
-          status: 'loaded',
-          error: null,
-          data: userStake ? decodeBigNumber(userStake).toFixed() : '0'
-        }
-      });
-    } catch (error) {
-      dispatch({
-        type: 'getUserActiveStake',
-        userActiveStake: { status: 'error', data: null, error }
+        userActiveStake: { status: 'error', data: null, error: new Error('All gateways failed') }
       });
     }
   }, [address, dispatch]);
