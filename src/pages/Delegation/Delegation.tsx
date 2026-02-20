@@ -14,7 +14,18 @@ export const Delegation = () => {
   const address = account.address;
   const { onRedelegate } = useStakeData();
   const { userClaimableRewards, userActiveStake } = useGlobalContext();
-  const { stakers, baseApr, aprMax } = useColsAprContext();
+  const { stakers, baseApr, aprMax, loading: stakersLoading } = useColsAprContext();
+
+  // Show loading until stakers data is fetched
+  if (stakersLoading || !stakers || stakers.length === 0) {
+    return (
+      <div className={styles.delegation}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+          <AnimatedDots />
+        </div>
+      </div>
+    );
+  }
 
   // Get delegated eGLD: prioritize stakers data if user has COLS staked
   // This ensures correct eGLD display even when SC query returns 0

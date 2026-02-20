@@ -19,7 +19,12 @@ export const GoldMember = () => {
   const address = account.address;
   const { baseApr } = useColsAprContext();
   const { userActiveStake, claimableCols, stakers: stakersFromContext } = useGlobalContext();
-  const { stakers } = useColsAprContext();
+  const { stakers, loading: stakersLoading } = useColsAprContext();
+  
+  // Show loading until stakers data is fetched
+  if (stakersLoading || !stakers || stakers.length === 0) {
+    return <div style={{ padding: 40, textAlign: 'center' }}><AnimatedDots /></div>;
+  }
   
   // Get stakers from both sources to ensure we have the data
   const allStakers = stakers?.length > 0 ? stakers : stakersFromContext?.data;
