@@ -288,26 +288,28 @@ export function useColsApr({ trigger, userActiveStakeRaw, userAddress }: { trigg
       const sumCols = table.reduce((s, r) => s + r.colsStaked, 0);
       setTotalColsStaked(sumCols);
 
+      // Calculate total DAO pool per year (in EGLD)
+      // 30% of agency rewards goes to buyback, 33.3% of that goes to DAO
+      const totalDaoPoolEgldPerYear = pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO;
+
       table.forEach(r => {
-        // DAO distribution: proportional to COLS stake for ALL COLS stakers (even with 0 eGLD)
-        if (r.colsStaked && sumCols > 0) {
-          // For users with eGLD: DAO based on their stake proportion
-          // For users without eGLD: still get DAO proportional to their COLS
-          if (r.egldStaked) {
-            r.dao = ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * r.colsStaked) / sumCols / r.egldStaked) * 100;
-          } else {
-            // Users with COLS but no eGLD still get DAO reward (based on COLS only)
-            r.dao = ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * r.colsStaked) / sumCols) * 100;
-          }
+        // Calculate DAO APR for users with COLS and eGLD
+        if (r.egldStaked && r.colsStaked && sumCols > 0) {
+          // User's share of DAO pool (in EGLD)
+          const userDaoEgldPerYear = (r.colsStaked / sumCols) * totalDaoPoolEgldPerYear;
+          // DAO APR = (DAO EGLD per year / user's eGLD stake) * 100
+          r.dao = (userDaoEgldPerYear / r.egldStaked) * 100;
+        } else {
+          r.dao = null;
         }
         
-        // Calculate APR total - for users with no eGLD, show bonus based on COLS alone
+        // Calculate APR total
         if (r.egldStaked && r.colsStaked) {
-          // Normal case: has both
+          // Has both eGLD and COLS: base + bonus + DAO
           r.aprTotal = safe(pA + safe(r.aprBonus) + safe(r.dao));
         } else if (r.colsStaked && !r.egldStaked) {
-          // COLS only: show base + DAO (no bonus since no eGLD staked)
-          r.aprTotal = safe(pA + safe(r.dao));
+          // COLS only: base APR only (no bonus, no DAO APR since no eGLD staked)
+          r.aprTotal = safe(pA);
         } else {
           // No COLS: just base APR
           r.aprTotal = safe(pA);
