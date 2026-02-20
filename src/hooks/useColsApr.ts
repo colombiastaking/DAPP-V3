@@ -123,38 +123,39 @@ async function fetchColsPrice(mode: ApiMode) {
 /*───────────────────────────────────────────────
   SMART CONTRACT STAKE (MODE AWARE)
 ─────────────────────────────────────────────────*/
-async function fetchStakeContract(addr: string, mode: ApiMode) {
-  const gateways =
-    mode === 'main'
-      ? [MAIN_GATEWAY, BACKUP_GATEWAY]
-      : [BACKUP_GATEWAY];
-
-  for (const gw of gateways) {
+// Bulk EGLD fetch from provider API (same as distribution script)
+async function fetchEgldBulk(mode: ApiMode): Promise<Record<string, number>> {
+  const primaryUrl = mode === 'main' 
+    ? `${PRIMARY_PROVIDER_API}/accounts?size=10000`
+    : `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
+  
+  const backupUrl = `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
+  
+  try {
+    const { data } = await axios.get(primaryUrl, { timeout: 10000 });
+    const accounts = Array.isArray(data) ? data : (data?.accounts || []);
+    const out: Record<string, number> = {};
+    for (const a of accounts) {
+      const v = Number(a.activeStake || a.delegationActiveStake || a.stake || 0);
+      out[a.address] = v > 1e12 ? v / 1e18 : v;
+    }
+    return out;
+  } catch {
+    // Try backup
     try {
-      const provider = new ProxyNetworkProvider(gw);
-      const q = createContractQuery({
-        address: new Address(network.delegationContract),
-        func: new ContractFunction('getUserActiveStake'),
-        args: [new AddressValue(new Address(addr))]
-      });
-      const r = await provider.queryContract(q);
-      const [raw] = r.getReturnDataParts();
-      if (raw) return Number(decodeBigNumber(raw)) / 1e18;
-    } catch {}
+      const { data } = await axios.get(backupUrl, { timeout: 10000 });
+      const accounts = Array.isArray(data) ? data : (data?.accounts || []);
+      const out: Record<string, number> = {};
+      for (const a of accounts) {
+        const v = Number(a.activeStake || a.delegationActiveStake || a.stake || 0);
+        out[a.address] = v > 1e12 ? v / 1e18 : v;
+      }
+      return out;
+    } catch {
+      console.warn('⚠️ Bulk EGLD API failed');
+      return {};
+    }
   }
-  return 0;
-}
-
-async function fetchStake_All(addresses: string[], mode: ApiMode) {
-  // Always use smart contract queries (more reliable than bulk API)
-  const out: Record<string, number> = {};
-  const r = await Promise.allSettled(
-    addresses.map(a => fetchStakeContract(a, mode))
-  );
-  r.forEach((x, i) => {
-    out[addresses[i]] = x.status === 'fulfilled' ? x.value as number : 0;
-  });
-  return out;
 }
 
 /*───────────────────────────────────────────────
@@ -218,10 +219,7 @@ export function useColsApr({ trigger, userActiveStakeRaw, userAddress }: { trigg
       setBaseApr(pA);
       setAgencyLockedEgld(pL);
 
-      const egldMap = await fetchStake_All(
-        users.map(u => u.address),
-        mode
-      );
+      const egldMap = await fetchEgldBulk(mode);
 
       const table: ColsStakerRow[] = users.map(u => ({
         address: u.address,
