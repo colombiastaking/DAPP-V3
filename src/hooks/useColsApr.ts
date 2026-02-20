@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
   Address,
@@ -26,9 +26,13 @@ const BONUS_BUYBACK_FACTOR = 0.66;
 
 const PRIMARY_PROVIDER_API =
   `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}`;
+const PRIMARY_PROVIDER_ACCOUNTS =
+  `${PRIMARY_PROVIDER_API}/accounts?size=10000`;
 
 const BACKUP_PROVIDER_API =
   `https://api.multiversx.com/providers/${network.delegationContract}`;
+const BACKUP_ACCOUNTS_API =
+  `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
 
 const MAIN_GATEWAY = network.gatewayAddress;
 const BACKUP_GATEWAY = 'https://gateway.multiversx.com';
@@ -122,85 +126,64 @@ async function fetchColsPrice(mode: ApiMode) {
 }
 
 /*───────────────────────────────────────────────
-  INDIVIDUAL EGLD FETCH (RELIABLE MODE)
-  Sequential queries with retries - slower but guaranteed
+  BULK EGLD FETCH
 ─────────────────────────────────────────────────*/
-async function fetchEgldForAddress(
-  address: string,
-  mode: ApiMode,
-  retryCount = 2
-): Promise<number> {
-  // ONLY use SC queries - no API calls for eGLD
-  return fetchStakeContractWithRetry(address, mode, retryCount);
+async function fetchEgldBulkPrimary(): Promise<Record<string, number>> {
+  try {
+    const r = await fetchWithBackup<any>(
+      PRIMARY_PROVIDER_ACCOUNTS,
+      BACKUP_ACCOUNTS_API
+    );
+    if (!r?.accounts?.length) throw new Error();
+
+    const out: Record<string, number> = {};
+    r.accounts.forEach((a: any) => {
+      const v = Number(a.activeStake || a.delegationActiveStake || 0);
+      out[a.address] = v > 1e12 ? v / 1e18 : v;
+    });
+    return out;
+  } catch {
+    console.warn('⚠️ Bulk EGLD failed → SC fallback');
+    return {};
+  }
 }
 
 /*───────────────────────────────────────────────
-  SMART CONTRACT STAKE (WITH RETRIES)
+  SMART CONTRACT STAKE (MODE AWARE)
 ─────────────────────────────────────────────────*/
-async function fetchStakeContractWithRetry(
-  addr: string,
-  mode: ApiMode,
-  retryCount = 2
-): Promise<number> {
+async function fetchStakeContract(addr: string, mode: ApiMode) {
   const gateways =
     mode === 'main'
       ? [MAIN_GATEWAY, BACKUP_GATEWAY]
       : [BACKUP_GATEWAY];
 
   for (const gw of gateways) {
-    for (let attempt = 0; attempt <= retryCount; attempt++) {
-      try {
-        const provider = new ProxyNetworkProvider(gw);
-        const q = createContractQuery({
-          address: new Address(network.delegationContract),
-          func: new ContractFunction('getUserActiveStake'),
-          args: [new AddressValue(new Address(addr))]
-        });
-        const r = await provider.queryContract(q);
-        const [raw] = r.getReturnDataParts();
-        if (raw) return Number(decodeBigNumber(raw)) / 1e18;
-      } catch {
-        if (attempt < retryCount) {
-          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-        }
-      }
-    }
+    try {
+      const provider = new ProxyNetworkProvider(gw);
+      const q = createContractQuery({
+        address: new Address(network.delegationContract),
+        func: new ContractFunction('getUserActiveStake'),
+        args: [new AddressValue(new Address(addr))]
+      });
+      const r = await provider.queryContract(q);
+      const [raw] = r.getReturnDataParts();
+      if (raw) return Number(decodeBigNumber(raw)) / 1e18;
+    } catch {}
   }
   return 0;
 }
 
 async function fetchStake_All(addresses: string[], mode: ApiMode) {
+  const bulk = await fetchEgldBulkPrimary();
+  if (Object.keys(bulk).length) return bulk;
+
   const out: Record<string, number> = {};
-  
-  // Process in batches of 30 for better parallelism
-  const BATCH_SIZE = 30;
-  const DELAY_BETWEEN_BATCHES = 200; // ms
-  
-  console.log(`🔄 Fetching eGLD for ${addresses.length} addresses via SC...`);
-  
-  for (let i = 0; i < addresses.length; i += BATCH_SIZE) {
-    const batch = addresses.slice(i, i + BATCH_SIZE);
-    
-    // Process batch in parallel
-    const results = await Promise.allSettled(
-      batch.map(addr => fetchEgldForAddress(addr, mode))
-    );
-    
-    results.forEach((x, idx) => {
-      out[batch[idx]] = x.status === 'fulfilled' ? x.value as number : 0;
-    });
-    
-    // Progress log
-    const done = Math.min(i + BATCH_SIZE, addresses.length);
-    console.log(`📊 Progress: ${done}/${addresses.length} addresses`);
-    
-    // Small delay between batches
-    if (i + BATCH_SIZE < addresses.length) {
-      await new Promise(r => setTimeout(r, DELAY_BETWEEN_BATCHES));
-    }
-  }
-  
-  console.log(`✅ Completed fetching eGLD for ${addresses.length} addresses`);
+  const r = await Promise.allSettled(
+    addresses.map(a => fetchStakeContract(a, mode))
+  );
+  r.forEach((x, i) => {
+    out[addresses[i]] = x.status === 'fulfilled' ? x.value as number : 0;
+  });
   return out;
 }
 
@@ -219,10 +202,6 @@ export function useColsApr({ trigger }: { trigger: any }) {
   const [totalColsStaked, setTotalColsStaked] = useState(0);
 
   const { contractDetails } = useGlobalContext();
-
-  // Track if we've already fetched data
-  const lastTriggerRef = useRef(trigger);
-  const isFetchingRef = useRef(false);
 
   const fetchColsStakers = useCallback(async (mode: ApiMode) => {
     const p = getScProvider(mode);
@@ -336,29 +315,13 @@ export function useColsApr({ trigger }: { trigger: any }) {
       const sumCols = table.reduce((s, r) => s + r.colsStaked, 0);
       setTotalColsStaked(sumCols);
 
-      // Calculate DAO APR for ALL users with COLS (not just those with eGLD)
-      // DAO distribution is based on user's share of total COLS staked
       table.forEach(r => {
-        if (r.colsStaked && sumCols > 0) {
+        if (r.egldStaked && r.colsStaked) {
           r.dao =
             ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * r.colsStaked)
-              / sumCols) * 100;
+              / sumCols / r.egldStaked) * 100;
         }
-        
-        // Total APR calculation:
-        // - If user has eGLD + COLS: base APR + bonus APR + DAO APR
-        // - If user has only COLS (no eGLD): DAO APR only (their reward is in COLS)
-        // - If user has only eGLD: base APR only
-        if (r.egldStaked && r.colsStaked) {
-          // Both eGLD and COLS: full calculation
-          r.aprTotal = safe(pA + safe(r.aprBonus) + safe(r.dao));
-        } else if (r.colsStaked && !r.egldStaked) {
-          // COLS only: show DAO APR (this is their return on COLS)
-          r.aprTotal = safe(r.dao);
-        } else {
-          // eGLD only (no COLS): base APR
-          r.aprTotal = safe(pA);
-        }
+        r.aprTotal = safe(pA + safe(r.aprBonus) + safe(r.dao));
       });
 
       const sorted = [...table].sort((a, b) => safe(b.aprTotal) - safe(a.aprTotal));
@@ -369,22 +332,10 @@ export function useColsApr({ trigger }: { trigger: any }) {
       setStakers([]);
     } finally {
       setLoading(false);
-      isFetchingRef.current = false;
     }
-  }, [contractDetails, fetchColsStakers]);
+  }, [trigger, contractDetails]);
 
-  // Only fetch when trigger changes (initial load or after transaction)
-  // Never re-fetch on tab switches - data should be cached
-  useEffect(() => {
-    // Skip if already fetched and trigger hasn't changed
-    if (lastTriggerRef.current === trigger && stakers.length > 0) return;
-    // Skip if already fetching
-    if (isFetchingRef.current) return;
-    
-    lastTriggerRef.current = trigger;
-    isFetchingRef.current = true;
-    recalc();
-  }, [trigger, recalc]);
+  useEffect(() => { recalc(); }, [recalc, trigger]);
 
   return {
     loading,
