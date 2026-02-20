@@ -131,12 +131,9 @@ async function fetchEgldForAddress(
   retryCount = 2
 ): Promise<number> {
   const primaryUrl = `${PRIMARY_PROVIDER_API}/accounts/${address}`;
-  
-  // For backup, use the public MultiversX API directly (different endpoint format)
-  // The /providers/{contract}/accounts/{address} endpoint only exists on your local API
   const backupUrl = `https://api.multiversx.com/accounts/${address}`;
 
-  // Helper to try fetching with retries
+  // Helper to try fetching with retries - stops early if stake found
   const tryFetch = async (url: string, timeout: number): Promise<number | null> => {
     for (let attempt = 0; attempt <= retryCount; attempt++) {
       try {
@@ -145,37 +142,37 @@ async function fetchEgldForAddress(
         // Handle different API response formats
         let stake = 0;
         if (url.includes('api.multiversx.com/accounts')) {
-          // Public API: check delegation data
           stake = Number(data?.delegation?.activeStake || 0);
         } else {
-          // Local API: check activeStake directly
           stake = Number(data?.activeStake || 0);
         }
         
         if (stake > 0) {
           return stake > 1e12 ? stake / 1e18 : stake;
         }
-        // Got response but no activeStake - return 0 (not staked)
         return 0;
       } catch (e) {
         if (attempt < retryCount) {
-          await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); // Wait before retry
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
         }
       }
     }
     return null;
   };
 
-  // Try primary API (your local API)
+  // Fast path: Try main API first (fewer retries, shorter delays)
   const primaryResult = await tryFetch(primaryUrl, 4000);
   if (primaryResult !== null) return primaryResult;
 
-  // Fallback to public MultiversX API
+  // Fallback: try SC query (your own nodes - reliable)
+  const scResult = await fetchStakeContractWithRetry(address, mode, 1);
+  if (scResult > 0) return scResult;
+
+  // Final fallback: public API
   const backupResult = await tryFetch(backupUrl, 6000);
   if (backupResult !== null) return backupResult;
 
-  // Final fallback: smart contract query with retries
-  return fetchStakeContractWithRetry(address, mode, retryCount);
+  return 0;
 }
 
 /*───────────────────────────────────────────────
@@ -216,10 +213,9 @@ async function fetchStakeContractWithRetry(
 async function fetchStake_All(addresses: string[], mode: ApiMode) {
   const out: Record<string, number> = {};
   
-  // Sequential processing for maximum reliability
-  // Process in batches of 10 to avoid overwhelming the API
-  const BATCH_SIZE = 10;
-  const DELAY_BETWEEN_BATCHES = 500; // ms
+  // Process in batches of 20 for better parallelism
+  const BATCH_SIZE = 20;
+  const DELAY_BETWEEN_BATCHES = 300; // ms
   
   console.log(`🔄 Fetching eGLD for ${addresses.length} addresses...`);
   
