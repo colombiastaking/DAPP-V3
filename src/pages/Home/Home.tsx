@@ -42,12 +42,14 @@ export const Home = () => {
     ? Number(userActiveStake.data || '0') / 1e18 
     : 0;
 
-  // Use stakers data for eGLD if available (for COLS stakers)
+  // Get eGLD from stakers data
   const egldDelegatedFromStakers = userRow?.egldStaked ?? 0;
   const colsStaked = userRow?.colsStaked ?? 0;
 
-  // Use context data as fallback when user not in stakers or SC returns 0
-  // This ensures accurate display even if SC query fails
+  // Priority for eGLD:
+  // 1. If user has COLS staked AND stakers data has valid eGLD → use stakers
+  // 2. Otherwise → use context data (most reliable source)
+  // This handles: Gold members, users without COLS, users with only COLS
   const actualEgldDelegated = (colsStaked > 0 && egldDelegatedFromStakers > 0) 
     ? egldDelegatedFromStakers 
     : delegatedEgld;
@@ -57,13 +59,19 @@ export const Home = () => {
   const rawBaseApr = getRawApr(baseApr);
   const { goldBonusApr } = calculateEffectiveApr(baseApr, actualEgldDelegated, goldCapacityEgld);
   
-  // Get user's total APR from stakers (includes Base + COLS Bonus + DAO)
+  // Get user's APR from stakers data
+  // - If user is in stakers: use their calculated APR (includes COLS bonus + DAO if applicable)
+  // - If user not in stakers (eGLD only, no COLS): null (will show base APR)
   const userBaseApr = userRow?.aprTotal !== null && userRow?.aprTotal !== undefined 
     ? Number(userRow.aprTotal) 
     : null;
   
-  // Gold member total: user's APR components + Gold Bonus (shown as raw/bruto APR)
-  const goldBrutoApr = userBaseApr !== null ? userBaseApr + goldBonusApr : null;
+  // For users with only COLS (no eGLD), we still show COLS bonus APR
+  // The aprBonus in stakers is calculated based on their COLS/eGLD ratio
+  const userAprBonusOnly = userRow?.aprBonus ?? null;
+  
+  // Gold member total: base APR + Gold Bonus (shown as raw/bruto APR)
+  const goldBrutoApr = userBaseApr !== null ? userBaseApr + goldBonusApr : (userAprBonusOnly !== null ? baseApr + userAprBonusOnly + goldBonusApr : null);
 
   const totalUsd =
     (actualEgldDelegated * Number(egldPrice || 0)) +
@@ -71,10 +79,15 @@ export const Home = () => {
 
   const totalStakers = stakers.length;
 
-  // Total APR shown in main panel (includes Gold bonus if applicable)
+  // Total APR shown in main panel:
+  // - If in stakers: use their calculated APR
+  // - If has COLS bonus only: baseApr + bonus
+  // - If Gold member with no stakers: rawBaseApr + goldBonusApr
   const userApr = userBaseApr !== null 
-    ? userBaseApr + goldBonusApr  // Add Gold bonus to base APR components
-    : (isGoldMember && goldBonusApr > 0 ? rawBaseApr + goldBonusApr : null);
+    ? userBaseApr + goldBonusApr  // User in stakers + Gold bonus
+    : (userAprBonusOnly !== null 
+        ? baseApr + userAprBonusOnly + goldBonusApr  // Has COLS bonus only + Gold
+        : (isGoldMember && goldBonusApr > 0 ? rawBaseApr + goldBonusApr : null)); // Gold only
   const userRank = userRow?.rank;
   const leagueInfo = userRank && totalStakers > 0 
     ? getLeagueInfo(userRank, totalStakers) 

@@ -289,12 +289,29 @@ export function useColsApr({ trigger, userActiveStakeRaw, userAddress }: { trigg
       setTotalColsStaked(sumCols);
 
       table.forEach(r => {
-        if (r.egldStaked && r.colsStaked) {
-          r.dao =
-            ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * r.colsStaked)
-              / sumCols / r.egldStaked) * 100;
+        // DAO distribution: proportional to COLS stake for ALL COLS stakers (even with 0 eGLD)
+        if (r.colsStaked && sumCols > 0) {
+          // For users with eGLD: DAO based on their stake proportion
+          // For users without eGLD: still get DAO proportional to their COLS
+          if (r.egldStaked) {
+            r.dao = ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * r.colsStaked) / sumCols / r.egldStaked) * 100;
+          } else {
+            // Users with COLS but no eGLD still get DAO reward (based on COLS only)
+            r.dao = ((pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO * r.colsStaked) / sumCols) * 100;
+          }
         }
-        r.aprTotal = safe(pA + safe(r.aprBonus) + safe(r.dao));
+        
+        // Calculate APR total - for users with no eGLD, show bonus based on COLS alone
+        if (r.egldStaked && r.colsStaked) {
+          // Normal case: has both
+          r.aprTotal = safe(pA + safe(r.aprBonus) + safe(r.dao));
+        } else if (r.colsStaked && !r.egldStaked) {
+          // COLS only: show base + DAO (no bonus since no eGLD staked)
+          r.aprTotal = safe(pA + safe(r.dao));
+        } else {
+          // No COLS: just base APR
+          r.aprTotal = safe(pA);
+        }
       });
 
       const sorted = [...table].sort((a, b) => safe(b.aprTotal) - safe(a.aprTotal));
