@@ -296,7 +296,8 @@ export function useColsApr({ trigger, userActiveStakeRaw, userAddress }: { trigg
 
       table.forEach(r => {
         // Calculate DAO for users with both COLS and eGLD
-        if (r.egldStaked && r.colsStaked && sumCols > 0) {
+        // Guard: only calculate if user has valid eGLD stake > 0
+        if (r.egldStaked && r.egldStaked > 0.001 && r.colsStaked && sumCols > 0) {
           // Daily DAO COLS = (daoPoolDaily * user's COLS / total COLS)
           const userDailyDaoCols = (totalDailyBuybackCols * DAO_DISTRIBUTION_RATIO * r.colsStaked) / sumCols;
           // Convert to EGLD: dailyDao * colsPrice / egldPrice
@@ -331,7 +332,7 @@ export function useColsApr({ trigger, userActiveStakeRaw, userAddress }: { trigg
     } finally {
       setLoading(false);
     }
-  }, [trigger, contractDetails]);
+  }, [trigger, contractDetails, userActiveStakeRaw, userAddress]);
 
   useEffect(() => { recalc(); }, [recalc, trigger]);
 
