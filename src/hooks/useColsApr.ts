@@ -288,17 +288,23 @@ export function useColsApr({ trigger, userActiveStakeRaw, userAddress }: { trigg
       const sumCols = table.reduce((s, r) => s + r.colsStaked, 0);
       setTotalColsStaked(sumCols);
 
-      // Calculate total DAO pool per year (in EGLD)
-      // 30% of agency rewards goes to buyback, 33.3% of that goes to DAO
-      const totalDaoPoolEgldPerYear = pL * baseCorrected * AGENCY_BUYBACK * serviceFee * DAO_DISTRIBUTION_RATIO;
+      // Calculate total DAO pool per year (in EGLD), then convert to daily COLS
+      // This matches the distribution script formula:
+      // dailyBuyback = (locked * baseCorrected * BUYBACK * serviceFee * egldPrice) / colsPrice / 365
+      // daoPool = dailyBuyback * DAO_RATIO (then distributed proportionally to COLS)
+      const totalDailyBuybackCols = (pL * baseCorrected * AGENCY_BUYBACK * serviceFee * pE) / pC / 365;
 
       table.forEach(r => {
-        // Calculate DAO APR for users with COLS and eGLD
+        // Calculate DAO for users with both COLS and eGLD
         if (r.egldStaked && r.colsStaked && sumCols > 0) {
-          // User's share of DAO pool (in EGLD)
-          const userDaoEgldPerYear = (r.colsStaked / sumCols) * totalDaoPoolEgldPerYear;
-          // DAO APR = (DAO EGLD per year / user's eGLD stake) * 100
-          r.dao = (userDaoEgldPerYear / r.egldStaked) * 100;
+          // Daily DAO COLS = (daoPoolDaily * user's COLS / total COLS)
+          const userDailyDaoCols = (totalDailyBuybackCols * DAO_DISTRIBUTION_RATIO * r.colsStaked) / sumCols;
+          // Convert to EGLD: dailyDao * colsPrice / egldPrice
+          const userDailyDaoEgld = userDailyDaoCols * pC / pE;
+          // Annual DAO EGLD
+          const userYearlyDaoEgld = userDailyDaoEgld * 365;
+          // DAO APR = (yearly DAO EGLD / user's eGLD stake) * 100
+          r.dao = (userYearlyDaoEgld / r.egldStaked) * 100;
         } else {
           r.dao = null;
         }
