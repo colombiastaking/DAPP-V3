@@ -163,7 +163,13 @@ This ensures the APR reflects your actual staking position.`;
             <div className={styles.welcomeContent}>
               <h2 className={styles.welcomeTitle}>Welcome to Colombia Staking!</h2>
               <p className={styles.welcomeText}>
-                You're not staking yet. Start earning <strong>{baseApr.toFixed(1)}% APY</strong> on your eGLD today — and up to <strong>{baseApr + aprBonusMax}%</strong> with COLS!
+                {!isDataReady ? (
+                  <AnimatedDots />
+                ) : (
+                  <>
+                    You're not staking yet. Start earning <strong>{baseApr.toFixed(1)}% APY</strong> on your eGLD today — and up to <strong>{baseApr + aprBonusMax}%</strong> with COLS!
+                  </>
+                )}
               </p>
               <div className={styles.welcomeBenefits}>
                 <div className={styles.welcomeBenefit}>
@@ -173,7 +179,7 @@ This ensures the APR reflects your actual staking position.`;
                   <span>🇨🇴</span> Colombian operations
                 </div>
                 <div className={styles.welcomeBenefit}>
-                  <span>💎</span> Up to +{aprBonusMax}% COLS bonus
+                  {!isDataReady ? <AnimatedDots /> : <><span>💎</span> Up to +{aprBonusMax}% COLS bonus</>}
                 </div>
               </div>
             </div>
@@ -183,7 +189,7 @@ This ensures the APR reflects your actual staking position.`;
           <section className={styles.potentialSection}>
             <h3 className={styles.potentialTitle}>💰 What Could You Earn?</h3>
             <p className={styles.potentialSubtitle}>
-              Base APR: {baseApr.toFixed(1)}% • COLS bonus: up to +{aprBonusMax}%
+              {!isDataReady ? <AnimatedDots /> : <>Base APR: {baseApr.toFixed(1)}% • COLS bonus: up to +{aprBonusMax}%</>}
             </p>
             <div className={styles.potentialGrid}>
               {potentialExamples.map((example, i) => {
@@ -224,7 +230,11 @@ This ensures the APR reflects your actual staking position.`;
           <div className={styles.upsellContent}>
             <h3 className={styles.upsellTitle}>Boost Your APR!</h3>
             <p className={styles.upsellText}>
-              Stake COLS tokens to earn up to <strong>+{aprBonusMax}% bonus APR</strong> on your eGLD delegation. The more COLS you stake relative to eGLD, the higher your bonus!
+              {!isDataReady ? (
+                <AnimatedDots />
+              ) : (
+                <>Stake COLS tokens to earn up to <strong>+{aprBonusMax}% bonus APR</strong> on your eGLD delegation. The more COLS you stake relative to eGLD, the higher your bonus!</>
+              )}
             </p>
           </div>
           <Link to="/stake" className={styles.upsellButton}>Stake COLS →</Link>
@@ -351,21 +361,21 @@ This ensures the APR reflects your actual staking position.`;
         <div className={styles.statsRow}>
           <div className={styles.statItem}>
             <div className={`${styles.statValue} ${styles.statValuePrimary}`}>
-              {userApr !== null ? `${(userApr - baseApr).toFixed(2)}%` : '—'}
+              {!isDataReady ? '—' : userApr !== null ? `${(userApr - baseApr).toFixed(2)}%` : '—'}
             </div>
             <div className={styles.statLabel}>Bonus APR</div>
           </div>
           <div className={styles.statItem}>
             <div className={`${styles.statValue} ${styles.assetValueAccent}`}>
-              {leagueInfo?.name || '—'}
+              {!isDataReady ? '—' : (leagueInfo?.name || '—')}
             </div>
             <div className={styles.statLabel}>Your League</div>
           </div>
           <div className={styles.statItem}>
             <div className={styles.statValue}>
-              {((actualEgldDelegated * Number(egldPrice || 0) + Number(colsStaked) * Number(colsPrice || 0)) > 0 && baseApr)
+              {!isDataReady ? '—' : (((actualEgldDelegated * Number(egldPrice || 0) + Number(colsStaked) * Number(colsPrice || 0)) > 0 && baseApr)
                 ? `$${Math.floor((actualEgldDelegated * Number(egldPrice || 0) + Number(colsStaked) * Number(colsPrice || 0)) * (Number(baseApr) / 100)).toLocaleString()}`
-                : '$0'}
+                : '$0')}
             </div>
             <div className={styles.statLabel}>Est. Yearly Reward</div>
           </div>
