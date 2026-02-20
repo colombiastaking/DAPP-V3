@@ -34,8 +34,8 @@ export const Home = () => {
   // Gold Member detection
   const { isGoldMember, goldNftCount, goldCapacityEgld } = useGoldMember(address);
   
-  // Find user row in stakers
-  const userRow = stakers.find((s: any) => s.address === address) ?? null;
+  // Find user row in stakers (case-insensitive comparison)
+  const userRow = stakers.find((s: any) => s.address.toLowerCase() === address.toLowerCase()) ?? null;
   
   // Get delegated eGLD from context (converted from raw to eGLD)
   const delegatedEgld = userActiveStake.status === 'loaded' 
@@ -46,8 +46,8 @@ export const Home = () => {
   const egldDelegatedFromStakers = userRow?.egldStaked ?? 0;
   const colsStaked = userRow?.colsStaked ?? 0;
 
-  // Prefer stakers data if user has COLS staked AND bulk API returned valid data, 
-  // otherwise use context (which queries SC directly) as fallback
+  // Use context data as fallback when user not in stakers or SC returns 0
+  // This ensures accurate display even if SC query fails
   const actualEgldDelegated = (colsStaked > 0 && egldDelegatedFromStakers > 0) 
     ? egldDelegatedFromStakers 
     : delegatedEgld;

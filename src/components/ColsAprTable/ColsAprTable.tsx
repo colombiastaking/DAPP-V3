@@ -15,9 +15,9 @@ export function ColsAprTable() {
   if (address !== TARGET_USER) return null;
   if (loading) return <div>Loading COLS-DIST table...</div>;
 
-  // Include all addresses with COLS staked and eGLD delegated
+  // Include all addresses with COLS staked (eGLD can be 0 - they just won't get bonus)
   const filtered = stakers.filter(
-    (row: ColsStakerRow) => row.colsStaked > 0 && row.egldStaked > 0
+    (row: ColsStakerRow) => row.colsStaked > 0
   );
 
   // Calculate COLS-DIST(i) for each eligible user

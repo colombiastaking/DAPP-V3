@@ -1,12 +1,18 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useColsApr } from '../hooks/useColsApr';
 import { onTxCompleted } from 'utils/txEvents';
+import { useGlobalContext } from 'context';
 
 const ColsAprContext = createContext<any>(null);
 
 export function ColsAprProvider({ children }: { children: any }) {
   const [trigger, setTrigger] = useState(0);
-  const { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, targetAvgAprBonus, totalColsStaked } = useColsApr({ trigger });
+  const { userActiveStake } = useGlobalContext();
+  
+  // Get raw stake from context (in wei)
+  const userActiveStakeRaw = userActiveStake.status === 'loaded' ? userActiveStake.data : null;
+  
+  const { loading, stakers, egldPrice, colsPrice, baseApr, agencyLockedEgld, targetAvgAprBonus, totalColsStaked } = useColsApr({ trigger, userActiveStakeRaw });
 
   // Track if we've already fetched data (don't refetch on tab clicks)
   const hasLoadedRef = useRef(false);
