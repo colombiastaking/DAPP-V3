@@ -46,7 +46,7 @@ export const delegationManagerContract =
 const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
 const SECONDARY_API = 'https://api.multiversx.com';
 
-const PRIMARY_GATEWAY = 'https://gateway.multiversx.com';
+const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gateway';
 const SECONDARY_GATEWAY = 'https://gateway.multiversx.com';
 
 // default network object

@@ -107,7 +107,7 @@ export function usePreloadData() {
     });
 
     // Try primary gateway first, fallback to public
-    const PRIMARY_GATEWAY = 'https://gateway.multiversx.com';
+    const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gateway';
     const PUBLIC_GATEWAY = 'https://gateway.multiversx.com';
     const gateways = [PRIMARY_GATEWAY, PUBLIC_GATEWAY];
     let success = false;
@@ -200,7 +200,7 @@ export function usePreloadData() {
     });
 
     // Try primary gateway first, fallback to public
-    const PRIMARY_GATEWAY = 'https://gateway.multiversx.com';
+    const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gateway';
     const PUBLIC_GATEWAY = 'https://gateway.multiversx.com';
     const gateways = [PRIMARY_GATEWAY, PUBLIC_GATEWAY];
     let success = false;
