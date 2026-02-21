@@ -12,6 +12,9 @@ import axios from 'axios';
 
 const CLAIM_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
+
+// Use working gateway for SC queries
+const GATEWAY_URL = 'https://gateway.multiversx.com';
 const DELEGATION_CONTRACT = 'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf';
 const COLS_TOKEN_ID = 'COLS-9d91b7';
 
@@ -74,7 +77,7 @@ export function usePreloadData() {
         contract: CLAIM_COLS_CONTRACT,
         entity: ENTITY_ADDRESS,
         user: address,
-        providerUrl: network.gatewayAddress
+        providerUrl: GATEWAY_URL
       });
 
       dispatch({
