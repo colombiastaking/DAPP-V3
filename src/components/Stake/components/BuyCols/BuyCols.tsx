@@ -17,6 +17,12 @@ const XOXNO_AGGREGATOR = 'erd1qqqqqqqqqqqqqpgq5rf2sppxk2xu4m0pkmugw2es4gak3rgjah
 const XOXNO_API = 'https://swap.xoxno.com';
 const COLS_TOKEN_ID = 'COLS-9d91b7';
 
+// Helper: Convert decimal amount to hex for ESDT transfers
+function toHex(amount: string): string {
+  const value = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
+  return new BigNumber(value).toString(16);
+}
+
 // Common tokens on MultiversX
 const TOKENS = [
   { id: 'EGLD', symbol: 'eGLD', decimals: 18, name: 'MultiversX' },
@@ -96,8 +102,9 @@ export const BuyCols = () => {
         const wegldTokenId = 'WEGLD-bd4d79';
         const wegldHex = Buffer.from(wegldTokenId).toString('hex');
         
-        // Step 2: Send WEGLD to XOXNO with swap instructions
-        const swapTxData = `ESDTTransfer@${wegldHex}@${amountWei}@${quoteData.txData}`;
+        // Step 2: Send WEGLD to XOXNO with swap instructions (hex amount)
+        const amountHex = toHex(amount);
+        const swapTxData = `ESDTTransfer@${wegldHex}@${amountHex}@${quoteData.txData}`;
         
         await sendTransactions({
           transactions: [
@@ -130,8 +137,9 @@ export const BuyCols = () => {
         const tokenId = selectedToken.split('-')[0];
         const tokenHex = Buffer.from(tokenId).toString('hex');
         
-        // Wrap XOXNO txData in ESDTTransfer format
-        const txData = `ESDTTransfer@${tokenHex}@${amountWei}@${quoteData.txData}`;
+        // Wrap XOXNO txData in ESDTTransfer format (hex amount)
+        const amountHex = toHex(amount);
+        const txData = `ESDTTransfer@${tokenHex}@${amountHex}@${quoteData.txData}`;
 
         await sendTransactions({
           transactions: [
