@@ -144,46 +144,44 @@ async function fetchStakeContract(addr: string): Promise<number> {
 }
 
 async function fetchEgldWithFallback(addresses: string[]): Promise<Record<string, number>> {
-  // Build URLs using query-string format for Colombia
+  // Build URLs - try Colombia first, then public
   const primaryUrl = `https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=providers/${network.delegationContract}/accounts?size=10000`;
   const backupUrl = `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
   
   let bulkMap: Record<string, number> = {};
+  let bulkFailed = false;
   
-  // Try backup bulk first (public API - faster)
+  // Try Colombia first (primary)
   try {
-    const { data } = await axios.get(backupUrl, { timeout: 30000 });
+    const { data } = await axios.get(primaryUrl, { timeout: 30000 });
     const accounts = Array.isArray(data) ? data : (data?.accounts || []);
     for (const a of accounts) {
       const v = Number(a.activeStake || a.delegationActiveStake || a.stake || 0);
       bulkMap[a.address] = v > 1e12 ? v / 1e18 : v;
     }
-    console.log(`✅ Backup bulk fetched: ${Object.keys(bulkMap).length} accounts`);
+    console.log(`✅ Colombia bulk fetched: ${Object.keys(bulkMap).length} accounts`);
   } catch (e) {
-    console.warn('⚠️ Backup bulk failed');
+    console.warn('⚠️ Colombia bulk failed, trying public...');
+    bulkFailed = true;
   }
   
-  // If backup returned nothing, try primary
-  if (Object.keys(bulkMap).length === 0) {
+  // If Colombia failed, try public (backup)
+  if (bulkFailed || Object.keys(bulkMap).length === 0) {
     try {
-      const { data } = await axios.get(primaryUrl, { timeout: 30000 });
+      const { data } = await axios.get(backupUrl, { timeout: 30000 });
       const accounts = Array.isArray(data) ? data : (data?.accounts || []);
       for (const a of accounts) {
         const v = Number(a.activeStake || a.delegationActiveStake || a.stake || 0);
         bulkMap[a.address] = v > 1e12 ? v / 1e18 : v;
       }
-      console.log(`✅ Primary bulk fetched: ${Object.keys(bulkMap).length} accounts`);
+      console.log(`✅ Public bulk fetched: ${Object.keys(bulkMap).length} accounts`);
     } catch (e) {
-      console.warn('⚠️ Primary bulk failed');
-    }
-  }
-  
-  // For addresses not in bulk, do SC queries
-  const missing = addresses.filter(a => !bulkMap[a]);
-  if (missing.length > 0) {
-    console.log(`🔄 SC fallback for ${missing.length} addresses...`);
-    for (const addr of missing) {
-      bulkMap[addr] = await fetchStakeContract(addr);
+      console.warn('⚠️ Public bulk failed too, using SC fallback...');
+      
+      // Only do SC queries if BOTH bulk APIs failed
+      for (const addr of addresses) {
+        bulkMap[addr] = await fetchStakeContract(addr);
+      }
     }
   }
   
