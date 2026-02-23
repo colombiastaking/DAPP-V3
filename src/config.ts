@@ -46,8 +46,8 @@ export const delegationManagerContract =
 const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
 const SECONDARY_API = 'https://api.multiversx.com';
 
-// Use MultiversX official gateway (your custom gateway doesn't support SC queries)
-const PRIMARY_GATEWAY = 'https://gateway.multiversx.com';
+// Use Colombia gateway (proxy) with public fallback
+const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gw';
 const SECONDARY_GATEWAY = 'https://gateway.multiversx.com';
 
 // default network object
