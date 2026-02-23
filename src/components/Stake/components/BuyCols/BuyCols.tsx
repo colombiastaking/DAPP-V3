@@ -9,24 +9,14 @@ import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAcco
 import { Action, Submit } from 'components/Action';
 import styles from './styles.module.scss';
 
-const WRAP_CONTRACT = 'erd1qqqqqqqqqqqqqpgqhe8t5jewej70zupmh44jurgn29psua5l2jps3ntjj3';
-const WRAP_FUNC = 'wrapEgld';
-const WRAP_GAS = 10000000;
-
 const XOXNO_AGGREGATOR = 'erd1qqqqqqqqqqqqqpgq5rf2sppxk2xu4m0pkmugw2es4gak3rgjah0sxvajva';
 const XOXNO_API = 'https://swap.xoxno.com';
 const COLS_TOKEN_ID = 'COLS-9d91b7';
 
-// Helper: Convert decimal amount to hex for ESDT transfers
-function toHex(amount: string): string {
-  const value = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
-  return new BigNumber(value).toString(16);
-}
-
 // Common tokens on MultiversX
 const TOKENS = [
-  { id: 'EGLD', symbol: 'eGLD', decimals: 18, name: 'MultiversX' },
-  { id: 'WEGLD-bd4d79', symbol: 'WEGLD', decimals: 18, name: 'Wrapped eGLD' },
+  { id: 'EGLD', symbol: 'EGLD', decimals: 18, name: 'MultiversX (EGLD)' },
+  { id: 'WEGLD-bd4d79', symbol: 'WEGLD', decimals: 18, name: 'Wrapped EGLD' },
   { id: 'USDC-c76f1f', symbol: 'USDC', decimals: 6, name: 'USD Coin' },
   { id: 'USDT-37f331', symbol: 'USDT', decimals: 6, name: 'Tether USD' },
   { id: 'MEX-455c57', symbol: 'MEX', decimals: 18, name: 'MEX Token' },
@@ -37,22 +27,23 @@ interface Quote {
   from: string;
   to: string;
   amountIn: string;
-  amountInShort: string;
+  amountInShort: number;
   amountOut: string;
-  amountOutShort: string;
+  amountOutShort: number;
   amountOutMin: string;
-  amountOutMinShort: string;
-  amountInUsd: string;
-  amountOutUsd: string;
-  amountOutMinUsd: string;
+  amountOutMinShort: number;
   slippage: number;
   priceImpact: number;
   rate: string;
   txData: string;
+  estimatedBuiltinCalls?: number;
 }
 
 async function getQuote(tokenIn: string, tokenOut: string, amountIn: string): Promise<Quote> {
-  const amountWei = new BigNumber(amountIn).multipliedBy('1e18').toFixed(0);
+  // Convert decimal amount to wei (smallest units)
+  const token = TOKENS.find(t => t.id === tokenIn);
+  const decimals = token?.decimals || 18;
+  const amountWei = new BigNumber(amountIn).multipliedBy(new BigNumber(10).pow(decimals)).toFixed(0);
 
   const response = await fetch(
     `${XOXNO_API}/api/v1/quote?from=${tokenIn}&to=${tokenOut}&amountIn=${amountWei}&slippage=0.01`
@@ -66,7 +57,11 @@ async function getQuote(tokenIn: string, tokenOut: string, amountIn: string): Pr
   return response.json();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// Convert amount to hex for ESDT transfers
+function toHex(amount: string, decimals: number): string {
+  const value = new BigNumber(amount).multipliedBy(new BigNumber(10).pow(decimals)).toFixed(0);
+  return new BigNumber(value).toString(16);
+}
 
 export const BuyCols = () => {
   const account = useGetAccount();
@@ -79,7 +74,6 @@ export const BuyCols = () => {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [selectedToken, setSelectedToken] = useState('EGLD');
 
-  // Handle swap via XOXNO aggregator - 2-step for EGLD (wrap -> swap)
   const handleSwap = async (amount: string, onClose: () => void) => {
     setError(null);
     setLoading(true);
@@ -89,65 +83,55 @@ export const BuyCols = () => {
       const token = TOKENS.find(t => t.id === selectedToken);
       if (!token) throw new Error('Invalid token');
 
-      const amountWei = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
-      
-      // For EGLD: wrap first, then swap WEGLD via XOXNO
-      if (selectedToken === 'EGLD') {
-        // Get quote for WEGLD -> COLS swap
-        const quoteData = await getQuote('WEGLD-bd4d79', COLS_TOKEN_ID, amount);
-        setQuote(quoteData);
+      // Get quote from XOXNO
+      const quoteData = await getQuote(selectedToken, COLS_TOKEN_ID, amount);
+      setQuote(quoteData);
 
-        // Build 2 transactions: wrap eGLD -> WEGLD, then swap WEGLD -> COLS
-        // IMPORTANT: The XOXNO txData needs to be wrapped in ESDTTransfer format
-        const wegldTokenId = 'WEGLD-bd4d79';
-        const wegldHex = Buffer.from(wegldTokenId).toString('hex');
-        
-        // Step 2: Send WEGLD to XOXNO with swap instructions (hex amount)
-        const amountHex = toHex(amount);
-        const swapTxData = `ESDTTransfer@${wegldHex}@${amountHex}@${quoteData.txData}`;
-        
+      // Calculate gas limit - XOXNO swaps need high gas due to multiple DEX interactions
+      // Use conservative estimate since API doesn't always return estimatedBuiltinCalls
+      const baseGas = 100000000; // 100M base for complex swaps
+      const perCallGas = 10000000; // 10M per swap operation
+      const estimatedCalls = 6; // Conservative estimate for multi-hop swaps
+      const gasLimit = baseGas + (estimatedCalls * perCallGas);
+
+      // Get amount in wei
+      const amountWei = new BigNumber(amount).multipliedBy(new BigNumber(10).pow(token.decimals)).toFixed(0);
+
+      if (selectedToken === 'EGLD') {
+        // For EGLD: Use txData directly, send value with transaction
+        // XOXNO handles wrapping internally
         await sendTransactions({
           transactions: [
             {
-              // Step 1: Wrap eGLD to WEGLD
               value: amountWei,
-              data: WRAP_FUNC,
-              receiver: WRAP_CONTRACT,
-              gasLimit: WRAP_GAS
-            },
-            {
-              // Step 2: Swap WEGLD to COLS via XOXNO (wrap in ESDTTransfer)
-              value: '0',
-              data: swapTxData,
+              data: quoteData.txData,
               receiver: XOXNO_AGGREGATOR,
-              gasLimit: 50000000
+              gasLimit: gasLimit
             }
           ],
           transactionsDisplayInfo: {
-            processingMessage: 'Swapping eGLD to COLS...',
+            processingMessage: 'Swapping EGLD to COLS...',
             successMessage: 'Swap completed!',
             errorMessage: 'Swap failed'
           }
         });
       } else {
-        // For other tokens: direct swap via XOXNO
-        const quoteData = await getQuote(selectedToken, COLS_TOKEN_ID, amount);
-        setQuote(quoteData);
-
-        const tokenId = selectedToken.split('-')[0];
+        // For ESDT tokens: Use ESDTTransfer format
+        // Format: ESDTTransfer@tokenIdentifier@amount@txData
+        const tokenId = selectedToken.split('-')[0]; // e.g., "USDC" from "USDC-c76f1f"
         const tokenHex = Buffer.from(tokenId).toString('hex');
+        const amountHex = toHex(amount, token.decimals);
         
-        // Wrap XOXNO txData in ESDTTransfer format (hex amount)
-        const amountHex = toHex(amount);
-        const txData = `ESDTTransfer@${tokenHex}@${amountHex}@${quoteData.txData}`;
+        // The txData from XOXNO is the raw swap payload - prepend it to ESDTTransfer
+        const esdtTxData = `ESDTTransfer@${tokenHex}@${amountHex}@${quoteData.txData}`;
 
         await sendTransactions({
           transactions: [
             {
               value: '0',
-              data: txData,
+              data: esdtTxData,
               receiver: XOXNO_AGGREGATOR,
-              gasLimit: 50000000
+              gasLimit: gasLimit
             }
           ],
           transactionsDisplayInfo: {
@@ -161,6 +145,7 @@ export const BuyCols = () => {
       setSuccess(true);
       onClose();
     } catch (e: any) {
+      console.error('Swap error:', e);
       setError(e?.message || 'Failed to swap');
     }
     setLoading(false);
@@ -177,11 +162,21 @@ export const BuyCols = () => {
       const quoteData = await getQuote(selectedToken, COLS_TOKEN_ID, amount);
       setQuote(quoteData);
     } catch (e) {
+      console.error('Quote error:', e);
       setQuote(null);
     }
   };
 
   const selectedTokenData = TOKENS.find(t => t.id === selectedToken);
+
+  // Get token-specific balance
+  const getTokenBalance = () => {
+    if (selectedToken === 'EGLD') {
+      return balanceEgld;
+    }
+    // For other tokens, we'd need to fetch balances - default to 0 for now
+    return '0';
+  };
 
   return (
     <div className={styles.buySection}>
@@ -220,9 +215,9 @@ export const BuyCols = () => {
                       return false;
                     }
                   })
-                  .test('max-balance', `Amount cannot exceed your wallet balance (${balanceEgld} eGLD).`, (value = '') => {
+                  .test('max-balance', `Amount cannot exceed your balance.`, (value = '') => {
                     try {
-                      return new BigNumber(value).lte(balanceEgld);
+                      return new BigNumber(value).lte(getTokenBalance() || '0');
                     } catch {
                       return false;
                     }
@@ -241,8 +236,9 @@ export const BuyCols = () => {
               }) => {
                 const onMaxClick = (event: React.MouseEvent<HTMLButtonElement>) => {
                   event.preventDefault();
-                  setFieldValue('amount', balanceEgld);
-                  handleAmountChange(balanceEgld, setFieldValue);
+                  const maxAmount = getTokenBalance();
+                  setFieldValue('amount', maxAmount);
+                  handleAmountChange(maxAmount, setFieldValue);
                 };
 
                 return (
@@ -297,7 +293,7 @@ export const BuyCols = () => {
                         </button>
                       </div>
                       <div className={styles.balance}>
-                        Available: <span>{balanceEgld} eGLD</span>
+                        Available: <span>{getTokenBalance()} {selectedTokenData?.symbol}</span>
                       </div>
                       {errors.amount && touched.amount && (
                         <span className={styles.error}>{errors.amount}</span>
