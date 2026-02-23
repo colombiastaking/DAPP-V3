@@ -46,8 +46,8 @@ export const delegationManagerContract =
 const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
 const SECONDARY_API = 'https://api.multiversx.com';
 
-// Use Colombia gateway (proxy) with public fallback
-const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gw';
+// Use Colombia gateway with query string (avoids LiteSpeed POST caching)
+const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/mvxproxy.php?service=gw&endpoint=';
 const SECONDARY_GATEWAY = 'https://gateway.multiversx.com';
 
 // default network object
@@ -100,15 +100,16 @@ async function checkApiHealth(url: string): Promise<boolean> {
   }
 }
 
-// Robust Gateway health check
+// Robust Gateway health check - test with actual endpoint
 async function checkGatewayHealth(url: string): Promise<boolean> {
   try {
-    // Simple GET to root or health endpoint
-    const res = await fetch(url, { method: 'HEAD' });
-    if (res.ok) return true;
-    // fallback: try GET root
-    const res2 = await fetch(url);
-    return res2.ok;
+    // Append a valid endpoint for health check
+    const testUrl = url.includes('endpoint=') 
+      ? url + 'v1.0/network/config' 
+      : url + '/v1.0/network/config';
+    
+    const res = await fetch(testUrl, { method: 'GET' });
+    return res.ok;
   } catch (err) {
     console.warn(`Gateway check error for ${url}:`, err);
     return false;
