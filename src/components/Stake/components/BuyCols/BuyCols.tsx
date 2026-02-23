@@ -9,7 +9,7 @@ import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAcco
 import { Action, Submit } from 'components/Action';
 import styles from './styles.module.scss';
 
-const XOXNO_AGGREGATOR = 'erd1qqqqqqqqqqqqqpgqxjc80qdqjnwnr6q0z9z75m7sgasjxfln2jpsp67kpt';
+const XOXNO_AGGREGATOR = 'erd1qqqqqqqqqqqqqpgq5rf2sppxk2xu4m0pkmugw2es4gak3rgjah0sxvajva';
 const XOXNO_API = 'https://swap.xoxno.com';
 const COLS_TOKEN_ID = 'COLS-9d91b7';
 
