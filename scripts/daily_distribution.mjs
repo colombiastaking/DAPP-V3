@@ -22,7 +22,7 @@ import fetch from 'node-fetch';
 
 const CONFIG = {
   network: {
-    provider: 'https://api.multiversx.com',
+    provider: 'https://gateway.multiversx.com',
     chainId: '1',
   },
   tokens: {
@@ -33,12 +33,21 @@ const CONFIG = {
     peermeClaim: 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0',
     delegation: 'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf',
   },
+  // Triple redundancy: Colombia-Staking (primary) → Local (secondary) → Public (fallback)
+  // Colombia-Staking has all data (prices + provider)
+  // Local has provider + delegators (no prices)
+  // Public has all data
   api: {
-    stakingPrimary: 'https://staking.colombia-staking.com/mvx-api',
-    stakingBackup: 'https://api.multiversx.com',
-    economics: 'https://api.multiversx.com/economics',
+    // For provider data (APR, fees, delegators)
+    providerPrimary: 'https://staking.colombia-staking.com/mvx-api',
+    providerSecondary: 'http://192.168.0.120',
+    providerBackup: 'https://api.multiversx.com',
+    // For prices (EGLD, COLS)
+    economicsPrimary: 'https://api.multiversx.com/economics',
+    economicsBackup: 'http://192.168.0.120/economics',
     mexPrices: 'https://api.multiversx.com/mex-pairs/hourly-prices',
-    colsToken: 'https://api.multiversx.com/tokens/COLS-9d91b7',
+    colsTokenPrimary: 'https://api.multiversx.com/tokens/COLS-9d91b7',
+    colsTokenBackup: 'http://192.168.0.120/tokens/COLS-9d91b7',
   },
   paths: {
     outputDir: '/tmp/cols_distribution',
@@ -95,19 +104,38 @@ function ensureOutputDir() {
 
 async function fetchEGLDPrice() {
   console.log('Fetching EGLD price...');
+  
+  // Try primary (public API)
   try {
-    const data = await fetchWithTimeout(CONFIG.api.economics);
+    const data = await fetchWithTimeout(CONFIG.api.economicsPrimary);
     const price = parseFloat(data.price);
-    console.log(`  EGLD: $${price}`);
-    return price;
+    if (price > 0) {
+      console.log(`  EGLD: $${price} (public API)`);
+      return price;
+    }
   } catch (e) {
-    console.log(`  Error: ${e.message}`);
-    return 0;
+    console.log(`  Public API failed: ${e.message}`);
   }
+  
+  // Fallback to local (no price but will fail gracefully)
+  try {
+    const data = await fetchWithTimeout(CONFIG.api.economicsBackup);
+    const price = parseFloat(data.price);
+    if (price > 0) {
+      console.log(`  EGLD: $${price} (local API)`);
+      return price;
+    }
+  } catch (e) {
+    console.log(`  Local API failed: ${e.message}`);
+  }
+  
+  return 0;
 }
 
 async function fetchCOLSPrice() {
   console.log('Fetching COLS price...');
+  
+  // Try MEX prices first
   try {
     const data = await fetchWithTimeout(CONFIG.api.mexPrices);
     const colsPair = data.find(p => p.baseId === 'COLS-9d91b7');
@@ -117,10 +145,21 @@ async function fetchCOLSPrice() {
     }
   } catch {}
   
+  // Try token API primary (public)
   try {
-    const data = await fetchWithTimeout(CONFIG.api.colsToken);
+    const data = await fetchWithTimeout(CONFIG.api.colsTokenPrimary);
+    const price = parseFloat(data.price);
+    if (price > 0) {
+      console.log(`  COLS: $${price} (public token API)`);
+      return price;
+    }
+  } catch {}
+  
+  // Fallback to public token API
+  try {
+    const data = await fetchWithTimeout('https://api.multiversx.com/tokens/COLS-9d91b7');
     const price = parseFloat(data.price) || 0.15;
-    console.log(`  COLS: $${price} (token API)`);
+    console.log(`  COLS: $${price} (public API fallback)`);
     return price;
   } catch (e) {
     console.log(`  Error: ${e.message}`);
@@ -131,27 +170,78 @@ async function fetchCOLSPrice() {
 async function fetchProviderData() {
   console.log('Fetching provider data...');
   
-  const url = `${CONFIG.api.stakingPrimary}/providers/${CONFIG.contracts.delegation}`;
-  
+  // Try Colombia-Staking API first (has all data)
+  let url = `${CONFIG.api.providerPrimary}/providers/${CONFIG.contracts.delegation}`;
   try {
     const data = await fetchWithTimeout(url);
-    let locked = parseFloat(data.locked) || 0;
-    if (locked > 1e18) locked = locked / 1e18;
-    
-    const result = {
-      baseApr: parseFloat(data.apr) || 8.45,
-      serviceFee: parseFloat(data.serviceFee) || 0.10,
-      totalLocked: locked,
-      totalDelegators: data.numUsers || 0,
-    };
-    console.log(`  Base APR: ${result.baseApr}%`);
-    console.log(`  Service Fee: ${result.serviceFee * 100}%`);
-    console.log(`  Total Locked: ${result.totalLocked.toFixed(0)} EGLD`);
-    return result;
+    if (data?.apr) {
+      let locked = parseFloat(data.locked) || 0;
+      if (locked > 1e18) locked = locked / 1e18;
+      
+      const result = {
+        baseApr: parseFloat(data.apr) || 8.45,
+        serviceFee: parseFloat(data.serviceFee) || 0.10,
+        totalLocked: locked,
+        totalDelegators: data.numUsers || 0,
+      };
+      console.log(`  Base APR: ${result.baseApr}% (Colombia-Staking API)`);
+      console.log(`  Service Fee: ${result.serviceFee * 100}%`);
+      console.log(`  Total Locked: ${result.totalLocked.toFixed(0)} EGLD`);
+      return result;
+    }
   } catch (e) {
-    console.log(`  Error: ${e.message}`);
-    return { baseApr: 8.45, serviceFee: 0.10, totalLocked: 178580, totalDelegators: 837 };
+    console.log(`  Colombia-Staking API failed: ${e.message}`);
   }
+  
+  // Fallback to local API
+  url = `${CONFIG.api.providerSecondary}/providers/${CONFIG.contracts.delegation}`;
+  try {
+    const data = await fetchWithTimeout(url);
+    if (data?.[0]?.apr) {
+      const d = data[0];
+      let locked = parseFloat(d.locked) || 0;
+      if (locked > 1e18) locked = locked / 1e18;
+      
+      const result = {
+        baseApr: parseFloat(d.apr) || 8.45,
+        serviceFee: parseFloat(d.serviceFee) || 0.10,
+        totalLocked: locked,
+        totalDelegators: d.numUsers || 0,
+      };
+      console.log(`  Base APR: ${result.baseApr}% (Local API)`);
+      console.log(`  Service Fee: ${result.serviceFee * 100}%`);
+      console.log(`  Total Locked: ${result.totalLocked.toFixed(0)} EGLD`);
+      return result;
+    }
+  } catch (e) {
+    console.log(`  Local API failed: ${e.message}`);
+  }
+  
+  // Fallback to public API
+  url = `${CONFIG.api.providerBackup}/providers/${CONFIG.contracts.delegation}`;
+  try {
+    const data = await fetchWithTimeout(url);
+    if (data?.[0]?.apr) {
+      const d = data[0];
+      let locked = parseFloat(d.locked) || 0;
+      if (locked > 1e18) locked = locked / 1e18;
+      
+      const result = {
+        baseApr: parseFloat(d.apr) || 8.45,
+        serviceFee: parseFloat(d.serviceFee) || 0.10,
+        totalLocked: locked,
+        totalDelegators: d.numUsers || 0,
+      };
+      console.log(`  Base APR: ${result.baseApr}% (Public API)`);
+      console.log(`  Service Fee: ${result.serviceFee * 100}%`);
+      console.log(`  Total Locked: ${result.totalLocked.toFixed(0)} EGLD`);
+      return result;
+    }
+  } catch (e) {
+    console.log(`  Public API failed: ${e.message}`);
+  }
+  
+  return { baseApr: 8.45, serviceFee: 0.10, totalLocked: 178580, totalDelegators: 837 };
 }
 
 async function fetchEGLDDelegators() {
@@ -161,28 +251,58 @@ async function fetchEGLDDelegators() {
   let offset = 0;
   const batchSize = 500;
   
-  while (true) {
-    const url = `${CONFIG.api.stakingPrimary}/providers/${CONFIG.contracts.delegation}/accounts?size=${batchSize}&from=${offset}`;
+  // Try each API in order: Colombia-Staking → Local → Public
+  const apis = [
+    { base: CONFIG.api.providerPrimary, name: 'Colombia-Staking' },
+    { base: CONFIG.api.providerSecondary, name: 'Local' },
+    { base: CONFIG.api.providerBackup, name: 'Public' }
+  ];
+  
+  for (const api of apis) {
+    console.log(`  Trying ${api.name} API...`);
+    let success = false;
     
-    try {
-      const data = await fetchWithTimeout(url);
-      if (!data || data.length === 0) break;
+    while (true) {
+      const url = `${api.base}/providers/${CONFIG.contracts.delegation}/accounts?size=${batchSize}&from=${offset}`;
       
-      for (const acc of data) {
-        let stake = parseFloat(acc.stake) || 0;
-        if (stake > 1e15) stake = stake / 1e18;
+      try {
+        const data = await fetchWithTimeout(url);
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+          success = true;
+          break;
+        }
         
-        allDelegators.push({
-          address: acc.address,
-          stake: stake,
-        });
+        for (const acc of data) {
+          let stake = parseFloat(acc.stake) || 0;
+          if (stake > 1e15) stake = stake / 1e18;
+          
+          allDelegators.push({
+            address: acc.address,
+            stake: stake,
+          });
+        }
+        
+        if (data.length < batchSize) {
+          success = true;
+          break;
+        }
+        offset += batchSize;
+      } catch (e) {
+        break;
       }
-      
-      if (data.length < batchSize) break;
-      offset += batchSize;
-    } catch (e) {
+    }
+    
+    if (success && allDelegators.length > 0) {
+      console.log(`  ✅ Got ${allDelegators.length} delegators from ${api.name} API`);
       break;
     }
+    
+    // Reset for next API attempt
+    offset = 0;
+  }
+  
+  if (allDelegators.length === 0) {
+    console.log('  ⚠️ Failed to fetch from all APIs');
   }
   
   console.log(`  Found ${allDelegators.length} delegators`);

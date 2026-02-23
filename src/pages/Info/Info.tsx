@@ -304,7 +304,7 @@ export const Info = () => {
                 <div className={styles.statusFooter}>
                   <span>Epoch: {nodeStatus.epoch}</span>
                   <span>•</span>
-                  <span>Updated: {new Date(nodeStatus.timestamp).toLocaleTimeString()}</span>
+                  <span>Updated: {new Date(Number(nodeStatus.timestamp) * 1000).toLocaleTimeString()}</span>
                 </div>
               </>
             ) : (

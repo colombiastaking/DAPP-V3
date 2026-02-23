@@ -16,10 +16,10 @@ const DELEGATION_CONTRACT = "erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqal
 const PEERME_COLS_CONTRACT = "erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0";
 const PEERME_ENTITY_ADDRESS = "erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0";
 
-// API endpoints (Primary + Backup, like dapp)
-const PRIMARY_API = "https://staking.colombia-staking.com/mvx-api";
+// API endpoints (Local API as PRIMARY, Public as BACKUP - matches dapp exactly)
+const PRIMARY_API = "http://192.168.0.120";
 const BACKUP_API = "https://api.multiversx.com";
-const PRIMARY_GATEWAY = "https://staking.colombia-staking.com/gateway";
+const PRIMARY_GATEWAY = "http://192.168.0.120/gateway";
 const BACKUP_GATEWAY = "https://gateway.multiversx.com";
 
 // ════════════════════════════════════════════════════════════════════════════

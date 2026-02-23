@@ -181,18 +181,22 @@ async function main() {
   const args = process.argv.slice(2);
   const doDao = args.includes('--dao') || args.includes('--all');
   const doBonus = args.includes('--bonus') || args.includes('--all');
+  const doGold = args.includes('--gold') || args.includes('--all-gold');
   const force = args.includes('--force'); // Force re-run even if already done today
   
-  if (!doDao && !doBonus) {
+  if (!doDao && !doBonus && !doGold) {
     console.log("Usage:");
     console.log("  node execute_distribution.cjs --dao      # DAO pool only");
-    console.log("  node execute_distribution.cjs --bonus    # BONUS pool only");
-    console.log("  node execute_distribution.cjs --all      # Both pools");
-    console.log("  node execute_distribution.cjs --all --force  # Force re-run");
+    console.log("  node execute_distribution.cjs --bonus  # BONUS pool only");
+    console.log("  node execute_distribution.cjs --gold   # GOLD pool only");
+    console.log("  node execute_distribution.cjs --all    # DAO + BONUS pools");
+    console.log("  node execute_distribution.cjs --all --all-gold  # DAO + BONUS + GOLD");
+    console.log("  node execute_distribution.cjs --all --force     # Force re-run");
     console.log("");
     console.log("IMPORTANT:");
     console.log("  DAO pool: Sends to PeerMe contract with distribute() call");
     console.log("  BONUS pool: Individual transfers to eligible addresses");
+    console.log("  GOLD pool: Service fee rebate for Gold NFT holders");
     process.exit(1);
   }
   
@@ -253,7 +257,7 @@ async function main() {
   console.log("");
   
   let nonce = Number(account.nonce);
-  const results = { dao: null, bonus: [] };
+  const results = { dao: null, bonus: [], gold: [] };
   
   // =============================================
   // DAO DISTRIBUTION (single transaction)
@@ -340,15 +344,75 @@ async function main() {
     console.log(`BONUS: ${totalSent.toFixed(6)} COLS → ${results.bonus.length} addresses`);
   }
   
+  // =============================================
+  // GOLD DISTRIBUTION (service fee rebate)
+  // =============================================
+  if (doGold) {
+    console.log("");
+    console.log("═".repeat(70));
+    console.log("🟡 GOLD POOL: Service fee rebate for Gold NFT holders");
+    console.log("═".repeat(70));
+    
+    // Load GOLD distribution
+    const goldFile = `/tmp/cols_distribution/gold_distribution_latest.json`;
+    let goldRecipients = [];
+    
+    if (fs.existsSync(goldFile)) {
+      const goldData = JSON.parse(fs.readFileSync(goldFile, 'utf-8'));
+      goldRecipients = goldData.recipients || [];
+    }
+    
+    if (goldRecipients.length === 0) {
+      console.log("⚠️ No GOLD recipients found. Run calculate_gold_distribution.mjs first.");
+    } else {
+      console.log(`Recipients: ${goldRecipients.length}`);
+      console.log("");
+      
+      let success = 0, fail = 0;
+      
+      for (const recipient of goldRecipients) {
+        const tx = buildBonusTransaction(senderAddress, recipient.address, recipient.amount);
+        tx.nonce = BigInt(nonce);
+        
+        try {
+          const hash = await signAndSend(provider, tx, secretKey);
+          results.gold = results.gold || [];
+          results.gold.push({ hash, address: recipient.address, amount: recipient.amount });
+          success++;
+          
+          if (success <= 5 || success % 10 === 0 || success === goldRecipients.length) {
+            console.log(`  ✅ [${success}/${goldRecipients.length}] ${recipient.address.slice(0,12)}... → ${recipient.amount.toFixed(6)} COLS`);
+          }
+        } catch (e) {
+          console.error(`  ❌ ${recipient.address.slice(0,12)}... → ${e.message}`);
+          fail++;
+        }
+        
+        nonce++;
+        await new Promise(r => setTimeout(r, 100));
+      }
+      
+      console.log("");
+      console.log(`GOLD Complete: ${success} success, ${fail} failed`);
+      
+      if (results.gold?.length > 0) {
+        const totalGold = results.gold.reduce((s, r) => s + r.amount, 0);
+        console.log(`GOLD: ${totalGold.toFixed(6)} COLS → ${results.gold.length} addresses`);
+      }
+    }
+  }
+  
   // Save state to prevent duplicate runs
   const finalState = {
     lastDistributionDate: today,
     lastDaoHash: results.dao?.hash || state.lastDaoHash,
     lastBonusCount: results.bonus.length || state.lastBonusCount,
+    lastGoldCount: results.gold?.length || 0,
     lastNonce: nonce,
     lastDistribution: {
       dao: results.dao?.hash ? { amount: daoAmount, tx: results.dao.hash } : null,
-      bonus: results.bonus.length > 0 ? { count: results.bonus.length, total: results.bonus.reduce((s, r) => s + r.amount, 0) } : null
+      bonus: results.bonus.length > 0 ? { count: results.bonus.length, total: results.bonus.reduce((s, r) => s + r.amount, 0) } : null,
+      gold: results.gold?.length > 0 ? { count: results.gold.length, total: results.gold.reduce((s, r) => s + r.amount, 0) } : null
     }
   };
   saveState(finalState);
@@ -359,9 +423,11 @@ async function main() {
   fs.writeFileSync(resultFile, JSON.stringify({
     timestamp: new Date().toISOString(),
     dao: results.dao,
-    bonus: results.bonus.slice(0, 10), // First 10 only
+    bonus: results.bonus.slice(0, 10),
     bonusCount: results.bonus.length,
-    totalColsDistributed: (results.dao?.amount || 0) + results.bonus.reduce((s, r) => s + r.amount, 0)
+    gold: results.gold?.slice(0, 10) || [],
+    goldCount: results.gold?.length || 0,
+    totalColsDistributed: (results.dao?.amount || 0) + results.bonus.reduce((s, r) => s + r.amount, 0) + (results.gold?.reduce((s, r) => s + r.amount, 0) || 0)
   }, null, 2));
   console.log(`\nResults saved: ${resultFile}`);
 }

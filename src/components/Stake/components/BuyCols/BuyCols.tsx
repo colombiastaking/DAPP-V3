@@ -9,89 +9,138 @@ import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAcco
 import { Action, Submit } from 'components/Action';
 import styles from './styles.module.scss';
 
-const WRAP_CONTRACT = 'erd1qqqqqqqqqqqqqpgqhe8t5jewej70zupmh44jurgn29psua5l2jps3ntjj3';
-const WRAP_FUNC = 'wrapEgld';
-const WRAP_GAS_LIMIT = 10000000;
+const XOXNO_AGGREGATOR = 'erd1qqqqqqqqqqqqqpgqxjc80qdqjnwnr6q0z9z75m7sgasjxfln2jpsp67kpt';
+const XOXNO_API = 'https://swap.xoxno.com';
+const COLS_TOKEN_ID = 'COLS-9d91b7';
 
-const SWAP_CONTRACT = 'erd1qqqqqqqqqqqqqpgq3r2vzqe89x23lryqmlp9xynf9t46qnpa2jpsrh63az';
-const SWAP_GAS_LIMIT = 150000000;
-const WEGLD_TOKEN_ID = '5745474c442d626434643739';
-const COLS_TOKEN_ID = '434f4c532d396439316237';
-const SWAP_FUNC_HEX = '73776170546f6b656e734669786564496e707574';
+// Common tokens on MultiversX
+const TOKENS = [
+  { id: 'EGLD', symbol: 'eGLD', decimals: 18, name: 'MultiversX' },
+  { id: 'WEGLD-bd4d79', symbol: 'WEGLD', decimals: 18, name: 'Wrapped eGLD' },
+  { id: 'USDC-c76f1f', symbol: 'USDC', decimals: 6, name: 'USD Coin' },
+  { id: 'USDT-37f331', symbol: 'USDT', decimals: 6, name: 'Tether USD' },
+  { id: 'MEX-455c57', symbol: 'MEX', decimals: 18, name: 'MEX Token' },
+  { id: 'WBTC-38fdb7', symbol: 'WBTC', decimals: 8, name: 'Wrapped Bitcoin' },
+];
 
-function amountToHex(amount: string) {
-  const value = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
-  let hex = new BigNumber(value).toString(16);
-  if (hex.length % 2 !== 0) hex = '0' + hex;
-  return hex;
+interface Quote {
+  from: string;
+  to: string;
+  amountIn: string;
+  amountInShort: string;
+  amountOut: string;
+  amountOutShort: string;
+  amountOutMin: string;
+  amountOutMinShort: string;
+  amountInUsd: string;
+  amountOutUsd: string;
+  amountOutMinUsd: string;
+  slippage: number;
+  priceImpact: number;
+  rate: string;
+  txData: string;
 }
+
+async function getQuote(tokenIn: string, tokenOut: string, amountIn: string): Promise<Quote> {
+  const amountWei = new BigNumber(amountIn).multipliedBy('1e18').toFixed(0);
+  
+  const response = await fetch(
+    `${XOXNO_API}/api/v1/quote?from=${tokenIn}&to=${tokenOut}&amountIn=${amountWei}&slippage=0.01`
+  );
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get quote');
+  }
+  
+  return response.json();
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 
 export const BuyCols = () => {
   const account = useGetAccount();
   const balanceRaw = account?.balance || '0';
-  const balanceEgld = new BigNumber(balanceRaw).dividedBy('1e18').toFixed(6);
+  const balanceEgld = new BigNumber(balanceRaw).dividedBy('1e18').toFixed(4);
 
-  const [wrapSuccess, setWrapSuccess] = useState(false);
-  const [wrapLoading, setWrapLoading] = useState(false);
-  const [wrapError, setWrapError] = useState<string | null>(null);
-  const [swapLoading, setSwapLoading] = useState(false);
-  const [swapError, setSwapError] = useState<string | null>(null);
-  const [wrappedAmount, setWrappedAmount] = useState<string>('1');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [selectedToken, setSelectedToken] = useState('EGLD');
 
-  const handleWrapSubmit = async (amount: string, onClose: () => void) => {
-    setWrapError(null);
-    setWrapLoading(true);
-    setWrapSuccess(false);
+  // Handle swap via XOXNO aggregator
+  const handleSwap = async (amount: string, onClose: () => void) => {
+    setError(null);
+    setLoading(true);
+    setSuccess(false);
+    
     try {
-      const value = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
+      const token = TOKENS.find(t => t.id === selectedToken);
+      if (!token) throw new Error('Invalid token');
+      
+      // Get fresh quote
+      const quoteData = await getQuote(selectedToken, COLS_TOKEN_ID, amount);
+      setQuote(quoteData);
+      
+      const isNative = selectedToken === 'EGLD';
+      const amountWei = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
+      
+      // Build transaction data
+      let txData: string;
+      let txValue: string;
+      
+      if (isNative) {
+        // Native eGLD - send with value
+        txValue = amountWei;
+        txData = quoteData.txData;
+      } else {
+        // ESDT token - need to transfer first
+        const tokenId = selectedToken.split('-')[0];
+        txData = `ESDTTransfer@${Buffer.from(tokenId).toString('hex')}@${Buffer.from(amountWei).toString('hex')}@${quoteData.txData}`;
+        txValue = '0';
+      }
+
       await sendTransactions({
         transactions: [
           {
-            value,
-            data: WRAP_FUNC,
-            receiver: WRAP_CONTRACT,
-            gasLimit: WRAP_GAS_LIMIT
+            value: txValue,
+            data: txData,
+            receiver: XOXNO_AGGREGATOR,
+            gasLimit: 50000000 // ~50M gas for aggregator
           }
-        ]
+        ],
+        transactionsDisplayInfo: {
+          processingMessage: 'Swapping to COLS...',
+          successMessage: 'Swap completed!',
+          errorMessage: 'Swap failed'
+        }
       });
-      setWrappedAmount(amount);
-      setWrapSuccess(true);
+      
+      setSuccess(true);
       onClose();
     } catch (e: any) {
-      setWrapError(e?.message || 'Failed to wrap eGLD');
+      setError(e?.message || 'Failed to swap');
     }
-    setWrapLoading(false);
+    setLoading(false);
   };
 
-  const handleSwapClick = async () => {
-    setSwapError(null);
-    setSwapLoading(true);
+  // Fetch quote when amount changes
+  const handleAmountChange = async (amount: string, setFieldValue: (field: string, value: any) => void) => {
+    setFieldValue('amount', amount);
+    if (!amount || parseFloat(amount) <= 0) {
+      setQuote(null);
+      return;
+    }
     try {
-      const amountHex = amountToHex(wrappedAmount);
-      const data = [
-        'ESDTTransfer',
-        WEGLD_TOKEN_ID,
-        amountHex,
-        SWAP_FUNC_HEX,
-        COLS_TOKEN_ID,
-        '01'
-      ].join('@');
-
-      await sendTransactions({
-        transactions: [
-          {
-            value: '0',
-            data,
-            receiver: SWAP_CONTRACT,
-            gasLimit: SWAP_GAS_LIMIT
-          }
-        ]
-      });
-    } catch (e: any) {
-      setSwapError(e?.message || 'Failed to swap WEGLD to COLS');
+      const quoteData = await getQuote(selectedToken, COLS_TOKEN_ID, amount);
+      setQuote(quoteData);
+    } catch (e) {
+      setQuote(null);
     }
-    setSwapLoading(false);
   };
+
+  const selectedTokenData = TOKENS.find(t => t.id === selectedToken);
 
   return (
     <div className={styles.buySection}>
@@ -99,22 +148,22 @@ export const BuyCols = () => {
         <span className={styles.swapIcon}>💱</span>
         <div>
           <h3 className={styles.swapTitle}>Get COLS</h3>
-          <p className={styles.swapDesc}>Swap eGLD for COLS tokens</p>
+          <p className={styles.swapDesc}>Swap any token to COLS via XOXNO</p>
         </div>
       </div>
 
       <Action
-        title="Swap eGLD to COLS"
-        description="Enter the amount of eGLD you want to swap. This is a 2-step process: wrap eGLD to WEGLD, then swap to COLS."
-        disabled={wrapLoading}
+        title="Swap to COLS"
+        description="Exchange any token for COLS tokens using XOXNO aggregator for best rates."
+        disabled={loading}
         trigger={
           <div
             className={classNames(styles.trigger, styles.triggerSecondary, {
-              [styles.disabled]: wrapLoading
+              [styles.disabled]: loading
             })}
           >
-            <span className={styles.triggerIcon}>🔄</span>
-            <span className={styles.triggerLabel}>Swap eGLD → COLS</span>
+            <span className={styles.triggerIcon}>⚡</span>
+            <span className={styles.triggerLabel}>Swap → COLS</span>
           </div>
         }
         render={(onClose: () => void) => (
@@ -139,26 +188,48 @@ export const BuyCols = () => {
                   })
               })}
               initialValues={{ amount: '1' }}
-              onSubmit={({ amount }) => handleWrapSubmit(amount, onClose)}
+              onSubmit={({ amount }) => handleSwap(amount, onClose)}
             >
               {({
                 errors,
                 values,
                 touched,
                 handleBlur,
-                handleChange,
                 handleSubmit,
                 setFieldValue
               }) => {
                 const onMaxClick = (event: React.MouseEvent<HTMLButtonElement>) => {
                   event.preventDefault();
                   setFieldValue('amount', balanceEgld);
+                  handleAmountChange(balanceEgld, setFieldValue);
                 };
 
                 return (
                   <form onSubmit={handleSubmit}>
+                    {/* Token Selector */}
                     <div className={styles.field}>
-                      <label htmlFor="amount" className={styles.label}>eGLD Amount</label>
+                      <label className={styles.label}>From Token</label>
+                      <select
+                        value={selectedToken}
+                        onChange={(e) => {
+                          setSelectedToken(e.target.value);
+                          setQuote(null);
+                        }}
+                        className={styles.select}
+                      >
+                        {TOKENS.map(token => (
+                          <option key={token.id} value={token.id}>
+                            {token.symbol} - {token.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Amount Input */}
+                    <div className={styles.field}>
+                      <label htmlFor="amount" className={styles.label}>
+                        Amount ({selectedTokenData?.symbol})
+                      </label>
                       <div className={styles.inputWrapper}>
                         <input
                           type="number"
@@ -167,10 +238,9 @@ export const BuyCols = () => {
                           required
                           autoComplete="off"
                           min={0}
-                          max={balanceEgld}
                           value={values.amount}
                           onBlur={handleBlur}
-                          onChange={handleChange}
+                          onChange={(e) => handleAmountChange(e.target.value, setFieldValue)}
                           className={classNames(styles.input, {
                             [styles.invalid]: errors.amount && touched.amount
                           })}
@@ -180,7 +250,7 @@ export const BuyCols = () => {
                           type="button"
                           onClick={onMaxClick}
                           className={styles.maxButton}
-                          disabled={wrapLoading}
+                          disabled={loading}
                         >
                           MAX
                         </button>
@@ -192,12 +262,42 @@ export const BuyCols = () => {
                         <span className={styles.error}>{errors.amount}</span>
                       )}
                     </div>
-                    {wrapError && <span className={styles.error}>{wrapError}</span>}
+
+                    {/* Quote Display */}
+                    {quote && (
+                      <div className={styles.quoteDisplay}>
+                        <div className={styles.quoteRow}>
+                          <span>You get:</span>
+                          <span className={styles.quoteValue}>
+                            {quote.amountOutShort} COLS
+                          </span>
+                        </div>
+                        <div className={styles.quoteRow}>
+                          <span>Min. you'll get:</span>
+                          <span className={styles.quoteValueSmall}>
+                            {quote.amountOutMinShort} COLS
+                          </span>
+                        </div>
+                        <div className={styles.quoteRow}>
+                          <span>Rate:</span>
+                          <span>1 {selectedTokenData?.symbol} = {quote.rate} COLS</span>
+                        </div>
+                        <div className={styles.quoteRow}>
+                          <span>Price impact:</span>
+                          <span className={quote.priceImpact > 5 ? styles.quoteWarning : ''}>
+                            {quote.priceImpact.toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {error && <span className={styles.error}>{error}</span>}
                     <Submit
-                      save="Swap"
+                      save={loading ? 'Swapping...' : 'Swap'}
                       onClose={() => {
                         setFieldValue('amount', '1');
-                        setWrapError(null);
+                        setError(null);
+                        setQuote(null);
                       }}
                     />
                   </form>
@@ -208,24 +308,13 @@ export const BuyCols = () => {
         )}
       />
 
-      {wrapSuccess && (
+      {success && (
         <div className={styles.stepTwo}>
           <div className={styles.stepTwoInfo}>
-            <span>✅ Step 1 complete! Now complete the swap:</span>
+            <span>✅ Swap completed! You received COLS tokens.</span>
           </div>
-          <button
-            type="button"
-            className={classNames(styles.completeButton, {
-              [styles.disabled]: swapLoading
-            })}
-            onClick={handleSwapClick}
-            disabled={swapLoading}
-          >
-            {swapLoading ? 'Processing...' : 'Complete Swap'}
-          </button>
         </div>
       )}
-      {swapError && <div className={styles.error}>{swapError}</div>}
     </div>
   );
 };

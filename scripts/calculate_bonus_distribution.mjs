@@ -14,14 +14,18 @@ const DAO_DISTRIBUTION_RATIO = 0.333;
 const BONUS_BUYBACK_FACTOR = 0.66;
 const APR_MIN = 0.5;
 
-// Configuration
+// Configuration - Triple redundancy
 const CONFIG = {
   api: {
-    stakingPrimary: 'https://staking.colombia-staking.com/mvx-api',
-    stakingBackup: 'https://api.multiversx.com',
+    // Provider data: Local (primary) → Public (backup)
+    providerPrimary: 'http://192.168.0.120',
+    providerBackup: 'https://api.multiversx.com',
+    // Prices: Public (primary) → Local (backup)
     economicsPrimary: 'https://api.multiversx.com/economics',
+    economicsBackup: 'http://192.168.0.120/economics',
     mexPrices: 'https://api.multiversx.com/mex-pairs/hourly-prices',
-    colsToken: 'https://api.multiversx.com/tokens/COLS-9d91b7',
+    colsTokenPrimary: 'https://api.multiversx.com/tokens/COLS-9d91b7',
+    colsTokenBackup: 'http://192.168.0.120/tokens/COLS-9d91b7',
   },
   contracts: {
     claim: 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0',

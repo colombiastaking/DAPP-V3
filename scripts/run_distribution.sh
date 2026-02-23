@@ -88,6 +88,23 @@ case "$1" in
     node "$SCRIPTS_DIR/verify_distribution.mjs"
     ;;
   
+  gold|--gold|-g)
+    echo -e "${GREEN}Calculating GOLD member distribution...${NC}"
+    node "$SCRIPTS_DIR/calculate_gold_distribution.mjs"
+    ;;
+  
+  all|--all|-a)
+    echo -e "${GREEN}Calculating ALL distributions (BONUS + GOLD)...${NC}"
+    echo ""
+    echo -e "${GREEN}1. BONUS Distribution${NC}"
+    node "$SCRIPTS_DIR/daily_distribution.mjs" --recalc
+    echo ""
+    echo -e "${GREEN}2. GOLD Distribution${NC}"
+    node "$SCRIPTS_DIR/calculate_gold_distribution.mjs"
+    echo ""
+    echo -e "${GREEN}✅ All distributions calculated!${NC}"
+    ;;
+  
   status|--status|-s)
     echo -e "${BLUE}Checking status...${NC}"
     echo ""
@@ -111,14 +128,32 @@ case "$1" in
     
     echo ""
     
+    # Check GOLD distribution
+    GOLD_FILE="$OUTPUT_DIR/gold_distribution_$TODAY.json"
+    if [ -f "$GOLD_FILE" ]; then
+      echo -e "${GREEN}✅ GOLD distribution calculated for today${NC}"
+      cat "$GOLD_FILE" | node -e "
+        const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+        console.log('   Total GOLD:', d.totalCols.toFixed(6), 'COLS');
+        console.log('   Recipients:', d.recipients.length);
+      "
+    else
+      echo -e "${YELLOW}❌ No GOLD distribution for today${NC}"
+      echo "   Run: ./run_distribution.sh gold"
+    fi
+    
+    echo ""
+    
     # Check COLS stakers cache
     STAKERS_FILE="$OUTPUT_DIR/cols_stakers_latest.json"
     if [ -f "$STAKERS_FILE" ]; then
       echo -e "${GREEN}✅ COLS stakers cache exists${NC}"
       cat "$STAKERS_FILE" | node -e "
         const d = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
-        console.log('   Total stakers:', d.totalStakers);
-        console.log('   Total staked:', d.totalStaked.toFixed(2), 'COLS');
+        const count = d.count || d.totalStakers || d.stakers?.length || 0;
+        const total = d.stakers ? d.stakers.reduce((s, u) => s + u.colsStake, 0) : (d.totalStaked || 0);
+        console.log('   Total stakers:', count);
+        console.log('   Total staked:', total.toFixed(2), 'COLS');
         console.log('   Cache time:', d.timestamp);
       "
     else
@@ -174,10 +209,13 @@ case "$1" in
     echo "Commands:"
     echo "  (none)        Show this help"
     echo "  calc          Calculate fresh BONUS distribution"
-    echo "  fetch         Fetch COLS stakers data"
+    echo "  fetch         Fetch COLS stakers data (SC query)"
+    echo "  gold          Calculate GOLD member distribution"
+    echo "  all           Calculate ALL distributions (BONUS + GOLD)"
     echo "  execute       Execute BOTH distributions (DAO + BONUS)"
     echo "  dao           Execute DAO distribution only (PeerMe contract)"
     echo "  bonus         Execute BONUS distribution only (individual transfers)"
+    echo "  gold-exec     Execute GOLD distribution (individual transfers)"
     echo "  verify        Verify last distribution"
     echo "  status        Show distribution status and wallet balances"
     echo "  table         Show COLS-DIST table"
@@ -186,12 +224,14 @@ case "$1" in
     echo "Distribution explanation:"
     echo "  DAO Pool (1/3): Single tx to PeerMe contract → distributes to ALL COLS stakers"
     echo "  BONUS Pool (2/3): Individual transfers → addresses with BOTH EGLD + COLS"
+    echo "  GOLD Pool: Service fee rebate → Gold NFT holders with EGLD delegation"
     echo ""
     echo "Typical daily workflow:"
-    echo "  1. $0 fetch      # Update COLS stakers cache"
-    echo "  2. $0 calc       # Calculate distribution"
-    echo "  3. $0 table      # Review amounts"
-    echo "  4. $0 execute    # Send BOTH to blockchain"
-    echo "  5. $0 verify     # Verify transactions"
+    echo "  1. $0 fetch      # Update COLS stakers cache (SC query)"
+    echo "  2. $0 all       # Calculate BONUS + GOLD distributions"
+    echo "  3. $0 status    # Review status and amounts"
+    echo "  4. $0 execute   # Send DAO + BONUS to blockchain"
+    echo "  5. $0 gold-exec # Send GOLD to blockchain"
+    echo "  6. $0 verify   # Verify transactions"
     ;;
 esac

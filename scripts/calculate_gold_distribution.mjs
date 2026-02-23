@@ -1,283 +1,427 @@
+#!/usr/bin/env node
 /**
- * Calculate Gold Member Daily Distribution
+ * Calculate Gold Member Daily Distribution - EFFICIENT VERSION
  * 
- * Gold members get back their daily service fee as COLS tokens
- * 
- * Formula:
- *   dailyServiceFeeEgld = min(eGLD, goldCapacity) × rawApr × serviceFee / 365
- *   dailyServiceFeeCols = dailyServiceFeeEgld × (egldPrice / colsPrice)
- * 
- * Gold NFT Collection: COL-70965c
- * Each NFT = 500 eGLD capacity at 0% fee
+ * Strategy:
+ * 1. Fetch all Gold NFTs from collection (50 NFTs) - single API call
+ * 2. Extract unique owner addresses
+ * 3. Look up delegations for those addresses
+ * 4. Calculate distribution
+ * 5. Cache everything for fallback
  */
 
-import * as fs from "fs";
+import * as fs from 'fs';
+import fetch from 'node-fetch';
 
-// Configuration
-const COLS_TOKEN_ID = "COLS-9d91b7";
-const GOLD_COLLECTION = "COL-70965c";
-const GOLD_EGLD_CAPACITY_PER_NFT = 500;
-const SERVICE_FEE = 0.10; // 10%
-const DAYS_IN_YEAR = 365;
+const CONFIG = {
+  COLS_TOKEN_ID: "COLS-9d91b7",
+  GOLD_COLLECTION: "COL-70965c",
+  GOLD_EGLD_CAPACITY_PER_NFT: 500,
+  SERVICE_FEE: 0.10,
+  DAYS_IN_YEAR: 365,
+  DELEGATION_CONTRACT: "erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf",
+  OUTPUT_DIR: "/tmp/cols_distribution"
+};
 
-// API endpoints - Use Kepler (Colombian Staking API)
-const PRICE_API = "https://api.multiversx.com/tokens";
-const STAKING_API = "https://staking.colombia-staking.com/mvx-api/providers";
-const MX_API = "https://staking.colombia-staking.com/mvx-api";
-
-// Delegation contract
-const DELEGATION_CONTRACT = "erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf";
+// API endpoints
+const APIs = {
+  multiversx: "https://api.multiversx.com",
+  local: "http://192.168.0.120"
+};
 
 /**
- * Fetch current token prices from MultiversX API
+ * Safe fetch with timeout
  */
-async function fetchPrices() {
+async function fetchWithTimeout(url, timeout = 15000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
   try {
-    const [colsRes, egldRes] = await Promise.all([
-      fetch(`${PRICE_API}/${COLS_TOKEN_ID}`),
-      fetch(`${PRICE_API}/EGLD`)
-    ]);
-    
-    const colsData = await colsRes.json();
-    const egldData = await egldRes.json();
-    
-    return {
-      colsPrice: parseFloat(colsData.price) || null,
-      egldPrice: parseFloat(egldData.price) || null
-    };
-  } catch (error) {
-    console.error("Error fetching prices:", error.message);
-    return { colsPrice: null, egldPrice: null };
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
 /**
- * Fetch all Gold NFT holders using Kepler API with batching
+ * Load cached data
  */
-async function fetchGoldMembers() {
+function loadCache(name) {
   try {
-    // First get all delegators with their stake
-    const delegatorsResponse = await fetch(
-      `${STAKING_API}/${DELEGATION_CONTRACT}/accounts?size=1000`
-    );
-    const delegatorsData = await delegatorsResponse.json();
+    const path = `${CONFIG.OUTPUT_DIR}/${name}`;
+    if (fs.existsSync(path)) {
+      return JSON.parse(fs.readFileSync(path, 'utf-8'));
+    }
+  } catch (e) {}
+  return null;
+}
+
+/**
+ * Save to cache
+ */
+function saveCache(name, data) {
+  try {
+    fs.mkdirSync(CONFIG.OUTPUT_DIR, { recursive: true });
+    fs.writeFileSync(`${CONFIG.OUTPUT_DIR}/${name}`, JSON.stringify(data, null, 2));
+  } catch (e) {}
+}
+
+/**
+ * Load last distribution
+ */
+function loadLastDistribution() {
+  try {
+    const files = fs.readdirSync(CONFIG.OUTPUT_DIR)
+      .filter(f => f.startsWith('gold_distribution_') && f.endsWith('.json'))
+      .sort()
+      .reverse();
     
-    const delegators = delegatorsData.map(d => d.address);
-    console.log(`📊 Found ${delegators.length} delegators, checking for Gold NFTs via Kepler API...`);
-    
-    // Process in parallel batches
-    const goldMembers = [];
-    const batchSize = 20;
-    
-    for (let i = 0; i < delegators.length; i += batchSize) {
-      const batch = delegators.slice(i, i + batchSize);
-      
-      const results = await Promise.all(
-        batch.map(async (address) => {
-          try {
-            const response = await fetch(
-              `${MX_API}/accounts/${address}/nfts?collection=${GOLD_COLLECTION}&size=10`
-            );
-            
-            if (response.ok) {
-              const nfts = await response.json();
-              if (Array.isArray(nfts) && nfts.length > 0) {
-                return { address, nftCount: nfts.length };
-              }
-            }
-          } catch (e) {
-            // Skip errors
-          }
-          return null;
-        })
-      );
-      
-      // Collect found Gold members
-      for (const result of results) {
-        if (result) {
-          goldMembers.push({
-            address: result.address,
-            nftCount: result.nftCount,
-            goldCapacity: result.nftCount * GOLD_EGLD_CAPACITY_PER_NFT
-          });
-          console.log(`   ✅ ${result.address.slice(0, 8)}... (${result.nftCount} NFTs)`);
-        }
+    for (const file of files) {
+      const data = JSON.parse(fs.readFileSync(`${CONFIG.OUTPUT_DIR}/${file}`, 'utf-8'));
+      if (data.recipients?.length > 0) {
+        return data;
       }
-      
-      console.log(`   Progress: ${Math.min(i + batchSize, delegators.length)}/${delegators.length}`);
+    }
+  } catch (e) {}
+  return null;
+}
+
+/**
+ * Fetch all Gold NFT owners from collection
+ */
+async function fetchGoldNftOwners() {
+  console.log("📡 Fetching Gold NFT owners from collection...");
+  
+  try {
+    // First get all NFT IDs in the collection
+    const nfts = await fetchWithTimeout(
+      `${APIs.multiversx}/collections/${CONFIG.GOLD_COLLECTION}/nfts?size=50`
+    );
+    
+    if (!Array.isArray(nfts) || nfts.length === 0) {
+      throw new Error("No NFTs returned");
     }
     
-    console.log(`📊 Found ${goldMembers.length} Gold members with delegations`);
-    return goldMembers;
-  } catch (error) {
-    console.error("Error fetching Gold members:", error.message);
+    // Get owner for each NFT (individual queries)
+    console.log(`  📊 Found ${nfts.length} NFTs, fetching owners...`);
+    
+    const ownerMap = {};
+    const batchSize = 5;
+    
+    for (let i = 0; i < nfts.length; i += batchSize) {
+      const batch = nfts.slice(i, i + batchSize);
+      
+      await Promise.all(batch.map(async (nft) => {
+        try {
+          const detail = await fetchWithTimeout(
+            `${APIs.multiversx}/nfts/${nft.identifier}`
+          );
+          
+          if (detail.owner) {
+            if (!ownerMap[detail.owner]) {
+              ownerMap[detail.owner] = { count: 0 };
+            }
+            ownerMap[detail.owner].count++;
+          }
+        } catch (e) {
+          // Skip failed
+        }
+      }));
+      
+      console.log(`    Progress: ${Math.min(i + batchSize, nfts.length)}/${nfts.length}`);
+    }
+    
+    const owners = Object.keys(ownerMap).map(addr => ({
+      address: addr,
+      nftCount: ownerMap[addr].count,
+      goldCapacity: ownerMap[addr].count * CONFIG.GOLD_EGLD_CAPACITY_PER_NFT
+    }));
+    
+    console.log(`  ✅ Found ${owners.length} unique Gold NFT owners`);
+    
+    // Cache it
+    saveCache('gold_nft_owners.json', {
+      timestamp: new Date().toISOString(),
+      owners: owners
+    });
+    
+    return owners;
+  } catch (e) {
+    console.log(`  ❌ Failed: ${e.message}`);
+    
+    // Try cache
+    const cached = loadCache('gold_nft_owners.json');
+    if (cached?.owners?.length > 0) {
+      console.log(`  📦 Using cached: ${cached.owners.length} owners`);
+      return cached.owners;
+    }
+    
     return [];
   }
 }
 
 /**
- * Fetch current APR from staking API
+ * Fetch prices
  */
-async function fetchApr() {
+async function fetchPrices() {
+  console.log("📡 Fetching prices...");
+  
   try {
-    const response = await fetch(`${STAKING_API}/${DELEGATION_CONTRACT}`);
-    const data = await response.json();
-    // APR from API is already with fee deducted (e.g., 8.41%)
-    const aprWithFee = parseFloat(data.apr) || 0;
-    // Calculate raw APR before fee
-    const rawApr = aprWithFee / (1 - SERVICE_FEE);
-    return { aprWithFee, rawApr };
-  } catch (error) {
-    console.error("Error fetching APR:", error.message);
-    return { aprWithFee: 8.41, rawApr: 9.35 }; // Fallback
+    const [colsRes, egldRes] = await Promise.all([
+      fetchWithTimeout(`${APIs.multiversx}/tokens/${CONFIG.COLS_TOKEN_ID}`),
+      fetchWithTimeout(`${APIs.multiversx}/economics`)
+    ]);
+    
+    const colsPrice = parseFloat(colsRes.price) || 0.15;
+    const egldPrice = parseFloat(egldRes.price) || 4.66;
+    
+    console.log(`  ✅ COLS: $${colsPrice}, EGLD: $${egldPrice}`);
+    
+    saveCache('gold_prices.json', { colsPrice, egldPrice, timestamp: new Date().toISOString() });
+    
+    return { colsPrice, egldPrice };
+  } catch (e) {
+    console.log(`  ❌ Failed: ${e.message}`);
+    const cached = loadCache('gold_prices.json');
+    if (cached?.colsPrice) {
+      console.log(`  📦 Using cached: COLS $${cached.colsPrice}, EGLD $${cached.egldPrice}`);
+      return { colsPrice: cached.colsPrice, egldPrice: cached.egldPrice };
+    }
+    return { colsPrice: 0.15, egldPrice: 4.66 };
   }
 }
 
 /**
- * Fetch EGLD delegation for addresses
+ * Fetch APR
+ */
+async function fetchApr() {
+  console.log("📡 Fetching APR...");
+  
+  try {
+    const data = await fetchWithTimeout(
+      `${APIs.multiversx}/providers/${CONFIG.DELEGATION_CONTRACT}`
+    );
+    
+    const provider = Array.isArray(data) ? data[0] : data;
+    const aprWithFee = parseFloat(provider.apr) || 8.41;
+    const rawApr = aprWithFee / (1 - CONFIG.SERVICE_FEE);
+    
+    console.log(`  ✅ APR: ${aprWithFee}% (with fee), ${rawApr}% (raw)`);
+    
+    saveCache('gold_apr.json', { aprWithFee, rawApr, timestamp: new Date().toISOString() });
+    
+    return { aprWithFee, rawApr };
+  } catch (e) {
+    console.log(`  ❌ Failed: ${e.message}`);
+    const cached = loadCache('gold_apr.json');
+    if (cached?.rawApr) {
+      console.log(`  📦 Using cached: ${cached.aprWithFee}% / ${cached.rawApr}%`);
+      return { aprWithFee: cached.aprWithFee, rawApr: cached.rawApr };
+    }
+    return { aprWithFee: 8.41, rawApr: 9.35 };
+  }
+}
+
+/**
+ * Fetch delegations for specific addresses
  */
 async function fetchDelegations(addresses) {
+  console.log(`📡 Fetching delegations for ${addresses.length} addresses...`);
+  
+  const delegations = {};
+  
+  // Fetch delegators in batches from provider
   try {
-    const response = await fetch(
-      `${STAKING_API}/${DELEGATION_CONTRACT}/accounts?size=1000`
-    );
-    const data = await response.json();
+    const allDelegators = [];
+    let offset = 0;
+    const batchSize = 100;
     
-    // Create lookup map - stake is in raw format (wei)
-    const delegations = {};
-    for (const account of data) {
-      // Convert from wei to eGLD
-      delegations[account.address] = parseFloat(account.stake) / 1e18;
+    while (true) {
+      const data = await fetchWithTimeout(
+        `${APIs.multiversx}/providers/${CONFIG.DELEGATION_CONTRACT}/accounts?size=${batchSize}&from=${offset}`
+      );
+      
+      if (!Array.isArray(data) || data.length === 0) break;
+      
+      allDelegators.push(...data);
+      
+      if (data.length < batchSize) break;
+      offset += batchSize;
+    }
+    
+    console.log(`  ✅ Total delegators: ${allDelegators.length}`);
+    
+    // Create lookup map
+    const delegatorMap = {};
+    for (const d of allDelegators) {
+      delegatorMap[d.address] = parseFloat(d.stake) / 1e18;
+    }
+    
+    // Filter to only Gold NFT owners
+    for (const addr of addresses) {
+      delegations[addr] = delegatorMap[addr] || 0;
     }
     
     return delegations;
-  } catch (error) {
-    console.error("Error fetching delegations:", error.message);
-    return {};
+  } catch (e) {
+    console.log(`  ❌ Failed: ${e.message}`);
+    
+    // Try local API
+    try {
+      let offset = 0;
+      const batchSize = 100;
+      
+      while (true) {
+        const data = await fetchWithTimeout(
+          `${APIs.local}/providers/${CONFIG.DELEGATION_CONTRACT}/accounts?size=${batchSize}&from=${offset}`
+        );
+        
+        if (!Array.isArray(data) || data.length === 0) break;
+        
+        for (const d of data) {
+          if (addresses.includes(d.address)) {
+            delegations[d.address] = parseFloat(d.stake) / 1e18;
+          }
+        }
+        
+        if (data.length < batchSize) break;
+        offset += batchSize;
+      }
+      
+      console.log(`  ✅ From local: ${Object.keys(delegations).length} found`);
+      return delegations;
+    } catch (e2) {
+      console.log(`  ❌ Local also failed: ${e2.message}`);
+    }
+    
+    // Use last distribution data
+    const lastDist = loadLastDistribution();
+    if (lastDist?.recipients?.length > 0) {
+      console.log(`  📦 Using last distribution data`);
+      for (const r of lastDist.recipients) {
+        delegations[r.address] = parseFloat(r.delegatedEgld) || 0;
+      }
+    }
+    
+    return delegations;
   }
 }
 
 /**
- * Main calculation
+ * Main
  */
 async function main() {
   console.log("═".repeat(70));
-  console.log("💰 GOLD MEMBER DAILY DISTRIBUTION CALCULATOR");
+  console.log("💰 GOLD MEMBER DAILY DISTRIBUTION (EFFICIENT)");
   console.log("═".repeat(70));
   console.log(`Time: ${new Date().toISOString()}`);
   console.log("");
   
-  // Fetch data
-  console.log("📡 Fetching data...");
-  const [prices, apr, goldMembers] = await Promise.all([
-    fetchPrices(),
-    fetchApr(),
-    fetchGoldMembers()
-  ]);
+  fs.mkdirSync(CONFIG.OUTPUT_DIR, { recursive: true });
   
-  const { colsPrice, egldPrice } = prices;
-  const { aprWithFee, rawApr } = apr;
+  // Step 1: Get Gold NFT owners
+  const goldOwners = await fetchGoldNftOwners();
   
-  // Fallback prices if API fails
-  const finalColsPrice = colsPrice || 0.147;
-  const finalEgldPrice = egldPrice || 5.00;
+  if (goldOwners.length === 0) {
+    console.log("❌ No Gold NFT owners found, using last distribution");
+    const lastDist = loadLastDistribution();
+    if (lastDist) {
+      console.log(JSON.stringify(lastDist, null, 2));
+    }
+    return;
+  }
   
-  if (!colsPrice) console.log("⚠️  COLS price API failed, using fallback:", finalColsPrice);
-  if (!egldPrice) console.log("⚠️  EGLD price API failed, using fallback:", finalEgldPrice);
+  // Step 2: Get prices
+  const { colsPrice, egldPrice } = await fetchPrices();
   
-  console.log("");
-  console.log("📊 Current Data:");
-  console.log(`   APR (with fee): ${aprWithFee.toFixed(2)}%`);
-  console.log(`   APR (raw): ${rawApr.toFixed(2)}%`);
-  console.log(`   COLS Price: $${finalColsPrice.toFixed(4)}`);
-  console.log(`   EGLD Price: $${finalEgldPrice.toFixed(2)}`);
-  console.log("");
+  // Step 3: Get APR
+  const { aprWithFee, rawApr } = await fetchApr();
   
-  // Get delegations for all addresses
-  const addresses = goldMembers.map(g => g.address);
+  // Step 4: Get delegations for Gold owners
+  const addresses = goldOwners.map(o => o.address);
   const delegations = await fetchDelegations(addresses);
   
-  // Calculate distribution for each Gold member
+  // Step 5: Calculate distribution
+  console.log("");
+  console.log("📊 Calculating distribution...");
+  
   const recipients = [];
   let totalCols = 0;
   
-  console.log("📊 Gold Member Daily Distribution:");
-  console.log("─".repeat(70));
-  
-  for (const member of goldMembers) {
-    const { address, nftCount, goldCapacity } = member;
+  for (const owner of goldOwners) {
+    const delegatedEgld = delegations[owner.address] || 0;
+    const goldEligibleEgld = Math.min(delegatedEgld, owner.goldCapacity);
     
-    // Get user's eGLD delegation
-    const delegatedEgld = delegations[address] || 0;
+    if (goldEligibleEgld <= 0) continue;
     
-    // Calculate gold-eligible eGLD (up to capacity)
-    const goldEligibleEgld = Math.min(delegatedEgld, goldCapacity);
+    // Calculate: eGLD × rawApr × serviceFee / 365 × (egldPrice / colsPrice)
+    const dailyServiceFeeEgld = goldEligibleEgld * (rawApr / 100) * CONFIG.SERVICE_FEE / CONFIG.DAYS_IN_YEAR;
+    const dailyServiceFeeCols = dailyServiceFeeEgld * (egldPrice / colsPrice);
     
-    if (goldEligibleEgld <= 0) {
-      console.log(`   ${address.slice(0, 8)}...${address.slice(-4)}: No delegation - skipped`);
-      continue;
-    }
-    
-    // Calculate daily service fee rebate in eGLD
-    // Formula: eGLD × (rawApr/100) × serviceFee / 365
-    const dailyServiceFeeEgld = goldEligibleEgld * (rawApr / 100) * SERVICE_FEE / DAYS_IN_YEAR;
-    
-    // Convert to COLS
-    const dailyServiceFeeCols = dailyServiceFeeEgld * (finalEgldPrice / finalColsPrice);
-    
-    // Only include if worth sending (minimum 0.01 COLS)
     if (dailyServiceFeeCols >= 0.01) {
       recipients.push({
-        address,
-        nftCount,
-        goldCapacity,
+        address: owner.address,
+        nftCount: owner.nftCount,
+        goldCapacity: owner.goldCapacity,
         delegatedEgld: delegatedEgld.toFixed(2),
         goldEligibleEgld: goldEligibleEgld.toFixed(2),
-        dailyServiceFeeEgld: dailyServiceFeeEgld.toFixed(6),
         dailyServiceFeeCols: dailyServiceFeeCols.toFixed(6)
       });
       
       totalCols += dailyServiceFeeCols;
-      
-      console.log(`   ${address.slice(0, 8)}...${address.slice(-4)}: ${goldEligibleEgld.toFixed(0)} eGLD → ${dailyServiceFeeCols.toFixed(4)} COLS`);
     }
+  }
+  
+  // Sort by amount descending
+  recipients.sort((a, b) => parseFloat(b.dailyServiceFeeCols) - parseFloat(a.dailyServiceFeeCols));
+  
+  console.log("");
+  console.log("📊 Recipients:");
+  for (const r of recipients) {
+    console.log(`   ${r.address.slice(0, 16)}... → ${r.dailyServiceFeeCols} COLS`);
   }
   
   console.log("");
   console.log("📊 Summary:");
-  console.log(`   Total recipients: ${recipients.length}`);
+  console.log(`   Recipients: ${recipients.length}`);
   console.log(`   Total COLS: ${totalCols.toFixed(4)}`);
-  console.log("");
   
-  // Save distribution file
+  // Save distribution
   const distribution = {
     timestamp: new Date().toISOString(),
     aprWithFee,
     rawApr,
-    colsPrice: finalColsPrice,
-    egldPrice: finalEgldPrice,
+    colsPrice,
+    egldPrice,
     recipients: recipients.map(r => ({
       address: r.address,
-      amount: parseFloat(r.dailyServiceFeeCols)
+      amount: parseFloat(r.dailyServiceFeeCols),
+      nftCount: r.nftCount,
+      goldCapacity: r.goldCapacity,
+      delegatedEgld: r.delegatedEgld
     })),
     totalCols,
     stats: {
       recipients: recipients.length,
       totalCols,
-      totalEgld: recipients.reduce((sum, r) => sum + parseFloat(r.dailyServiceFeeEgld), 0)
+      totalEgld: recipients.reduce((sum, r) => sum + parseFloat(r.delegatedEgld), 0)
     }
   };
   
-  const filename = `/tmp/cols_distribution/gold_distribution_${new Date().toISOString().slice(0, 10)}.json`;
-  fs.mkdirSync("/tmp/cols_distribution", { recursive: true });
+  const filename = `${CONFIG.OUTPUT_DIR}/gold_distribution_${new Date().toISOString().slice(0, 10)}.json`;
   fs.writeFileSync(filename, JSON.stringify(distribution, null, 2));
+  console.log(`✅ Saved to: ${filename}`);
   
-  console.log(`✅ Distribution saved to: ${filename}`);
+  // Also save as latest
+  fs.writeFileSync(`${CONFIG.OUTPUT_DIR}/gold_distribution_latest.json`, JSON.stringify(distribution, null, 2));
+  
   console.log("");
-  
-  // Print for copy-paste
-  console.log("💰 GOLD DISTRIBUTION DATA:");
+  console.log("💰 DISTRIBUTION DATA:");
   console.log(JSON.stringify(distribution, null, 2));
 }
 
-main().catch(console.error);
+main().catch(e => {
+  console.error("Fatal:", e.message);
+  process.exit(1);
+});
