@@ -155,7 +155,7 @@ export const BuyCols = () => {
       // Calculate gas limit - XOXNO swaps need high gas due to multiple DEX interactions
       const baseGas = 100000000; // 100M base for complex swaps
       const perCallGas = 10000000; // 10M per swap operation
-      const estimatedCalls = 6; // Conservative estimate for multi-hop swaps
+      const estimatedCalls = 5; // Optimized estimate for multi-hop swaps
       const gasLimit = baseGas + (estimatedCalls * perCallGas);
 
       // Get amount in wei
@@ -418,3 +418,4 @@ export const BuyCols = () => {
     </div>
   );
 };
+ // rebuild Mon Feb 23 08:38:48 -05 2026
