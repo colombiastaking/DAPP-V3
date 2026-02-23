@@ -63,9 +63,11 @@ async function getQuote(tokenIn: string, tokenOut: string, amountIn: string): Pr
 }
 
 // Convert amount to hex for ESDT transfers
+// Returns unpadded hex string (BigInt handles this natively)
 function toHex(amount: string, decimals: number): string {
   const value = new BigNumber(amount).multipliedBy(new BigNumber(10).pow(decimals)).toFixed(0);
-  return new BigNumber(value).toString(16);
+  const hexStr = new BigNumber(value).toString(16);
+  return hexStr;
 }
 
 // Format token balance based on decimals
@@ -177,8 +179,9 @@ export const BuyCols = () => {
         });
       } else {
         // For ESDT tokens: Use ESDTTransfer format
-        const tokenId = selectedToken.split('-')[0];
-        const tokenHex = Buffer.from(tokenId).toString('hex');
+        // Use full token identifier (e.g., USDC-c76f1f) in hex for XOXNO
+        const tokenFullId = token.identifier || token.id; // e.g., "USDC-c76f1f"
+        const tokenHex = Buffer.from(tokenFullId).toString('hex');
         const amountHex = toHex(amount, token.decimals);
         const esdtTxData = `ESDTTransfer@${tokenHex}@${amountHex}@${quoteData.txData}`;
 
