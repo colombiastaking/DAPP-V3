@@ -43,7 +43,8 @@ export const stakingContract =
 export const delegationManagerContract =
   'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqylllslmq6y6';
 
-const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
+// Use Colombia proxy with query string (avoids LiteSpeed caching issues)
+const PRIMARY_API = 'https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=';
 const SECONDARY_API = 'https://api.multiversx.com';
 
 // Use Colombia gateway with query string (avoids LiteSpeed POST caching)
@@ -63,11 +64,15 @@ export const network: NetworkType = {
     'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf'
 };
 
-// Robust API health check
+// Robust API health check - works with both path and query-string formats
 async function checkApiHealth(url: string): Promise<boolean> {
   try {
-    // Use /economics endpoint - works on both public API and Colombia API
-    const res = await fetch(`${url}/economics`);
+    // Append economics endpoint - works with both formats
+    const testUrl = url.includes('endpoint=') 
+      ? url + 'economics' 
+      : url + '/economics';
+    
+    const res = await fetch(testUrl);
 
     if (!res.ok) {
       console.warn(`API check failed: ${url} returned status ${res.status}`);
