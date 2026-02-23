@@ -9,6 +9,10 @@ import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAcco
 import { Action, Submit } from 'components/Action';
 import styles from './styles.module.scss';
 
+const WRAP_CONTRACT = 'erd1qqqqqqqqqqqqqpgqhe8t5jewej70zupmh44jurgn29psua5l2jps3ntjj3';
+const WRAP_FUNC = 'wrapEgld';
+const WRAP_GAS = 10000000;
+
 const XOXNO_AGGREGATOR = 'erd1qqqqqqqqqqqqqpgq5rf2sppxk2xu4m0pkmugw2es4gak3rgjah0sxvajva';
 const XOXNO_API = 'https://swap.xoxno.com';
 const COLS_TOKEN_ID = 'COLS-9d91b7';
@@ -43,16 +47,16 @@ interface Quote {
 
 async function getQuote(tokenIn: string, tokenOut: string, amountIn: string): Promise<Quote> {
   const amountWei = new BigNumber(amountIn).multipliedBy('1e18').toFixed(0);
-  
+
   const response = await fetch(
     `${XOXNO_API}/api/v1/quote?from=${tokenIn}&to=${tokenOut}&amountIn=${amountWei}&slippage=0.01`
   );
-  
+
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to get quote');
   }
-  
+
   return response.json();
 }
 
@@ -69,7 +73,7 @@ export const BuyCols = () => {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [selectedToken, setSelectedToken] = useState('EGLD');
 
-  // Handle swap via XOXNO aggregator
+  // Handle swap via XOXNO aggregator - 2-step for EGLD (wrap -> swap)
   const handleSwap = async (amount: string, onClose: () => void) => {
     setError(null);
     setLoading(true);
@@ -78,44 +82,63 @@ export const BuyCols = () => {
     try {
       const token = TOKENS.find(t => t.id === selectedToken);
       if (!token) throw new Error('Invalid token');
-      
-      // Get fresh quote
-      const quoteData = await getQuote(selectedToken, COLS_TOKEN_ID, amount);
-      setQuote(quoteData);
-      
-      const isNative = selectedToken === 'EGLD';
+
       const amountWei = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
       
-      // Build transaction data
-      let txData: string;
-      let txValue: string;
-      
-      if (isNative) {
-        // Native eGLD - send with value
-        txValue = amountWei;
-        txData = quoteData.txData;
-      } else {
-        // ESDT token - need to transfer first
-        const tokenId = selectedToken.split('-')[0];
-        txData = `ESDTTransfer@${Buffer.from(tokenId).toString('hex')}@${Buffer.from(amountWei).toString('hex')}@${quoteData.txData}`;
-        txValue = '0';
-      }
+      // For EGLD: wrap first, then swap
+      if (selectedToken === 'EGLD') {
+        // Get quote for WEGLD -> COLS swap
+        const quoteData = await getQuote('WEGLD-bd4d79', COLS_TOKEN_ID, amount);
+        setQuote(quoteData);
 
-      await sendTransactions({
-        transactions: [
-          {
-            value: txValue,
-            data: txData,
-            receiver: XOXNO_AGGREGATOR,
-            gasLimit: 50000000 // ~50M gas for aggregator
+        // Build 2 transactions: wrap eGLD -> WEGLD, then swap WEGLD -> COLS
+        await sendTransactions({
+          transactions: [
+            {
+              // Step 1: Wrap eGLD to WEGLD
+              value: amountWei,
+              data: WRAP_FUNC,
+              receiver: WRAP_CONTRACT,
+              gasLimit: WRAP_GAS
+            },
+            {
+              // Step 2: Swap WEGLD to COLS via XOXNO
+              value: '0',
+              data: quoteData.txData,
+              receiver: XOXNO_AGGREGATOR,
+              gasLimit: 50000000
+            }
+          ],
+          transactionsDisplayInfo: {
+            processingMessage: 'Swapping eGLD to COLS...',
+            successMessage: 'Swap completed!',
+            errorMessage: 'Swap failed'
           }
-        ],
-        transactionsDisplayInfo: {
-          processingMessage: 'Swapping to COLS...',
-          successMessage: 'Swap completed!',
-          errorMessage: 'Swap failed'
-        }
-      });
+        });
+      } else {
+        // For other tokens: direct swap via XOXNO
+        const quoteData = await getQuote(selectedToken, COLS_TOKEN_ID, amount);
+        setQuote(quoteData);
+
+        const tokenId = selectedToken.split('-')[0];
+        const txData = `ESDTTransfer@${Buffer.from(tokenId).toString('hex')}@${Buffer.from(amountWei).toString('hex')}@${quoteData.txData}`;
+
+        await sendTransactions({
+          transactions: [
+            {
+              value: '0',
+              data: txData,
+              receiver: XOXNO_AGGREGATOR,
+              gasLimit: 50000000
+            }
+          ],
+          transactionsDisplayInfo: {
+            processingMessage: 'Swapping to COLS...',
+            successMessage: 'Swap completed!',
+            errorMessage: 'Swap failed'
+          }
+        });
+      }
       
       setSuccess(true);
       onClose();
