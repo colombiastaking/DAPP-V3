@@ -85,13 +85,20 @@ export const BuyCols = () => {
 
       const amountWei = new BigNumber(amount).multipliedBy('1e18').toFixed(0);
       
-      // For EGLD: wrap first, then swap
+      // For EGLD: wrap first, then swap WEGLD via XOXNO
       if (selectedToken === 'EGLD') {
         // Get quote for WEGLD -> COLS swap
         const quoteData = await getQuote('WEGLD-bd4d79', COLS_TOKEN_ID, amount);
         setQuote(quoteData);
 
         // Build 2 transactions: wrap eGLD -> WEGLD, then swap WEGLD -> COLS
+        // IMPORTANT: The XOXNO txData needs to be wrapped in ESDTTransfer format
+        const wegldTokenId = 'WEGLD-bd4d79';
+        const wegldHex = Buffer.from(wegldTokenId).toString('hex');
+        
+        // Step 2: Send WEGLD to XOXNO with swap instructions
+        const swapTxData = `ESDTTransfer@${wegldHex}@${amountWei}@${quoteData.txData}`;
+        
         await sendTransactions({
           transactions: [
             {
@@ -102,9 +109,9 @@ export const BuyCols = () => {
               gasLimit: WRAP_GAS
             },
             {
-              // Step 2: Swap WEGLD to COLS via XOXNO
+              // Step 2: Swap WEGLD to COLS via XOXNO (wrap in ESDTTransfer)
               value: '0',
-              data: quoteData.txData,
+              data: swapTxData,
               receiver: XOXNO_AGGREGATOR,
               gasLimit: 50000000
             }
@@ -121,7 +128,10 @@ export const BuyCols = () => {
         setQuote(quoteData);
 
         const tokenId = selectedToken.split('-')[0];
-        const txData = `ESDTTransfer@${Buffer.from(tokenId).toString('hex')}@${Buffer.from(amountWei).toString('hex')}@${quoteData.txData}`;
+        const tokenHex = Buffer.from(tokenId).toString('hex');
+        
+        // Wrap XOXNO txData in ESDTTransfer format
+        const txData = `ESDTTransfer@${tokenHex}@${amountWei}@${quoteData.txData}`;
 
         await sendTransactions({
           transactions: [
