@@ -13,7 +13,8 @@ import axios from 'axios';
 const CLAIM_COLS_CONTRACT = 'erd1qqqqqqqqqqqqqpgqjhn0rrta3hceyguqlmkqgklxc0eh0r5rl3tsv6a9k0';
 const ENTITY_ADDRESS = 'erd1qqqqqqqqqqqqqpgq7khr5sqd4cnjh5j5dz0atfz03r3l99y727rsulfjj0';
 
-// Use working gateway for SC queries
+// Use query-string format for Colombia proxy
+const COLOMBIA_API = 'https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=';
 const GATEWAY_URL = 'https://gateway.multiversx.com';
 const DELEGATION_CONTRACT = 'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqallllls5rqmaf';
 const COLS_TOKEN_ID = 'COLS-9d91b7';
@@ -43,7 +44,7 @@ export function usePreloadData() {
 
     try {
       const res = await fetch(
-        `https://staking.colombia-staking.com/mvx-api/providers/${DELEGATION_CONTRACT}`
+        `${COLOMBIA_API}providers/${DELEGATION_CONTRACT}`
       );
       const data = await res.json();
       const count = data?.numUsers || data?.accounts || 0;
@@ -109,8 +110,8 @@ export function usePreloadData() {
       userClaimableRewards: { status: 'loading', data: null, error: null }
     });
 
-    // Try primary gateway first, fallback to public
-    const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gateway';
+    // Use query-string format for Colombia proxy
+    const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/mvxproxy.php?service=gw&endpoint=';
     const PUBLIC_GATEWAY = 'https://gateway.multiversx.com';
     const gateways = [PRIMARY_GATEWAY, PUBLIC_GATEWAY];
     let success = false;
@@ -161,8 +162,8 @@ export function usePreloadData() {
       colsBalance: { status: 'loading', data: null, error: null }
     });
 
-    // Try Colombia API first, fallback to public
-    const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
+    // Use query-string format for Colombia proxy
+    const PRIMARY_API = 'https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=';
     const PUBLIC_API = 'https://api.multiversx.com';
     const apis = [PRIMARY_API, PUBLIC_API];
     let balance = '0';
@@ -202,8 +203,8 @@ export function usePreloadData() {
       userActiveStake: { status: 'loading', data: null, error: null }
     });
 
-    // Try primary gateway first, fallback to public
-    const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gateway';
+    // Use query-string format for Colombia proxy
+    const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/mvxproxy.php?service=gw&endpoint=';
     const PUBLIC_GATEWAY = 'https://gateway.multiversx.com';
     const gateways = [PRIMARY_GATEWAY, PUBLIC_GATEWAY];
     let success = false;

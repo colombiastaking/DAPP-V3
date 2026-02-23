@@ -5,7 +5,8 @@ interface GetLatestTransactionsType {
   // Removed unused parameters
 }
 
-const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
+// Use query-string format for Colombia proxy
+const PRIMARY_API = 'https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=';
 const BACKUP_API = 'https://api.multiversx.com';
 
 const fetchTransactions = (url: string) =>

@@ -337,9 +337,10 @@ export const Migration = () => {
 
   const fetchProviderListAndDelegation = async () => {
     try {
+      const COLOMBIA_API = 'https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=';
       const [provRes, delRes] = await Promise.all([
-        axios.get('https://staking.colombia-staking.com/mvx-api/providers?type=staking'),
-        axios.get(`https://staking.colombia-staking.com/mvx-api/accounts/${address}/delegation`)
+        axios.get(`${COLOMBIA_API}providers?type=staking`),
+        axios.get(`${COLOMBIA_API}accounts/${address}/delegation`)
       ]);
       const map: Record<string, string> = {};
       for (const p of provRes.data || []) {

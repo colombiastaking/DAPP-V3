@@ -25,7 +25,7 @@ const DAO_DISTRIBUTION_RATIO = 0.333;
 const BONUS_BUYBACK_FACTOR = 0.66;
 
 const PRIMARY_PROVIDER_API =
-  `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}`;
+  `https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=providers/${network.delegationContract}`;
 const BACKUP_PROVIDER_API =
   `https://api.multiversx.com/providers/${network.delegationContract}`;
 
@@ -103,9 +103,10 @@ async function fetchEgldPrice(mode: ApiMode) {
 
 async function fetchColsPrice(mode: ApiMode) {
   if (mode === 'main') {
+    // Try Colombia proxy first, then public
     const data = await fetchWithBackup<any>(
       'https://api.multiversx.com/mex/tokens/prices/hourly/COLS-9d91b7',
-      'https://staking.colombia-staking.com/mvx-api/accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7'
+      'https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=accounts/erd1kr7m0ge40v6zj6yr8e2eupkeudfsnv827e7ta6w550e9rnhmdv6sfr8qdm/tokens?identifier=COLS-9d91b7'
     );
     if (Array.isArray(data) && data[data.length - 1]?.value)
       return Number(data[data.length - 1].value);
@@ -143,13 +144,13 @@ async function fetchStakeContract(addr: string): Promise<number> {
 }
 
 async function fetchEgldWithFallback(addresses: string[]): Promise<Record<string, number>> {
-  // First try bulk API
+  // Build URLs using query-string format for Colombia
+  const primaryUrl = `https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=providers/${network.delegationContract}/accounts?size=10000`;
   const backupUrl = `https://api.multiversx.com/providers/${network.delegationContract}/accounts?size=10000`;
-  const primaryUrl = `https://staking.colombia-staking.com/mvx-api/providers/${network.delegationContract}/accounts?size=10000`;
   
   let bulkMap: Record<string, number> = {};
   
-  // Try backup bulk first
+  // Try backup bulk first (public API - faster)
   try {
     const { data } = await axios.get(backupUrl, { timeout: 30000 });
     const accounts = Array.isArray(data) ? data : (data?.accounts || []);
@@ -157,12 +158,12 @@ async function fetchEgldWithFallback(addresses: string[]): Promise<Record<string
       const v = Number(a.activeStake || a.delegationActiveStake || a.stake || 0);
       bulkMap[a.address] = v > 1e12 ? v / 1e18 : v;
     }
-    console.log(`✅ Bulk fetched: ${Object.keys(bulkMap).length} accounts`);
+    console.log(`✅ Backup bulk fetched: ${Object.keys(bulkMap).length} accounts`);
   } catch (e) {
     console.warn('⚠️ Backup bulk failed');
   }
   
-  // If bulk returned nothing, try primary
+  // If backup returned nothing, try primary
   if (Object.keys(bulkMap).length === 0) {
     try {
       const { data } = await axios.get(primaryUrl, { timeout: 30000 });

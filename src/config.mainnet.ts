@@ -43,10 +43,10 @@ export const stakingContract =
 export const delegationManagerContract =
   'erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqylllslmq6y6';
 
-const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
+const PRIMARY_API = 'https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=';
 const SECONDARY_API = 'https://api.multiversx.com';
 
-const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/gateway';
+const PRIMARY_GATEWAY = 'https://staking.colombia-staking.com/mvxproxy.php?service=gw&endpoint=';
 const SECONDARY_GATEWAY = 'https://gateway.multiversx.com';
 
 // default network object

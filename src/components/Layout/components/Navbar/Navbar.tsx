@@ -20,8 +20,8 @@ export const Navbar = () => {
   useEffect(() => {
     const fetchCols = async () => {
       setLoading(true);
-      // Try Colombia API first, fallback to public
-      const PRIMARY_API = 'https://staking.colombia-staking.com/mvx-api';
+      // Use query-string format for Colombia proxy
+      const PRIMARY_API = 'https://staking.colombia-staking.com/mvxproxy.php?service=api&endpoint=';
       const PUBLIC_API = 'https://api.multiversx.com';
       const apis = [PRIMARY_API, PUBLIC_API];
       let balance = '0';
