@@ -1,4 +1,4 @@
-// Delegate Component Styles
+// Delegate Component Styles - Modern & Compact
 // Colombia Staking Theme
 
 $primary: #62dbb8;
@@ -13,23 +13,24 @@ $text-muted: #6a6a6a;
 $border-color: rgba(98, 219, 184, 0.2);
 
 .wrapper {
-  display: contents; // Let parent grid control layout
+  display: contents;
 }
 
 .trigger {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 20px 16px;
-  border-radius: 16px;
+  gap: 8px;
+  padding: 14px 20px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   font-family: 'Poppins', sans-serif;
   width: 100%;
-  min-height: 100px;
   box-sizing: border-box;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
 
   &:hover:not(.disabled) {
     transform: translateY(-2px);
@@ -43,27 +44,47 @@ $border-color: rgba(98, 219, 184, 0.2);
 .triggerPrimary {
   background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
   color: $background;
-  border: none;
-  box-shadow: 0 4px 15px rgba($primary, 0.3);
+  box-shadow: 0 4px 12px rgba($primary, 0.25);
 
   &:hover:not(.disabled) {
-    box-shadow: 0 6px 25px rgba($primary, 0.4);
+    box-shadow: 0 6px 20px rgba($primary, 0.35);
+  }
+}
+
+.triggerSecondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: $text-primary;
+  border: 1px solid rgba($primary, 0.2);
+
+  &:hover:not(.disabled) {
+    border-color: rgba($primary, 0.4);
+    background: rgba($primary, 0.08);
   }
 }
 
 .triggerWarning {
-  background: $card-bg-hover;
+  background: rgba(255, 152, 0, 0.08);
   color: #ff9800;
   border: 1px solid rgba(255, 152, 0, 0.3);
 
   &:hover:not(.disabled) {
     border-color: #ff9800;
-    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.2);
+    background: rgba(255, 152, 0, 0.12);
+  }
+}
+
+.triggerAccent {
+  background: linear-gradient(135deg, $accent 0%, lighten($accent, 8%) 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba($accent, 0.2);
+
+  &:hover:not(.disabled) {
+    box-shadow: 0 6px 20px rgba($accent, 0.3);
   }
 }
 
 .triggerIcon {
-  font-size: 24px;
+  font-size: 16px;
 }
 
 .triggerLabel {
@@ -77,22 +98,23 @@ $border-color: rgba(98, 219, 184, 0.2);
   filter: grayscale(0.5);
 }
 
-// Form styles
+// Form styles - Inside Modal
 .delegate {
   width: 100%;
 }
 
 .field {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .label {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   color: $text-secondary;
-  margin-bottom: 10px;
-  text-align: left;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .inputWrapper {
@@ -103,15 +125,16 @@ $border-color: rgba(98, 219, 184, 0.2);
 
 .input {
   width: 100%;
-  padding: 16px 80px 16px 16px;
-  font-size: 18px;
-  font-weight: 600;
+  padding: 14px 16px;
+  padding-right: 70px;
+  font-size: 16px;
+  font-weight: 500;
   color: $text-primary;
-  background: $card-bg;
-  border: 1px solid $border-color;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
   outline: none;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   font-family: 'Poppins', sans-serif;
 
   &::placeholder {
@@ -119,13 +142,12 @@ $border-color: rgba(98, 219, 184, 0.2);
   }
 
   &:focus {
-    border-color: $primary;
-    box-shadow: 0 0 0 3px rgba($primary, 0.2);
+    border-color: rgba($primary, 0.5);
+    background: rgba(255, 255, 255, 0.08);
   }
 
   &.invalid {
-    border-color: #f44336;
-    box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.2);
+    border-color: rgba($accent, 0.5);
   }
 
   // Hide number spinners
@@ -142,18 +164,20 @@ $border-color: rgba(98, 219, 184, 0.2);
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
-  color: $background;
+  background: rgba($primary, 0.15);
+  color: $primary;
   font-weight: 700;
-  font-size: 12px;
-  padding: 8px 14px;
-  border-radius: 8px;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: 'Poppins', sans-serif;
+  letter-spacing: 0.5px;
 
   &:hover:not(:disabled) {
+    background: rgba($primary, 0.25);
     transform: translateY(-50%) scale(1.05);
   }
 
@@ -176,9 +200,9 @@ $border-color: rgba(98, 219, 184, 0.2);
 }
 
 .error {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #f44336;
+  margin-top: 6px;
+  font-size: 11px;
+  color: $accent;
   display: block;
   text-align: left;
 }

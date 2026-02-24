@@ -1,10 +1,9 @@
-// Undelegate Component Styles
+// Undelegate Component Styles - Modern & Compact
 // Colombia Staking Theme
 
 $primary: #62dbb8;
 $primary-dark: #4bc9a1;
 $accent: #d33682;
-$warning: #ff9800;
 $background: #0a0a0a;
 $card-bg: #1a1a1a;
 $card-bg-hover: #252525;
@@ -14,86 +13,70 @@ $text-muted: #6a6a6a;
 $border-color: rgba(98, 219, 184, 0.2);
 
 .wrapper {
-  display: contents; // Let parent grid control layout
+  display: contents;
 }
 
 .trigger {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 20px 16px;
-  border-radius: 16px;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   font-family: 'Poppins', sans-serif;
   width: 100%;
-  min-height: 100px;
   box-sizing: border-box;
+  border: 1px solid rgba(255, 152, 0, 0.25);
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(255, 152, 0, 0.08);
+  color: #ff9800;
 
   &:hover:not(.disabled) {
+    border-color: #ff9800;
+    background: rgba(255, 152, 0, 0.12);
     transform: translateY(-2px);
   }
 
   &:active:not(.disabled) {
     transform: translateY(0);
   }
-}
 
-.triggerPrimary {
-  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
-  color: $background;
-  border: none;
-  box-shadow: 0 4px 15px rgba($primary, 0.3);
-
-  &:hover:not(.disabled) {
-    box-shadow: 0 6px 25px rgba($primary, 0.4);
-  }
-}
-
-.triggerWarning {
-  background: $card-bg-hover;
-  color: $warning;
-  border: 1px solid rgba($warning, 0.3);
-
-  &:hover:not(.disabled) {
-    border-color: $warning;
-    box-shadow: 0 4px 15px rgba($warning, 0.2);
+  &.disabled {
+    pointer-events: none;
+    opacity: 0.5;
+    filter: grayscale(0.5);
   }
 }
 
 .triggerIcon {
-  font-size: 24px;
+  font-size: 15px;
 }
 
 .triggerLabel {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
-.disabled {
-  pointer-events: none;
-  opacity: 0.5;
-  filter: grayscale(0.5);
-}
-
-// Form styles
+// Form styles - Inside Modal
 .undelegate {
   width: 100%;
 }
 
 .field {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .label {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   color: $text-secondary;
-  margin-bottom: 10px;
-  text-align: left;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .inputWrapper {
@@ -104,15 +87,16 @@ $border-color: rgba(98, 219, 184, 0.2);
 
 .input {
   width: 100%;
-  padding: 16px 80px 16px 16px;
-  font-size: 18px;
-  font-weight: 600;
+  padding: 14px 16px;
+  padding-right: 70px;
+  font-size: 16px;
+  font-weight: 500;
   color: $text-primary;
-  background: $card-bg;
-  border: 1px solid $border-color;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
   outline: none;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   font-family: 'Poppins', sans-serif;
 
   &::placeholder {
@@ -120,13 +104,12 @@ $border-color: rgba(98, 219, 184, 0.2);
   }
 
   &:focus {
-    border-color: $primary;
-    box-shadow: 0 0 0 3px rgba($primary, 0.2);
+    border-color: rgba(#ff9800, 0.5);
+    background: rgba(255, 255, 255, 0.08);
   }
 
   &.invalid {
-    border-color: #f44336;
-    box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.2);
+    border-color: rgba($accent, 0.5);
   }
 
   // Hide number spinners
@@ -143,18 +126,20 @@ $border-color: rgba(98, 219, 184, 0.2);
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
-  color: $background;
+  background: rgba(#ff9800, 0.15);
+  color: #ff9800;
   font-weight: 700;
-  font-size: 12px;
-  padding: 8px 14px;
-  border-radius: 8px;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: 'Poppins', sans-serif;
+  letter-spacing: 0.5px;
 
   &:hover:not(:disabled) {
+    background: rgba(#ff9800, 0.25);
     transform: translateY(-50%) scale(1.05);
   }
 
@@ -171,15 +156,15 @@ $border-color: rgba(98, 219, 184, 0.2);
   text-align: left;
 
   span {
-    color: $primary;
+    color: #ff9800;
     font-weight: 600;
   }
 }
 
 .error {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #f44336;
+  margin-top: 6px;
+  font-size: 11px;
+  color: $accent;
   display: block;
   text-align: left;
 }
