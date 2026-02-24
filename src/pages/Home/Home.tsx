@@ -120,9 +120,9 @@ This ensures the APR reflects your actual staking position.`;
 
   // Check if user has no holdings
   const hasNoHoldings = actualEgldDelegated === 0 && Number(colsStaked) === 0;
-  const hasEgldButNoCols = actualEgldDelegated > 0 && Number(colsStaked) === 0;
-  const hasColsButLittle = Number(colsStaked) > 0 && Number(colsStaked) < 100;
-  const hasColsOnly = Number(colsStaked) > 0 && actualEgldDelegated === 0;
+  // const hasEgldButNoCols = actualEgldDelegated > 0 && Number(colsStaked) === 0;
+  // const hasColsButLittle = Number(colsStaked) > 0 && Number(colsStaked) < 100;
+  // const hasColsOnly = Number(colsStaked) > 0 && actualEgldDelegated === 0;
 
   // Potential rewards calculator for new users
   const potentialExamples = [
@@ -242,7 +242,7 @@ This ensures the APR reflects your actual staking position.`;
       )}
 
       {/* Upsell Banner - has eGLD but no COLS */}
-      {hasEgldButNoCols && address && (
+      {/* {hasEgldButNoCols && address && (
         <section className={styles.upsellBanner}>
           <div className={styles.upsellIcon}>🔥</div>
           <div className={styles.upsellContent}>
@@ -257,10 +257,10 @@ This ensures the APR reflects your actual staking position.`;
           </div>
           <Link to="/stake" className={styles.upsellButton}>Stake COLS →</Link>
         </section>
-      )}
+      )} */}
 
       {/* Upsell Banner - has some COLS but not enough */}
-      {hasColsButLittle && address && (
+      {/* {hasColsButLittle && address && (
         <section className={styles.upsellBannerCols}>
           <div className={styles.upsellIcon}>💎</div>
           <div className={styles.upsellContent}>
@@ -271,10 +271,10 @@ This ensures the APR reflects your actual staking position.`;
           </div>
           <Link to="/stake" className={styles.upsellButtonCols}>Stake More →</Link>
         </section>
-      )}
+      )} */}
 
       {/* COLS-Only Banner - has COLS but no eGLD */}
-      {hasColsOnly && address && (
+      {/* {hasColsOnly && address && (
         <section className={styles.colsOnlyBanner}>
           <div className={styles.colsOnlyIcon}>🎯</div>
           <div className={styles.colsOnlyContent}>
@@ -285,7 +285,7 @@ This ensures the APR reflects your actual staking position.`;
           </div>
           <Link to="/delegate" className={styles.colsOnlyButton}>Delegate eGLD →</Link>
         </section>
-      )}
+      )} */}
 
       {/* League Hero Section - Main showcase when user has holdings */}
       {address && !hasNoHoldings && (
