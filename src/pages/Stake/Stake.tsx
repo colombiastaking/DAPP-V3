@@ -1,5 +1,4 @@
 import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
-import { ClaimColsButton } from 'components/Stake/ClaimColsButton';
 import { StakeCols } from 'components/Stake/components/StakeCols';
 import { BuyCols } from 'components/Stake/components/BuyCols';
 import { useGlobalContext } from 'context';
@@ -54,7 +53,7 @@ export const Stake = () => {
           Stake COLS
         </h1>
         <p className={styles.heroSubtitle}>
-          Stake your COLS tokens to earn additional APR bonus
+          Earn up to +{aprMax}% bonus APR on your eGLD delegation
         </p>
       </section>
 
@@ -68,8 +67,8 @@ export const Stake = () => {
           </p>
           <div className={styles.emptyBenefits}>
             <div className={styles.emptyBenefit}>🚀 {baseApr.toFixed(1)}% base + up to +{aprMax}% bonus</div>
-            <div className={styles.emptyBenefit}>🏆 Climb the league leaderboard</div>
-            <div className={styles.emptyBenefit}>💰 Maximize your staking returns</div>
+            <div className={styles.emptyBenefit}>🏆 Climb the leaderboard</div>
+            <div className={styles.emptyBenefit}>💰 Maximize staking returns</div>
           </div>
         </div>
       )}
@@ -78,22 +77,39 @@ export const Stake = () => {
       {hasLittleCols && (
         <div className={styles.upsellState}>
           <div className={styles.upsellIcon}>💪</div>
-          <h3 className={styles.upsellTitle}>Level Up!</h3>
-          <p className={styles.upsellText}>
-            You're on your way! Stake more COLS to unlock higher leagues and earn even more bonus APR.
-          </p>
+          <div>
+            <h3 className={styles.upsellTitle}>Level Up!</h3>
+            <p className={styles.upsellText}>
+              You're on your way! Stake more COLS to unlock higher leagues.
+            </p>
+          </div>
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className={styles.statsGrid}>
+      {/* Strengths Pills */}
+      <div className={styles.strengthsGrid}>
+        <div className={styles.strengthPill}>
+          <span className={styles.strengthIcon}>🚀</span>
+          <span className={styles.strengthText}><strong>+{aprMax}%</strong> max bonus</span>
+        </div>
+        <div className={styles.strengthPill}>
+          <span className={styles.strengthIcon}>🏆</span>
+          <span className={styles.strengthText}><strong>DAO</strong> rewards</span>
+        </div>
+        <div className={styles.strengthPill}>
+          <span className={styles.strengthIcon}>💎</span>
+          <span className={styles.strengthText}><strong>Gold</strong> membership</span>
+        </div>
+      </div>
+
+      {/* Quick Stats Row */}
+      <div className={styles.statsRow}>
         <div className={styles.statCard}>
           <div className={styles.statIcon}>🪙</div>
-          <div className={styles.statLabel}>COLS Staked</div>
+          <div className={styles.statLabel}>Staked</div>
           <div className={styles.statValue}>
-            {stakers.length === 0 ? <AnimatedDots /> : colsStaked.toFixed(4)}
+            {stakers.length === 0 ? <AnimatedDots /> : colsStaked.toFixed(2)}
           </div>
-          <div className={styles.statHint}>Currently staked</div>
         </div>
         <div className={styles.statCardAccent}>
           <div className={styles.statIcon}>🎁</div>
@@ -101,34 +117,38 @@ export const Stake = () => {
           <div className={`${styles.statValue} ${styles.statValueAccent}`}>
             {claimableCols.status === 'loading' ? <AnimatedDots /> : claimableColsValue.toFixed(4)}
           </div>
-          <div className={styles.statHint}>Rewards ready</div>
         </div>
       </div>
 
       {/* Wallet Balance Card */}
-      <div className={styles.statCard} style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div className={styles.statLabel}>Wallet Balance</div>
-            <div className={styles.statValue}>
-              {colsBalance.status === 'loading' ? <AnimatedDots /> : `${Number(colsBalanceValue).toFixed(4)} COLS`}
-            </div>
+      <div className={styles.walletCard}>
+        <div className={styles.walletInfo}>
+          <div className={styles.walletLabel}>Wallet Balance</div>
+          <div className={styles.walletValue}>
+            {colsBalance.status === 'loading' ? <AnimatedDots /> : `${Number(colsBalanceValue).toFixed(4)} COLS`}
           </div>
-          <div style={{ fontSize: 32 }}>💼</div>
         </div>
+        <div className={styles.walletIcon}>💼</div>
       </div>
 
-      {/* Actions Section */}
-      <section className={styles.actionsSection}>
-        <h3 className={styles.actionsTitle}>Actions</h3>
-        <div className={styles.actionsGrid}>
-          {/* Stake COLS */}
-          <StakeCols />
+      {/* Primary Stake Button */}
+      <div className={styles.stakeButtonWrapper}>
+        <StakeCols />
+      </div>
 
-          {/* Claim COLS */}
-          <ClaimColsButton onClaimed={() => {}} />
+      {/* Quick Actions */}
+      <div className={styles.quickActions}>
+        {/* Claim COLS */}
+        <div className={styles.quickAction}>
+          <div className={styles.quickIcon}>🎁</div>
+          <div className={styles.quickInfo}>
+            <div className={styles.quickLabel}>Claim Rewards</div>
+            <div className={`${styles.quickValue} ${styles.quickValueAccent}`}>
+              {claimableCols.status === 'loading' ? '—' : `${claimableColsValue.toFixed(4)} COLS`}
+            </div>
+          </div>
         </div>
-      </section>
+      </div>
 
       {/* Buy COLS Section */}
       <BuyCols />

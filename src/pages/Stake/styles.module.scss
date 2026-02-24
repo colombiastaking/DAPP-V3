@@ -1,4 +1,4 @@
-// Colombia Staking - Stake Page Styles
+// Colombia Staking - Stake Page Styles (Revamped)
 $primary: #62dbb8;
 $primary-dark: #4bc9a1;
 $accent: #d33682;
@@ -10,10 +10,18 @@ $text-secondary: #a0a0a0;
 $text-muted: #6a6a6a;
 $border-color: rgba(98, 219, 184, 0.2);
 
+// Glassmorphism mixin
+@mixin glassmorphism($opacity: 0.08, $blur: 20px) {
+  background: rgba(255, 255, 255, $opacity);
+  backdrop-filter: blur($blur);
+  -webkit-backdrop-filter: blur($blur);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .stake {
-  max-width: 600px;
+  max-width: 520px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 20px;
   padding-bottom: 100px;
   box-sizing: border-box;
   font-family: 'Poppins', sans-serif;
@@ -26,13 +34,13 @@ $border-color: rgba(98, 219, 184, 0.2);
   font-size: 16px;
 }
 
-// Hero Section
+// Hero Section - Compact
 .heroSection {
-  background: linear-gradient(135deg, rgba($accent, 0.1) 0%, rgba($primary, 0.05) 100%);
+  background: linear-gradient(135deg, rgba($accent, 0.12) 0%, rgba($primary, 0.06) 100%);
   border: 1px solid rgba($accent, 0.2);
-  border-radius: 24px;
-  padding: 32px 24px;
-  margin-bottom: 24px;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 20px;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -40,9 +48,9 @@ $border-color: rgba(98, 219, 184, 0.2);
   &::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 100%;
+    top: -30%;
+    right: -30%;
+    width: 80%;
     height: 100%;
     background: radial-gradient(circle, rgba($accent, 0.08) 0%, transparent 70%);
     pointer-events: none;
@@ -51,53 +59,60 @@ $border-color: rgba(98, 219, 184, 0.2);
 
 .heroTitle {
   font-family: 'Lustria', serif;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   color: $text-primary;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
 
-  @media (max-width: 575px) {
-    font-size: 22px;
+  @media (max-width: 480px) {
+    font-size: 20px;
   }
 }
 
 .heroIcon {
-  font-size: 32px;
+  font-size: 28px;
 }
 
 .heroSubtitle {
-  font-size: 14px;
+  font-size: 13px;
   color: $text-secondary;
   margin: 0;
 }
 
-// Stats Grid
-.statsGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+// Stats Row - Horizontal compact
+.statsRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
 .statCard {
-  background: $card-bg;
-  border: 1px solid $border-color;
-  border-radius: 16px;
-  padding: 20px;
+  @include glassmorphism(0.06, 16px);
+  border-radius: 14px;
+  padding: 16px 20px;
+  min-width: 140px;
+  flex: 1;
   text-align: center;
   transition: all 0.3s ease;
 
   &:hover {
     border-color: rgba($primary, 0.3);
     transform: translateY(-2px);
+  }
+
+  @media (max-width: 480px) {
+    min-width: 120px;
+    padding: 14px 16px;
   }
 }
 
@@ -111,79 +126,181 @@ $border-color: rgba(98, 219, 184, 0.2);
 }
 
 .statIcon {
-  font-size: 24px;
-  margin-bottom: 8px;
+  font-size: 20px;
+  margin-bottom: 6px;
 }
 
 .statLabel {
-  font-size: 12px;
-  color: $text-secondary;
+  font-size: 11px;
+  color: #a0a0a0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
 }
 
 .statValue {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
-  color: $primary;
+  color: #62dbb8;
   font-family: 'Poppins', sans-serif;
+  white-space: nowrap;
 }
 
 .statValueAccent {
-  color: $accent;
+  color: #d33682;
 }
 
 .statHint {
-  font-size: 11px;
+  font-size: 10px;
   color: $text-muted;
   margin-top: 4px;
 }
 
-// Actions Section
-.actionsSection {
-  background: $card-bg;
-  border: 1px solid $border-color;
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 24px;
+// Primary Stake Button
+.stakeButtonWrapper {
+  margin-bottom: 16px;
 }
 
-.actionsTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: $text-secondary;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin: 0 0 20px 0;
-}
-
-.actionsGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+// Quick Actions Row
+.quickActions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 
   @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 }
 
-.actionButton {
+.quickAction {
+  flex: 1;
+  min-width: 140px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  @include glassmorphism(0.06, 16px);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid transparent;
+
+  &:hover {
+    border-color: rgba($primary, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .quickIcon {
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($primary, 0.15);
+    border-radius: 10px;
+  }
+
+  .quickInfo {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .quickLabel {
+    font-size: 12px;
+    color: #a0a0a0;
+    margin-bottom: 2px;
+  }
+
+  .quickValue {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .quickValueAccent {
+    color: #d33682;
+  }
+}
+
+// Wallet Balance Card
+.walletCard {
+  @include glassmorphism(0.06, 16px);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .walletInfo {
+    flex: 1;
+  }
+
+  .walletLabel {
+    font-size: 11px;
+    color: #a0a0a0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .walletValue {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .walletIcon {
+    font-size: 28px;
+  }
+}
+
+// Actions Section - Collapsible
+.actionsSection {
+  @include glassmorphism(0.06, 16px);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.actionsTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.actionsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+// Action Buttons - Modern & Compact
+.actionButton {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 20px 16px;
-  border-radius: 16px;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
   text-decoration: none;
-  width: 100%;
-  min-height: 100px;
-  box-sizing: border-box;
+  min-width: 100px;
 
   &:hover {
     transform: translateY(-2px);
@@ -192,52 +309,59 @@ $border-color: rgba(98, 219, 184, 0.2);
   &:active {
     transform: translateY(0);
   }
-}
 
-.actionButtonPrimary {
-  background: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
-  color: $background;
-  box-shadow: 0 4px 15px rgba($primary, 0.3);
-
-  &:hover {
-    box-shadow: 0 6px 25px rgba($primary, 0.4);
+  @media (max-width: 480px) {
+    padding: 10px 16px;
+    font-size: 13px;
+    min-width: 90px;
+    flex: 1;
   }
 }
 
-.actionButtonAccent {
-  background: linear-gradient(135deg, $accent 0%, #e85a8a 100%);
-  color: $text-primary;
-  box-shadow: 0 4px 15px rgba($accent, 0.3);
+.actionButtonPrimary {
+  background: linear-gradient(135deg, #62dbb8 0%, #4bc9a1 100%);
+  color: #0a0a0a;
+  box-shadow: 0 4px 12px rgba(98, 219, 184, 0.25);
 
   &:hover {
-    box-shadow: 0 6px 25px rgba($accent, 0.4);
+    box-shadow: 0 6px 20px rgba(98, 219, 184, 0.35);
   }
 }
 
 .actionButtonSecondary {
-  background: $card-bg-hover;
-  color: $text-primary;
-  border: 1px solid $border-color;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(98, 219, 184, 0.2);
 
   &:hover {
-    border-color: $primary;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    border-color: #62dbb8;
+    background: rgba(98, 219, 184, 0.1);
+  }
+}
+
+.actionButtonAccent {
+  background: linear-gradient(135deg, #d33682 0%, #e85a8a 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(211, 54, 130, 0.25);
+
+  &:hover {
+    box-shadow: 0 6px 20px rgba(211, 54, 130, 0.35);
   }
 }
 
 .actionButtonWarning {
-  background: $card-bg-hover;
+  background: rgba(255, 152, 0, 0.1);
   color: #ff9800;
   border: 1px solid rgba(255, 152, 0, 0.3);
 
   &:hover {
     border-color: #ff9800;
-    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.2);
+    background: rgba(255, 152, 0, 0.15);
   }
 }
 
 .actionIcon {
-  font-size: 24px;
+  font-size: 16px;
 }
 
 .actionLabel {
@@ -255,11 +379,11 @@ $border-color: rgba(98, 219, 184, 0.2);
 
 // Lock time info
 .lockInfo {
-  margin-top: 16px;
-  padding: 12px 16px;
+  margin-top: 12px;
+  padding: 10px 14px;
   background: rgba($accent, 0.1);
   border: 1px solid rgba($accent, 0.2);
-  border-radius: 12px;
+  border-radius: 10px;
   text-align: center;
 
   &.unlocked {
@@ -269,7 +393,7 @@ $border-color: rgba(98, 219, 184, 0.2);
 }
 
 .lockText {
-  font-size: 13px;
+  font-size: 12px;
   color: $text-secondary;
 }
 
@@ -282,66 +406,49 @@ $border-color: rgba(98, 219, 184, 0.2);
   color: $primary;
 }
 
-// Responsive
-@media (max-width: 575px) {
-  .stake {
-    padding: 16px;
-    padding-bottom: 100px;
-  }
-
-  .heroSection {
-    padding: 24px 16px;
-    border-radius: 16px;
-  }
-
-  .actionsSection {
-    padding: 20px 16px;
-    border-radius: 16px;
-  }
-}
-
 // Empty State - No COLS at all
 .emptyState {
-  background: linear-gradient(135deg, rgba($accent, 0.1) 0%, rgba($primary, 0.05) 100%);
+  background: linear-gradient(135deg, rgba($accent, 0.12) 0%, rgba($primary, 0.06) 100%);
   border: 1px solid rgba($accent, 0.2);
-  border-radius: 20px;
-  padding: 28px 24px;
-  margin-bottom: 24px;
+  border-radius: 18px;
+  padding: 24px 20px;
+  margin-bottom: 20px;
   text-align: center;
   animation: slideIn 0.4s ease-out;
 }
 
 .emptyIcon {
-  font-size: 48px;
-  margin-bottom: 12px;
+  font-size: 40px;
+  margin-bottom: 10px;
 }
 
 .emptyTitle {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: $text-primary;
   margin: 0 0 8px 0;
 }
 
 .emptyText {
-  font-size: 14px;
+  font-size: 13px;
   color: $text-secondary;
-  margin: 0 0 16px 0;
+  margin: 0 0 14px 0;
   line-height: 1.5;
 }
 
 .emptyBenefits {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
+  justify-content: center;
 }
 
 .emptyBenefit {
-  font-size: 13px;
+  font-size: 12px;
   color: $primary;
   background: rgba($primary, 0.1);
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
   border: 1px solid rgba($primary, 0.2);
 }
 
@@ -349,37 +456,77 @@ $border-color: rgba(98, 219, 184, 0.2);
 .upsellState {
   display: flex;
   align-items: center;
-  gap: 16px;
-  background: linear-gradient(135deg, rgba(156, 39, 176, 0.1) 0%, rgba($accent, 0.05) 100%);
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.12) 0%, rgba($accent, 0.06) 100%);
   border: 1px solid rgba(156, 39, 176, 0.2);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 24px;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
   text-align: left;
 
-  @media (max-width: 575px) {
+  @media (max-width: 480px) {
     flex-direction: column;
     text-align: center;
   }
 }
 
 .upsellIcon {
-  font-size: 36px;
+  font-size: 32px;
   flex-shrink: 0;
 }
 
 .upsellTitle {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #9c27b0;
   margin: 0 0 4px 0;
 }
 
 .upsellText {
-  font-size: 13px;
+  font-size: 12px;
   color: $text-secondary;
   margin: 0;
   line-height: 1.4;
+}
+
+// Strengths - Compact Pills
+.strengthsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.strengthPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(98, 219, 184, 0.08);
+  border: 1px solid rgba(98, 219, 184, 0.15);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #a0a0a0;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(98, 219, 184, 0.3);
+    background: rgba(98, 219, 184, 0.12);
+    color: #ffffff;
+  }
+
+  .strengthIcon {
+    font-size: 14px;
+  }
+
+  .strengthText {
+    font-weight: 500;
+    
+    strong {
+      color: #62dbb8;
+    }
+  }
 }
 
 @keyframes slideIn {
@@ -390,5 +537,27 @@ $border-color: rgba(98, 219, 184, 0.2);
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+// Responsive
+@media (max-width: 480px) {
+  .stake {
+    padding: 12px;
+    padding-bottom: 100px;
+  }
+
+  .heroSection {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .actionsSection {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .statCard {
+    border-radius: 12px;
   }
 }
