@@ -1,6 +1,7 @@
 import { useGetAccount } from '@multiversx/sdk-dapp/out/react/account/useGetAccount';
 import { StakeCols } from 'components/Stake/components/StakeCols';
 import { BuyCols } from 'components/Stake/components/BuyCols';
+import { ClaimColsButton } from 'components/Stake/ClaimColsButton';
 import { useGlobalContext } from 'context';
 import { useColsAprContext } from 'context/ColsAprContext';
 import { AnimatedDots } from 'components/AnimatedDots';
@@ -139,15 +140,7 @@ export const Stake = () => {
       {/* Quick Actions */}
       <div className={styles.quickActions}>
         {/* Claim COLS */}
-        <div className={styles.quickAction}>
-          <div className={styles.quickIcon}>🎁</div>
-          <div className={styles.quickInfo}>
-            <div className={styles.quickLabel}>Claim Rewards</div>
-            <div className={`${styles.quickValue} ${styles.quickValueAccent}`}>
-              {claimableCols.status === 'loading' ? '—' : `${claimableColsValue.toFixed(4)} COLS`}
-            </div>
-          </div>
-        </div>
+        <ClaimColsButton onClaimed={() => {}} />
       </div>
 
       {/* Buy COLS Section */}
