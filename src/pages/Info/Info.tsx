@@ -364,6 +364,16 @@ export const Info = () => {
                 </span>
               </div>
             </div>
+            
+            {/* COLS Token Properties */}
+            <div className={styles.colsProperties}>
+              <h3 className={styles.colsPropsTitle}>📜 COLS Token Properties</h3>
+              <ul className={styles.colsPropsList}>
+                <li><strong>Max Supply:</strong> 150,000 COLS (fixed, never more)</li>
+                <li><strong>Already Circulating:</strong> All 150,000 COLS in circulation</li>
+                <li><strong>Token Utility:</strong> Staking + DAO rewards + Bonus APR</li>
+              </ul>
+            </div>
           </div>
 
           {/* Top 10 COLS Stakers */}

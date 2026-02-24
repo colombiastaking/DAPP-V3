@@ -198,7 +198,7 @@ export function useColsApr({ trigger, userActiveStakeRaw, userAddress }: { trigg
   const [colsPrice, setColsPrice] = useState(0);
   const [baseApr, setBaseApr] = useState(0);
   const [agencyLockedEgld, setAgencyLockedEgld] = useState(0);
-  const [aprMax, setAprMax] = useState(15);
+  const [aprMax, setAprMax] = useState(50);
   const [targetAvgAprBonus, setTargetAvgAprBonus] = useState(0);
   const [totalColsStaked, setTotalColsStaked] = useState(0);
 

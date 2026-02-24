@@ -164,6 +164,14 @@ export const GoldMember = () => {
               <p>Earn bonus COLS tokens and DAO rewards on your staked position.</p>
             </div>
           </div>
+          
+          <div className={styles.benefitItem}>
+            <span className={styles.benefitIcon}>📅</span>
+            <div className={styles.benefitContent}>
+              <h3>Daily Distributions</h3>
+              <p>Rewards are distributed <strong>daily</strong> (previously weekly). Check your dashboard for daily COLS earnings!</p>
+            </div>
+          </div>
         </div>
       </div>
 
