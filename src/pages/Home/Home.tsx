@@ -351,9 +351,13 @@ This ensures the APR reflects your actual staking position.`;
         {/* Ranking Badge */}
         {userRank !== null && userRank !== undefined && (
           <div className={styles.rankingBadge}>
-            <span className={styles.rankingBadgeIcon}>{leagueInfo?.icon}</span>
+            {leagueInfo?.image ? (
+              <img src={leagueInfo.image} alt={leagueInfo.name} className={styles.rankingBadgeImage} />
+            ) : (
+              <span className={styles.rankingBadgeIcon}>{leagueInfo?.icon}</span>
+            )}
             <span>
-              Rank <span className={styles.rankingBadgeRank}>#{userRank}</span> of {totalStakers.toLocaleString()}
+              <span className={styles.rankingBadgeRank}>#{userRank}</span> · {leagueInfo?.tier} Tier
             </span>
           </div>
         )}
@@ -367,10 +371,14 @@ This ensures the APR reflects your actual staking position.`;
             <div className={styles.statLabel}>Bonus APR</div>
           </div>
           <div className={styles.statItem}>
-            <div className={`${styles.statValue} ${styles.assetValueAccent}`}>
-              {!isDataReady ? '—' : (leagueInfo?.name || '—')}
-            </div>
-            <div className={styles.statLabel}>Your League</div>
+            {leagueInfo?.image ? (
+              <img src={leagueInfo.image} alt={leagueInfo.name} style={{width: 40, height: 40, borderRadius: 12, marginBottom: 4, border: `2px solid ${leagueInfo.color}`}} />
+            ) : (
+              <div className={`${styles.statValue} ${styles.assetValueAccent}`}>
+                {!isDataReady ? '—' : (leagueInfo?.name || '—')}
+              </div>
+            )}
+            <div className={styles.statLabel}>{leagueInfo?.tier} Tier</div>
           </div>
           <div className={styles.statItem}>
             <div className={styles.statValue}>
@@ -397,14 +405,14 @@ function getLeagueInfo(rank: number, total: number) {
   const percentile = (rank / total) * 100;
   
   const leagues = [
-    { name: 'Leviathan', icon: '🐉', color: '#9c27b0', range: [0, 1] },
-    { name: 'Whale', icon: '🐋', color: '#2196f3', range: [1, 5] },
-    { name: 'Shark', icon: '🦈', color: '#03a9f4', range: [5, 15] },
-    { name: 'Dolphin', icon: '🐬', color: '#00bcd4', range: [15, 30] },
-    { name: 'Pufferfish', icon: '🐡', color: '#4caf50', range: [30, 50] },
-    { name: 'Fish', icon: '🐟', color: '#8bc34a', range: [50, 70] },
-    { name: 'Crab', icon: '🦀', color: '#ff9800', range: [70, 90] },
-    { name: 'Shrimp', icon: '🦐', color: '#f44336', range: [90, 100] },
+    { name: 'Leviathan', icon: '🐉', color: '#9c27b0', range: [0, 1], image: '/leagues/leviathan.jpg', tier: 'Diamond' },
+    { name: 'Whale', icon: '🐋', color: '#2196f3', range: [1, 5], image: '/leagues/whale.jpg', tier: 'Platinum' },
+    { name: 'Shark', icon: '🦈', color: '#03a9f4', range: [5, 15], image: '/leagues/Shark.jpg', tier: 'Gold' },
+    { name: 'Dolphin', icon: '🐬', color: '#00bcd4', range: [15, 30], image: '/leagues/Dolphin.jpg', tier: 'Silver' },
+    { name: 'Pufferfish', icon: '🐡', color: '#4caf50', range: [30, 50], image: '/leagues/Pufferfish.jpg', tier: 'Bronze' },
+    { name: 'Fish', icon: '🐟', color: '#8bc34a', range: [50, 70], image: '/leagues/Fish.jpg', tier: 'Iron' },
+    { name: 'Crab', icon: '🦀', color: '#ff9800', range: [70, 90], image: '/leagues/Crab.jpg', tier: 'Stone' },
+    { name: 'Shrimp', icon: '🦐', color: '#f44336', range: [90, 100], image: '/leagues/Shrimp.jpg', tier: 'Wood' },
   ];
 
   return leagues.find(l => percentile > l.range[0] && percentile <= l.range[1]) || leagues[leagues.length - 1];

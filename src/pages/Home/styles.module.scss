@@ -369,6 +369,14 @@ $glow-accent: 0 0 20px rgba(211, 54, 130, 0.3);
   font-size: 20px;
 }
 
+.rankingBadgeImage {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(98, 219, 184, 0.5);
+}
+
 .rankingBadgeRank {
   color: $primary;
   font-weight: 700;

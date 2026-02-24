@@ -21,14 +21,14 @@ type ToNextType = {
 
 // Animal leagues with rank % ranges
 const ANIMAL_LEAGUES = [
-  { name: "Leviathan", icon: "🐉", color: "#9c27b0", range: [0, 1], gradient: "linear-gradient(135deg, #9c27b0, #7b1fa2)" },
-  { name: "Whale", icon: "🐋", color: "#2196f3", range: [1, 5], gradient: "linear-gradient(135deg, #2196f3, #1565c0)" },
-  { name: "Shark", icon: "🦈", color: "#03a9f4", range: [5, 15], gradient: "linear-gradient(135deg, #03a9f4, #0097a7)" },
-  { name: "Dolphin", icon: "🐬", color: "#00bcd4", range: [15, 30], gradient: "linear-gradient(135deg, #00bcd4, #009688)" },
-  { name: "Pufferfish", icon: "🐡", color: "#4caf50", range: [30, 50], gradient: "linear-gradient(135deg, #4caf50, #388e3c)" },
-  { name: "Fish", icon: "🐟", color: "#8bc34a", range: [50, 70], gradient: "linear-gradient(135deg, #8bc34a, #689f38)" },
-  { name: "Crab", icon: "🦀", color: "#ff9800", range: [70, 90], gradient: "linear-gradient(135deg, #ff9800, #f57c00)" },
-  { name: "Shrimp", icon: "🦐", color: "#f44336", range: [90, 100], gradient: "linear-gradient(135deg, #f44336, #d32f2f)" },
+  { name: "Leviathan", icon: "🐉", color: "#9c27b0", range: [0, 1], gradient: "linear-gradient(135deg, #9c27b0, #7b1fa2)", image: "/leagues/leviathan.jpg", tier: "Diamond" },
+  { name: "Whale", icon: "🐋", color: "#2196f3", range: [1, 5], gradient: "linear-gradient(135deg, #2196f3, #1565c0)", image: "/leagues/whale.jpg", tier: "Platinum" },
+  { name: "Shark", icon: "🦈", color: "#03a9f4", range: [5, 15], gradient: "linear-gradient(135deg, #03a9f4, #0097a7)", image: "/leagues/Shark.jpg", tier: "Gold" },
+  { name: "Dolphin", icon: "🐬", color: "#00bcd4", range: [15, 30], gradient: "linear-gradient(135deg, #00bcd4, #009688)", image: "/leagues/Dolphin.jpg", tier: "Silver" },
+  { name: "Pufferfish", icon: "🐡", color: "#4caf50", range: [30, 50], gradient: "linear-gradient(135deg, #4caf50, #388e3c)", image: "/leagues/Pufferfish.jpg", tier: "Bronze" },
+  { name: "Fish", icon: "🐟", color: "#8bc34a", range: [50, 70], gradient: "linear-gradient(135deg, #8bc34a, #689f38)", image: "/leagues/Fish.jpg", tier: "Iron" },
+  { name: "Crab", icon: "🦀", color: "#ff9800", range: [70, 90], gradient: "linear-gradient(135deg, #ff9800, #f57c00)", image: "/leagues/Crab.jpg", tier: "Stone" },
+  { name: "Shrimp", icon: "🦐", color: "#f44336", range: [90, 100], gradient: "linear-gradient(135deg, #f44336, #d32f2f)", image: "/leagues/Shrimp.jpg", tier: "Wood" },
 ];
 
 // Get league by percentile
@@ -200,19 +200,38 @@ export function RankingTable() {
           <span
             style={{
               background: league.gradient,
-              padding: isMobile ? "4px 10px" : "6px 14px",
-              borderRadius: 20,
+              padding: "6px 12px",
+              borderRadius: "20px",
               color: "#fff",
               fontWeight: 800,
               boxShadow: `0 2px 12px ${league.color}66`,
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
+              gap: 8,
               fontSize: isMobile ? 12 : 14,
             }}
           >
-            <span>{league.icon}</span>
+            <img 
+              src={league.image} 
+              alt={league.name} 
+              style={{ 
+                width: 24, 
+                height: 24, 
+                borderRadius: 6, 
+                objectFit: 'cover',
+                border: '1px solid rgba(255,255,255,0.3)'
+              }} 
+            />
             <span>{league.name}</span>
+            <span style={{ 
+              fontSize: 10, 
+              opacity: 0.8,
+              marginLeft: 4,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {league.tier}
+            </span>
             {isUser && (
               <span style={{ 
                 marginLeft: 4, 
@@ -331,11 +350,32 @@ export function RankingTable() {
                 fontSize: isMobile ? 14 : 16,
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
+                gap: 10,
               }}
             >
-              <span style={{ fontSize: isMobile ? 18 : 20 }}>{league.icon}</span>
-              {league.name}
+              <img 
+                src={league.image} 
+                alt={league.name} 
+                style={{ 
+                  width: 28, 
+                  height: 28, 
+                  borderRadius: 8, 
+                  objectFit: 'cover',
+                  border: '2px solid rgba(255,255,255,0.4)'
+                }} 
+              />
+              <span>{league.name}</span>
+              <span style={{ 
+                fontSize: 10, 
+                opacity: 0.9,
+                background: 'rgba(255,255,255,0.2)',
+                padding: '2px 8px',
+                borderRadius: 10,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                {league.tier}
+              </span>
             </span>
           </div>
           <div

@@ -35,14 +35,14 @@ interface StatusData {
 
 // Animal leagues (same as RankingTable)
 const ANIMAL_LEAGUES = [
-  { name: 'Leviathan', icon: '🐉', color: '#9c27b0', range: [0, 1] },
-  { name: 'Whale', icon: '🐋', color: '#2196f3', range: [1, 5] },
-  { name: 'Shark', icon: '🦈', color: '#03a9f4', range: [5, 15] },
-  { name: 'Dolphin', icon: '🐬', color: '#00bcd4', range: [15, 30] },
-  { name: 'Pufferfish', icon: '🐡', color: '#4caf50', range: [30, 50] },
-  { name: 'Fish', icon: '🐟', color: '#8bc34a', range: [50, 70] },
-  { name: 'Crab', icon: '🦀', color: '#ff9800', range: [70, 90] },
-  { name: 'Shrimp', icon: '🦐', color: '#f44336', range: [90, 100] }
+  { name: 'Leviathan', icon: '🐉', color: '#9c27b0', range: [0, 1], image: '/leagues/leviathan.jpg', tier: 'Diamond' },
+  { name: 'Whale', icon: '🐋', color: '#2196f3', range: [1, 5], image: '/leagues/whale.jpg', tier: 'Platinum' },
+  { name: 'Shark', icon: '🦈', color: '#03a9f4', range: [5, 15], image: '/leagues/Shark.jpg', tier: 'Gold' },
+  { name: 'Dolphin', icon: '🐬', color: '#00bcd4', range: [15, 30], image: '/leagues/Dolphin.jpg', tier: 'Silver' },
+  { name: 'Pufferfish', icon: '🐡', color: '#4caf50', range: [30, 50], image: '/leagues/Pufferfish.jpg', tier: 'Bronze' },
+  { name: 'Fish', icon: '🐟', color: '#8bc34a', range: [50, 70], image: '/leagues/Fish.jpg', tier: 'Iron' },
+  { name: 'Crab', icon: '🦀', color: '#ff9800', range: [70, 90], image: '/leagues/Crab.jpg', tier: 'Stone' },
+  { name: 'Shrimp', icon: '🦐', color: '#f44336', range: [90, 100], image: '/leagues/Shrimp.jpg', tier: 'Wood' }
 ];
 
 function getLeague(rank: number, total: number) {
@@ -376,74 +376,73 @@ export const Info = () => {
             </div>
           </div>
 
-          {/* Top 10 COLS Stakers */}
+          {/* Top 10 COLS Stakers - Card Layout */}
           <div className={styles.topStakersSection}>
             <h2 className={styles.sectionTitle}>🏆 Top 10 COLS Stakers</h2>
             <p className={styles.sectionSubtitle}>
               Ranked by COLS tokens staked
             </p>
             
-            <div className={styles.tableContainer}>
-              <table className={styles.stakersTable}>
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Address</th>
-                    <th>COLS Staked</th>
-                    <th>eGLD Staked</th>
-                    <th>Total APR</th>
-                    <th>League</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topStakers.map((staker: any, index: number) => {
-                    const league = staker.rank && totalStakers 
-                      ? getLeague(staker.rank, totalStakers) 
-                      : ANIMAL_LEAGUES[7];
-                    const shortAddress = `${staker.address.slice(0, 6)}...${staker.address.slice(-4)}`;
+            <div className={styles.leagueCardsGrid}>
+              {topStakers.map((staker: any, index: number) => {
+                const league = staker.rank && totalStakers 
+                  ? getLeague(staker.rank, totalStakers) 
+                  : ANIMAL_LEAGUES[7];
+                const shortAddress = `${staker.address.slice(0, 6)}...${staker.address.slice(-4)}`;
+                const isTop3 = index < 3;
+                
+                return (
+                  <div 
+                    key={staker.address} 
+                    className={`${styles.leagueCard} ${isTop3 ? styles.leagueCardTop : ''}`}
+                    style={{ 
+                      '--league-color': league.color,
+                      '--league-gradient': `linear-gradient(135deg, ${league.color}33, ${league.color}11)`
+                    } as React.CSSProperties}
+                  >
+                    <div className={styles.leagueCardRank}>
+                      {index === 0 && <span className={styles.rankMedal} style={{background: 'linear-gradient(135deg, #ffd700, #ffaa00)'}}>🥇</span>}
+                      {index === 1 && <span className={styles.rankMedal} style={{background: 'linear-gradient(135deg, #c0c0c0, #a0a0a0)'}}>🥈</span>}
+                      {index === 2 && <span className={styles.rankMedal} style={{background: 'linear-gradient(135deg, #cd7f32, #a05020)'}}>🥉</span>}
+                      {index > 2 && <span className={styles.rankNumber}>#{index + 1}</span>}
+                    </div>
                     
-                    return (
-                      <tr key={staker.address}>
-                        <td className={styles.rankCell}>
-                          {index === 0 && '🥇'}
-                          {index === 1 && '🥈'}
-                          {index === 2 && '🥉'}
-                          {index > 2 && `#${index + 1}`}
-                        </td>
-                        <td className={styles.addressCell}>
-                          <a 
-                            href={`https://explorer.multiversx.com/accounts/${staker.address}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.addressLink}
-                          >
-                            {shortAddress}
-                          </a>
-                        </td>
-                        <td className={styles.numberCell}>
-                          {staker.colsStaked ? formatNumber(staker.colsStaked, 0) : '—'}
-                        </td>
-                        <td className={styles.numberCell}>
-                          {staker.egldStaked ? formatNumber(staker.egldStaked, 2) : '—'}
-                        </td>
-                        <td className={styles.aprCell}>
-                          {staker.aprTotal ? staker.aprTotal.toFixed(2) + '%' : '—'}
-                        </td>
-                        <td>
-                          <span 
-                            className={styles.leagueBadge}
-                            style={{ 
-                              background: `linear-gradient(135deg, ${league.color}99, ${league.color})` 
-                            }}
-                          >
-                            {league.icon} {!isMobile && league.name}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    <div className={styles.leagueCardMain}>
+                      <div className={styles.leagueCardHeader}>
+                        <img src={league.image} alt={league.name} className={styles.leagueCardImage} />
+                        <div className={styles.leagueCardInfo}>
+                          <span className={styles.leagueCardName}>{league.name}</span>
+                          <span className={styles.leagueCardTier}>{league.tier} Tier</span>
+                        </div>
+                      </div>
+                      
+                      <div className={styles.leagueCardStats}>
+                        <div className={styles.leagueCardStat}>
+                          <span className={styles.leagueCardStatLabel}>COLS</span>
+                          <span className={styles.leagueCardStatValue}>{staker.colsStaked ? formatNumber(staker.colsStaked, 0) : '—'}</span>
+                        </div>
+                        <div className={styles.leagueCardStat}>
+                          <span className={styles.leagueCardStatLabel}>eGLD</span>
+                          <span className={styles.leagueCardStatValue}>{staker.egldStaked ? formatNumber(staker.egldStaked, 2) : '—'}</span>
+                        </div>
+                        <div className={styles.leagueCardStat}>
+                          <span className={styles.leagueCardStatLabel}>APR</span>
+                          <span className={styles.leagueCardStatValue} style={{color: '#6ee7c7'}}>{staker.aprTotal ? staker.aprTotal.toFixed(2) + '%' : '—'}</span>
+                        </div>
+                      </div>
+                      
+                      <a 
+                        href={`https://explorer.multiversx.com/accounts/${staker.address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.leagueCardAddress}
+                      >
+                        {shortAddress} ↗
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
