@@ -25,6 +25,28 @@ function formatCurrency(value: number): string {
   return `$${Math.floor(value).toLocaleString()}`;
 }
 
+// League info helper - matches RankingTable
+const ANIMAL_LEAGUES = [
+  { name: 'Leviathan', icon: '🐉', color: '#9c27b0', range: [0, 1], gradient: 'linear-gradient(135deg, #9c27b0, #7b1fa2)', image: '/leagues/leviathan.jpg', tier: 'Diamond' },
+  { name: 'Whale', icon: '🐋', color: '#2196f3', range: [1, 5], gradient: 'linear-gradient(135deg, #2196f3, #1565c0)', image: '/leagues/whale.jpg', tier: 'Platinum' },
+  { name: 'Shark', icon: '🦈', color: '#03a9f4', range: [5, 15], gradient: 'linear-gradient(135deg, #03a9f4, #0097a7)', image: '/leagues/Shark.jpg', tier: 'Gold' },
+  { name: 'Dolphin', icon: '🐬', color: '#00bcd4', range: [15, 30], gradient: 'linear-gradient(135deg, #00bcd4, #009688)', image: '/leagues/Dolphin.jpg', tier: 'Silver' },
+  { name: 'Pufferfish', icon: '🐡', color: '#4caf50', range: [30, 50], gradient: 'linear-gradient(135deg, #4caf50, #388e3c)', image: '/leagues/Pufferfish.jpg', tier: 'Bronze' },
+  { name: 'Fish', icon: '🐟', color: '#8bc34a', range: [50, 70], gradient: 'linear-gradient(135deg, #8bc34a, #689f38)', image: '/leagues/Fish.jpg', tier: 'Iron' },
+  { name: 'Crab', icon: '🦀', color: '#ff9800', range: [70, 90], gradient: 'linear-gradient(135deg, #ff9800, #f57c00)', image: '/leagues/Crab.jpg', tier: 'Stone' },
+  { name: 'Shrimp', icon: '🦐', color: '#f44336', range: [90, 100], gradient: 'linear-gradient(135deg, #f44336, #d32f2f)', image: '/leagues/Shrimp.jpg', tier: 'Wood' },
+];
+
+function getLeagueInfo(rank: number, total: number) {
+  const percentile = (rank / total) * 100;
+  return ANIMAL_LEAGUES.find(l => percentile > l.range[0] && percentile <= l.range[1]) || ANIMAL_LEAGUES[ANIMAL_LEAGUES.length - 1];
+}
+
+function getLeagueClass(rank: number, total: number): string {
+  const league = getLeagueInfo(rank, total);
+  return league.name.toLowerCase();
+}
+
 export const Home = () => {
   const account = useGetAccount();
   const address = account.address;
@@ -53,25 +75,19 @@ export const Home = () => {
   // 1. If user in stakers and has valid eGLD → use stakers
   // 2. If user in stakers but eGLD = 0 (failed query) → use context
   // 3. If user not in stakers → use context
-  // This handles ALL cases: Gold members, eGLD only, COLS only, COLS+EGLD, nothing
   const actualEgldDelegated = (userRow && egldDelegatedFromStakers > 0) 
     ? egldDelegatedFromStakers 
     : delegatedEgld;
   
   // Calculate Gold member effective APR (without service fee = bruto)
-  // For Gold members: raw APR + Gold Bonus
   const rawBaseApr = getRawApr(baseApr);
   const { goldBonusApr } = calculateEffectiveApr(baseApr, actualEgldDelegated, goldCapacityEgld);
   
   // Get user's APR from stakers data
-  // - If user is in stakers: use their calculated APR (includes COLS bonus + DAO if applicable)
-  // - If user not in stakers (eGLD only, no COLS): null (will show base APR)
   const userBaseApr = userRow?.aprTotal !== null && userRow?.aprTotal !== undefined 
     ? Number(userRow.aprTotal) 
     : null;
   
-  // For users with only COLS (no eGLD), we still show COLS bonus APR
-  // The aprBonus in stakers is calculated based on their COLS/eGLD ratio
   const userAprBonusOnly = userRow?.aprBonus ?? null;
   
   // Gold member total: base APR + Gold Bonus (shown as raw/bruto APR)
@@ -84,14 +100,11 @@ export const Home = () => {
   const totalStakers = stakers.length;
 
   // Total APR shown in main panel:
-  // - If in stakers: use their calculated APR
-  // - If has COLS bonus only: baseApr + bonus
-  // - If Gold member with no stakers: rawBaseApr + goldBonusApr
   const userApr = userBaseApr !== null 
     ? userBaseApr + goldBonusApr  // User in stakers + Gold bonus
     : (userAprBonusOnly !== null 
         ? baseApr + userAprBonusOnly + goldBonusApr  // Has COLS bonus only + Gold
-        : (isGoldMember && goldBonusApr > 0 ? rawBaseApr + goldBonusApr : null)); // Gold only
+        : (isGoldMember && goldBonusApr > 0 ? rawBaseApr + goldBonusApr : null));
   const userRank = userRow?.rank;
   const leagueInfo = userRank && totalStakers > 0 
     ? getLeagueInfo(userRank, totalStakers) 
@@ -118,8 +131,12 @@ This ensures the APR reflects your actual staking position.`;
     { egld: 100, cols: 200, desc: 'COLS Boost', apr: baseApr + 5 },
   ];
 
-  // Get realistic APR range from the context
-  const aprBonusMax = aprMax; // Max bonus from COLS staking
+  const aprBonusMax = aprMax;
+
+  // Determine hero class based on league
+  const heroClass = (userRank && totalStakers > 0) 
+    ? getLeagueClass(userRank, totalStakers) 
+    : 'default';
 
   return (
     <div className={styles.landing}>
@@ -270,18 +287,69 @@ This ensures the APR reflects your actual staking position.`;
         </section>
       )}
 
-      {/* Hero Section */}
-      <section className={styles.heroSection}>
-        <div className={styles.heroHeader}>
-          <h1 className={styles.heroGreeting}>
-            Welcome, <span>Staker</span> 👋
-          </h1>
-          <div className={styles.heroBadge}>
-            {loading ? <AnimatedDots /> : `${totalStakers.toLocaleString()} Stakers`}
-          </div>
-        </div>
+      {/* League Hero Section - Main showcase when user has holdings */}
+      {address && !hasNoHoldings && (
+        <section className={`${styles.heroSection} ${heroClass}`}>
+          <div className={styles.heroContent}>
+            {/* Animal Image */}
+            <div className={styles.heroAnimal}>
+              {leagueInfo ? (
+                <>
+                  <img src={leagueInfo.image} alt={leagueInfo.name} />
+                  <div className={styles.leagueBadge}>
+                    <div className={styles.tier}>{leagueInfo.tier}</div>
+                    <div className={styles.name}>{leagueInfo.name}</div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ width: 180, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80, background: 'rgba(255,255,255,0.1)', borderRadius: 30 }}>
+                  🏆
+                </div>
+              )}
+            </div>
 
-        {/* Asset Cards Grid */}
+            {/* Info */}
+            <div className={styles.heroInfo}>
+              <h1 className={styles.heroGreeting}>
+                Welcome, <span>Staker</span> 👋
+              </h1>
+              
+              {/* Rank Badge */}
+              {userRank && (
+                <div className={styles.heroRank}>
+                  <span className={styles.rankNumber}>#{userRank}</span>
+                  <span>of {totalStakers.toLocaleString()} stakers</span>
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className={styles.heroStats}>
+                <div className={styles.heroStat}>
+                  <span className={styles.value}>
+                    {userApr !== null ? `${userApr.toFixed(1)}%` : '—'}
+                  </span>
+                  <span className={styles.label}>Your APR</span>
+                </div>
+                <div className={styles.heroStat}>
+                  <span className={styles.value}>
+                    {!isDataReady ? '—' : formatNumber(actualEgldDelegated, 2)}
+                  </span>
+                  <span className={styles.label}>eGLD</span>
+                </div>
+                <div className={styles.heroStat}>
+                  <span className={styles.value}>
+                    {!isDataReady ? '—' : formatNumber(colsStaked, 0)}
+                  </span>
+                  <span className={styles.label}>COLS</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Asset Cards Grid */}
+      {address && (
         <div className={styles.assetGrid}>
           {/* eGLD Card */}
           <div className={styles.assetCard}>
@@ -324,10 +392,10 @@ This ensures the APR reflects your actual staking position.`;
             </div>
           </div>
         </div>
-      </section>
+      )}
 
       {/* APR Panel */}
-      <section className={styles.aprPanel}>
+      <section className={`${styles.aprPanel} ${heroClass}`}>
         <div className={styles.aprHeader}>
           Your Total APR
           <HelpIcon text={totalAprHelpText} />
@@ -372,7 +440,7 @@ This ensures the APR reflects your actual staking position.`;
           </div>
           <div className={styles.statItem}>
             {leagueInfo?.image ? (
-              <img src={leagueInfo.image} alt={leagueInfo.name} style={{width: 40, height: 40, borderRadius: 12, marginBottom: 4, border: `2px solid ${leagueInfo.color}`}} />
+              <img src={leagueInfo.image} alt={leagueInfo.name} style={{width: 44, height: 44, borderRadius: 14, marginBottom: 6, border: `2px solid ${leagueInfo.color}`}} />
             ) : (
               <div className={`${styles.statValue} ${styles.assetValueAccent}`}>
                 {!isDataReady ? '—' : (leagueInfo?.name || '—')}
@@ -399,23 +467,5 @@ This ensures the APR reflects your actual staking position.`;
     </div>
   );
 };
-
-// League info helper
-function getLeagueInfo(rank: number, total: number) {
-  const percentile = (rank / total) * 100;
-  
-  const leagues = [
-    { name: 'Leviathan', icon: '🐉', color: '#9c27b0', range: [0, 1], image: '/leagues/leviathan.jpg', tier: 'Diamond' },
-    { name: 'Whale', icon: '🐋', color: '#2196f3', range: [1, 5], image: '/leagues/whale.jpg', tier: 'Platinum' },
-    { name: 'Shark', icon: '🦈', color: '#03a9f4', range: [5, 15], image: '/leagues/Shark.jpg', tier: 'Gold' },
-    { name: 'Dolphin', icon: '🐬', color: '#00bcd4', range: [15, 30], image: '/leagues/Dolphin.jpg', tier: 'Silver' },
-    { name: 'Pufferfish', icon: '🐡', color: '#4caf50', range: [30, 50], image: '/leagues/Pufferfish.jpg', tier: 'Bronze' },
-    { name: 'Fish', icon: '🐟', color: '#8bc34a', range: [50, 70], image: '/leagues/Fish.jpg', tier: 'Iron' },
-    { name: 'Crab', icon: '🦀', color: '#ff9800', range: [70, 90], image: '/leagues/Crab.jpg', tier: 'Stone' },
-    { name: 'Shrimp', icon: '🦐', color: '#f44336', range: [90, 100], image: '/leagues/Shrimp.jpg', tier: 'Wood' },
-  ];
-
-  return leagues.find(l => percentile > l.range[0] && percentile <= l.range[1]) || leagues[leagues.length - 1];
-}
 
 export default Home;
