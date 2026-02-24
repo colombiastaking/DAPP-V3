@@ -11,14 +11,6 @@ type StakerRow = {
   egldStaked?: number;
 };
 
-type ToNextType = {
-  rank: number;
-  apr: number | null | undefined;
-  address: string;
-  leagueName: string;
-  icon: string;
-} | null;
-
 // Animal leagues with rank % ranges
 const ANIMAL_LEAGUES = [
   { name: "Leviathan", icon: "🐉", color: "#9c27b0", range: [0, 1], gradient: "linear-gradient(135deg, #9c27b0, #7b1fa2)", image: "/leagues/leviathan.jpg", tier: "Diamond" },
@@ -40,19 +32,6 @@ function getLeague(rank: number, total: number) {
     ) || ANIMAL_LEAGUES[ANIMAL_LEAGUES.length - 1]
   );
 }
-
-// Theme colors
-const theme = {
-  primary: '#62dbb8',
-  primaryDark: '#4bc9a1',
-  accent: '#d33682',
-  background: '#0a0a0a',
-  cardBg: '#1a1a1a',
-  cardBgHover: '#252525',
-  textPrimary: '#ffffff',
-  textSecondary: '#a0a0a0',
-  border: 'rgba(98, 219, 184, 0.2)',
-};
 
 export function RankingTable() {
   const { stakers, loading } = useColsAprContext();
@@ -91,203 +70,171 @@ export function RankingTable() {
     userRows = sorted.slice(start, end);
   }
 
-  // Find next league target
-  let toNext: ToNextType = null;
-  if (user) {
-    const currentLeague = getLeague(user.rank!, total);
-    const currentIdx = ANIMAL_LEAGUES.findIndex(
-      (l) => l.name === currentLeague.name
-    );
-    if (currentIdx > 0) {
-      const nextLeague = ANIMAL_LEAGUES[currentIdx - 1];
-      const thresholdRank = Math.ceil((nextLeague.range[1] / 100) * total);
-      const thresholdUser = sorted[thresholdRank - 1];
-      if (thresholdUser) {
-        toNext = {
-          rank: thresholdUser.rank!,
-          apr: thresholdUser.aprTotal,
-          address: thresholdUser.address,
-          leagueName: nextLeague.name,
-          icon: nextLeague.icon,
-        };
-      }
-    }
-  }
-
-  // Generate keyframes for glow animations
-  const keyframesStyles = ANIMAL_LEAGUES.map(
-    (l) => `
-      @keyframes glow${l.name} {
-        0% { box-shadow: 0 0 4px ${l.color}44; }
-        100% { box-shadow: 0 0 16px ${l.color}aa; }
-      }
-      @keyframes pulse${l.name} {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-      }
-    `
-  ).join("\n");
-
   // Medal for top 3
   function getMedal(rank: number) {
-    if (rank === 1) return "🥇";
-    if (rank === 2) return "🥈";
-    if (rank === 3) return "🥉";
+    if (rank === 1) return { emoji: "🥇", glow: "0 0 20px #ffd700" };
+    if (rank === 2) return { emoji: "🥈", glow: "0 0 20px #c0c0c0" };
+    if (rank === 3) return { emoji: "🥉", glow: "0 0 20px #cd7f32" };
     return null;
   }
 
-  // Render a table row
-  function renderRow(s: StakerRow, highlight = false) {
+  // Render rank card (big beautiful cards)
+  function renderRankCard(s: StakerRow, _index: number) {
     const league = getLeague(s.rank!, total);
     const isUser = s.address === address;
     const medal = getMedal(s.rank!);
 
     return (
-      <tr
+      <div
         key={s.address}
         style={{
-          background: isUser
-            ? `linear-gradient(90deg, ${league.color}22, ${league.color}11)`
-            : highlight
-            ? theme.cardBgHover
-            : theme.cardBg,
+          display: "flex",
+          alignItems: "center",
+          gap: isMobile ? 12 : 16,
+          padding: isMobile ? "14px 12px" : "16px 20px",
+          background: isUser 
+            ? `linear-gradient(135deg, ${league.color}22, ${league.color}11)`
+            : "rgba(255, 255, 255, 0.03)",
+          borderRadius: 16,
           border: isUser 
-            ? `2px solid ${league.color}` 
-            : `1px solid ${theme.border}`,
+            ? `2px solid ${league.color}`
+            : "1px solid rgba(255, 255, 255, 0.08)",
           boxShadow: isUser 
-            ? `0 4px 20px ${league.color}44` 
+            ? `0 8px 32px ${league.color}33`
             : "none",
-          color: theme.textPrimary,
-          fontWeight: isUser ? 700 : 500,
-          fontSize: isMobile ? 13 : 15,
+          transition: "all 0.3s ease",
+          cursor: "default",
         }}
       >
-        <td style={{ 
-          textAlign: "center", 
-          fontWeight: 700, 
-          width: isMobile ? "30%" : "25%", 
-          padding: isMobile ? "12px 8px" : "14px 12px",
-          borderRadius: isUser ? "8px 0 0 8px" : 0,
+        {/* Rank Number / Medal */}
+        <div style={{
+          minWidth: isMobile ? 36 : 48,
+          textAlign: "center",
         }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            {medal && <span style={{ fontSize: 18 }}>{medal}</span>}
-            <span style={{ 
-              color: league.color, 
+          {medal ? (
+            <div style={{
+              fontSize: isMobile ? 24 : 32,
+              filter: medal.glow ? `drop-shadow(${medal.glow})` : "none",
+            }}>
+              {medal.emoji}
+            </div>
+          ) : (
+            <div style={{
+              fontSize: isMobile ? 16 : 20,
               fontWeight: 800,
-              fontSize: isMobile ? 14 : 16,
-            }}>#{s.rank}</span>
-          </span>
-        </td>
-        <td style={{ 
-          textAlign: "center", 
-          fontWeight: 700, 
-          width: isMobile ? "35%" : "30%", 
-          padding: isMobile ? "12px 8px" : "14px 12px",
-          color: theme.primary,
-          fontSize: isMobile ? 14 : 16,
+              color: league.color,
+            }}>
+              #{s.rank}
+            </div>
+          )}
+        </div>
+
+        {/* League Badge - Big Animal */}
+        <div style={{
+          position: "relative",
+          flexShrink: 0,
         }}>
-          {typeof s.aprTotal === "number" && !isNaN(s.aprTotal)
-            ? `${Number(s.aprTotal).toFixed(2)}%`
-            : "—"}
-        </td>
-        <td style={{ 
-          textAlign: "center", 
-          fontWeight: 700, 
-          width: isMobile ? "35%" : "45%", 
-          padding: isMobile ? "12px 8px" : "14px 12px",
-          borderRadius: isUser ? "0 8px 8px 0" : 0,
-        }}>
-          <span
+          <img 
+            src={league.image} 
+            alt={league.name}
             style={{
-              background: league.gradient,
-              padding: "6px 12px",
-              borderRadius: "20px",
-              color: "#fff",
-              fontWeight: 800,
-              boxShadow: `0 2px 12px ${league.color}66`,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              fontSize: isMobile ? 12 : 14,
+              width: isMobile ? 48 : 56,
+              height: isMobile ? 48 : 56,
+              borderRadius: 14,
+              objectFit: "cover",
+              border: `3px solid ${league.color}`,
+              boxShadow: `0 4px 16px ${league.color}44`,
             }}
-          >
-            <img 
-              src={league.image} 
-              alt={league.name} 
-              style={{ 
-                width: 24, 
-                height: 24, 
-                borderRadius: 6, 
-                objectFit: 'cover',
-                border: '1px solid rgba(255,255,255,0.3)'
-              }} 
-            />
-            <span>{league.name}</span>
-            <span style={{ 
-              fontSize: 10, 
-              opacity: 0.8,
-              marginLeft: 4,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
+          />
+          {/* League Icon Overlay */}
+          <div style={{
+            position: "absolute",
+            bottom: -6,
+            right: -6,
+            background: league.gradient,
+            borderRadius: "50%",
+            width: isMobile ? 20 : 24,
+            height: isMobile ? 20 : 24,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: isMobile ? 10 : 12,
+            border: "2px solid rgba(255,255,255,0.3)",
+          }}>
+            {league.icon}
+          </div>
+        </div>
+
+        {/* League Name & Tier */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: isMobile ? 14 : 16,
+            fontWeight: 700,
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+          }}>
+            {league.name}
+            <span style={{
+              fontSize: isMobile ? 9 : 10,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              background: league.gradient,
+              padding: "3px 8px",
+              borderRadius: 10,
+              color: "#fff",
+              fontWeight: 600,
             }}>
               {league.tier}
             </span>
             {isUser && (
-              <span style={{ 
-                marginLeft: 4, 
-                color: "#fff", 
-                fontSize: 11,
-                background: "rgba(255,255,255,0.3)",
-                padding: "2px 6px",
-                borderRadius: 8,
+              <span style={{
+                fontSize: isMobile ? 10 : 11,
+                background: "rgba(98, 219, 184, 0.2)",
+                color: "#62dbb8",
+                padding: "3px 8px",
+                borderRadius: 10,
+                fontWeight: 600,
               }}>
                 You
               </span>
             )}
-          </span>
-        </td>
-      </tr>
-    );
-  }
+          </div>
+          <div style={{
+            fontSize: isMobile ? 11 : 12,
+            color: "rgba(255, 255, 255, 0.5)",
+            marginTop: 2,
+          }}>
+            {((s.rank! / total) * 100).toFixed(1)}% percentile
+          </div>
+        </div>
 
-  // Render table header
-  function renderHeader() {
-    return (
-      <tr style={{ 
-        background: theme.cardBgHover, 
-        borderBottom: `2px solid ${theme.border}`,
-      }}>
-        <th style={{ 
-          textAlign: "center", 
-          fontWeight: 700, 
-          width: isMobile ? "30%" : "25%", 
-          padding: isMobile ? "12px 8px" : "14px 12px", 
-          fontSize: isMobile ? 12 : 14,
-          color: theme.primary,
-          textTransform: "uppercase",
-          letterSpacing: 1,
-        }}>Rank</th>
-        <th style={{ 
-          textAlign: "center", 
-          fontWeight: 700, 
-          width: isMobile ? "35%" : "30%", 
-          padding: isMobile ? "12px 8px" : "14px 12px", 
-          fontSize: isMobile ? 12 : 14,
-          color: theme.primary,
-          textTransform: "uppercase",
-          letterSpacing: 1,
-        }}>APR</th>
-        <th style={{ 
-          textAlign: "center", 
-          fontWeight: 700, 
-          width: isMobile ? "35%" : "45%", 
-          padding: isMobile ? "12px 8px" : "14px 12px", 
-          fontSize: isMobile ? 12 : 14,
-          color: theme.primary,
-          textTransform: "uppercase",
-          letterSpacing: 1,
-        }}>League</th>
-      </tr>
+        {/* APR */}
+        <div style={{
+          textAlign: "right",
+          minWidth: isMobile ? 60 : 80,
+        }}>
+          <div style={{
+            fontSize: isMobile ? 18 : 22,
+            fontWeight: 800,
+            color: "#62dbb8",
+          }}>
+            {typeof s.aprTotal === "number" && !isNaN(s.aprTotal)
+              ? `${Number(s.aprTotal).toFixed(2)}%`
+              : "—"}
+          </div>
+          <div style={{
+            fontSize: isMobile ? 10 : 11,
+            color: "rgba(255, 255, 255, 0.5)",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+          }}>
+            APR
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -298,17 +245,19 @@ export function RankingTable() {
 
     // Progress to next league
     let progress = 100;
-    if (
-      toNext &&
-      typeof user.aprTotal === "number" &&
-      typeof toNext.apr === "number"
-    ) {
-      progress = Math.min(100, (user.aprTotal / toNext.apr) * 100);
+    const currentIdx = ANIMAL_LEAGUES.findIndex((l) => l.name === league.name);
+    if (currentIdx > 0) {
+      const nextLeague = ANIMAL_LEAGUES[currentIdx - 1];
+      const thresholdRank = Math.ceil((nextLeague.range[1] / 100) * total);
+      const thresholdUser = sorted[thresholdRank - 1];
+      if (thresholdUser && typeof thresholdUser.aprTotal === "number" && typeof user.aprTotal === "number") {
+        progress = Math.min(100, (user.aprTotal / thresholdUser.aprTotal) * 100);
+      }
     }
 
     // Build X post
-    const tweetText = toNext
-      ? `I'm ranked #${user.rank} in the ${league.icon} ${league.name} League with ${user.aprTotal?.toFixed(2)}% APR at @ColombiaStaking 🚀\nNext stop: ${toNext.icon} ${toNext.leagueName} 🏆\nStake with me 👉 https://staking.colombia-staking.com/stake`
+    const tweetText = currentIdx > 0
+      ? `I'm ranked #${user.rank} in the ${league.icon} ${league.name} League with ${user.aprTotal?.toFixed(2)}% APR at @ColombiaStaking 🚀\nNext stop: ${ANIMAL_LEAGUES[currentIdx - 1].icon} ${ANIMAL_LEAGUES[currentIdx - 1].name} 🏆\nStake with me 👉 https://staking.colombia-staking.com/stake`
       : `I'm in the top ${league.icon} ${league.name} League at @ColombiaStaking with ${user.aprTotal?.toFixed(2)}% APR 🚀\nStake with me 👉 https://staking.colombia-staking.com/stake`;
 
     const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
@@ -317,84 +266,107 @@ export function RankingTable() {
       <div
         style={{
           marginBottom: 24,
-          background: theme.cardBg,
-          borderRadius: 20,
-          padding: isMobile ? "20px 16px" : "24px",
-          color: theme.textPrimary,
+          background: `linear-gradient(135deg, ${league.color}15, ${league.color}08)`,
+          borderRadius: 24,
+          padding: isMobile ? "20px 16px" : "28px",
+          color: "#fff",
           display: "flex",
           flexDirection: "column",
-          gap: 16,
-          boxShadow: `0 4px 24px ${league.color}44`,
-          border: `1px solid ${league.color}66`,
+          gap: 20,
+          boxShadow: `0 8px 40px ${league.color}33`,
+          border: `1px solid ${league.color}44`,
+          backdropFilter: "blur(10px)",
         }}
       >
-        {/* Header */}
+        {/* Header Row */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: 12,
+            gap: 16,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span
-              style={{
-                background: league.gradient,
-                padding: isMobile ? "8px 16px" : "10px 20px",
-                borderRadius: 50,
-                color: "#fff",
+          {/* League Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <img 
+              src={league.image} 
+              alt={league.name} 
+              style={{ 
+                width: isMobile ? 56 : 72, 
+                height: isMobile ? 56 : 72, 
+                borderRadius: 18, 
+                objectFit: 'cover',
+                border: `4px solid ${league.color}`,
+                boxShadow: `0 6px 24px ${league.color}55`,
+              }} 
+            />
+            <div>
+              <div style={{
+                fontSize: isMobile ? 12 : 13,
+                color: "rgba(255,255,255,0.6)",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                marginBottom: 4,
+              }}>
+                Your League
+              </div>
+              <div style={{
+                fontSize: isMobile ? 24 : 28,
                 fontWeight: 800,
-                boxShadow: `0 4px 16px ${league.color}66`,
-                fontSize: isMobile ? 14 : 16,
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
-              }}
-            >
-              <img 
-                src={league.image} 
-                alt={league.name} 
-                style={{ 
-                  width: 28, 
-                  height: 28, 
-                  borderRadius: 8, 
-                  objectFit: 'cover',
-                  border: '2px solid rgba(255,255,255,0.4)'
-                }} 
-              />
-              <span>{league.name}</span>
-              <span style={{ 
-                fontSize: 10, 
-                opacity: 0.9,
-                background: 'rgba(255,255,255,0.2)',
-                padding: '2px 8px',
-                borderRadius: 10,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
               }}>
-                {league.tier}
-              </span>
-            </span>
+                {league.icon} {league.name}
+              </div>
+              <div style={{
+                fontSize: isMobile ? 11 : 12,
+                color: league.color,
+                fontWeight: 600,
+                marginTop: 4,
+              }}>
+                {league.tier} Tier
+              </div>
+            </div>
           </div>
+
+          {/* Rank Badge */}
           <div
             style={{
-              fontWeight: 700,
-              fontSize: isMobile ? 14 : 16,
-              padding: isMobile ? "6px 14px" : "8px 18px",
-              borderRadius: 50,
-              background: theme.cardBgHover,
-              border: `1px solid ${theme.border}`,
-              color: theme.primary,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: isMobile ? "12px 20px" : "16px 28px",
+              borderRadius: 16,
+              background: "rgba(0,0,0,0.3)",
+              border: `1px solid ${league.color}44`,
             }}
           >
-            <span style={{ color: theme.textSecondary }}>Rank</span>
-            <span style={{ fontWeight: 800 }}>#{user.rank}</span>
-            <span style={{ color: theme.textSecondary, fontSize: 12 }}>of {total}</span>
+            <div style={{ 
+              fontSize: isMobile ? 12 : 13,
+              color: "rgba(255,255,255,0.6)",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+            }}>
+              Rank
+            </div>
+            <div style={{ 
+              fontSize: isMobile ? 32 : 40, 
+              fontWeight: 800, 
+              color: league.color,
+              lineHeight: 1,
+            }}>
+              #{user.rank}
+            </div>
+            <div style={{ 
+              fontSize: isMobile ? 11 : 12, 
+              color: "rgba(255,255,255,0.5)",
+              marginTop: 4,
+            }}>
+              of {total.toLocaleString()}
+            </div>
           </div>
         </div>
 
@@ -402,43 +374,47 @@ export function RankingTable() {
         <div style={{ 
           display: 'flex', 
           alignItems: 'baseline', 
-          gap: 8,
+          gap: 12,
           flexWrap: 'wrap',
         }}>
           <span style={{ 
-            fontWeight: 700, 
-            fontSize: isMobile ? 28 : 36, 
-            color: theme.primary,
+            fontWeight: 800, 
+            fontSize: isMobile ? 36 : 48, 
+            color: "#62dbb8",
             lineHeight: 1,
+            textShadow: "0 0 30px rgba(98, 219, 184, 0.5)",
           }}>
             {user.aprTotal?.toFixed(2) ?? "—"}%
           </span>
           <span style={{ 
-            color: theme.textSecondary, 
-            fontSize: 14,
+            color: "rgba(255, 255, 255, 0.6)", 
+            fontSize: isMobile ? 14 : 16,
           }}>
             Total APR
           </span>
         </div>
 
-        {/* Progress bar */}
-        {toNext && (
-          <div style={{ marginTop: 4 }}>
+        {/* Progress bar to next league */}
+        {currentIdx > 0 && (
+          <div>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              marginBottom: 8,
+              marginBottom: 10,
             }}>
               <span style={{ 
                 fontSize: isMobile ? 12 : 14, 
-                color: theme.textSecondary 
+                color: "rgba(255,255,255,0.7)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
               }}>
-                Progress to {toNext.icon} {toNext.leagueName}
+                {ANIMAL_LEAGUES[currentIdx - 1].icon} Next: {ANIMAL_LEAGUES[currentIdx - 1].name}
               </span>
               <span style={{ 
                 fontSize: isMobile ? 12 : 14, 
-                color: league.color,
+                color: ANIMAL_LEAGUES[currentIdx - 1].color,
                 fontWeight: 600,
               }}>
                 {progress.toFixed(0)}%
@@ -446,9 +422,9 @@ export function RankingTable() {
             </div>
             <div
               style={{
-                height: 8,
-                borderRadius: 4,
-                background: theme.cardBgHover,
+                height: 10,
+                borderRadius: 5,
+                background: "rgba(255, 255, 255, 0.1)",
                 overflow: "hidden",
               }}
             >
@@ -456,18 +432,12 @@ export function RankingTable() {
                 style={{
                   width: `${progress}%`,
                   height: "100%",
-                  background: league.gradient,
+                  background: `linear-gradient(90deg, ${league.color}, ${ANIMAL_LEAGUES[currentIdx - 1].color})`,
                   transition: "width 0.6s ease",
-                  borderRadius: 4,
+                  borderRadius: 5,
+                  boxShadow: `0 0 20px ${league.color}66`,
                 }}
               />
-            </div>
-            <div style={{ 
-              fontSize: 12, 
-              color: theme.textSecondary, 
-              marginTop: 4,
-            }}>
-              Target: {toNext.apr?.toFixed(2)}% APR
             </div>
           </div>
         )}
@@ -478,29 +448,19 @@ export function RankingTable() {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            marginTop: 8,
             alignSelf: "flex-start",
-            background: league.gradient,
+            background: `linear-gradient(135deg, ${league.color}, ${league.color}cc)`,
             color: "#fff",
             fontSize: isMobile ? 13 : 14,
             fontWeight: 700,
-            padding: isMobile ? "10px 20px" : "12px 24px",
-            borderRadius: 50,
-            textAlign: "center",
+            padding: isMobile ? "12px 20px" : "14px 28px",
+            borderRadius: 14,
             textDecoration: "none",
-            boxShadow: `0 4px 16px ${league.color}44`,
+            boxShadow: `0 4px 20px ${league.color}44`,
             display: "inline-flex",
             alignItems: "center",
-            gap: 8,
-            transition: "transform 0.2s ease, box-shadow 0.2s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow = `0 6px 24px ${league.color}66`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = `0 4px 16px ${league.color}44`;
+            gap: 10,
+            transition: "all 0.2s ease",
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -512,76 +472,79 @@ export function RankingTable() {
     );
   }
 
-  // Build final table rows
+  // Filter user rows from top5
   const filteredUserRows = userRows.filter(
     (r) => !top5.some((t) => t.address === r.address)
   );
-  const tableRows: JSX.Element[] = [
-    ...top5.map((s) => renderRow(s, false)),
-    ...(filteredUserRows.length > 0
-      ? [
-          <tr key="divider">
-            <td colSpan={3} style={{ height: 16, background: "transparent" }}></td>
-          </tr>,
-          ...filteredUserRows.map((s) => renderRow(s, false)),
-        ]
-      : []),
-  ];
 
   return (
     <div
       style={{
         margin: "32px auto 0 auto",
-        background: theme.cardBg,
-        borderRadius: 20,
-        boxShadow: `0 4px 24px rgba(0,0,0,0.3)`,
-        padding: isMobile ? "20px 12px" : "24px 20px",
-        maxWidth: 720,
-        border: `1px solid ${theme.border}`,
+        background: "rgba(20, 20, 25, 0.8)",
+        borderRadius: 24,
+        backdropFilter: "blur(20px)",
+        boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
+        padding: isMobile ? "20px 16px" : "28px 24px",
+        maxWidth: 680,
+        border: "1px solid rgba(255, 255, 255, 0.08)",
       }}
     >
-      <style>{keyframesStyles}</style>
-
       {/* Section title */}
       <h3 style={{
-        margin: "0 0 20px 0",
+        margin: "0 0 24px 0",
         padding: "0 0 16px 0",
-        borderBottom: `1px solid ${theme.border}`,
-        fontSize: isMobile ? 18 : 20,
+        borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+        fontSize: isMobile ? 20 : 24,
         fontWeight: 700,
-        color: theme.textPrimary,
+        color: "#fff",
         display: "flex",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
       }}>
-        <span style={{ fontSize: 24 }}>🏆</span>
+        <span style={{ fontSize: 28 }}>🏆</span>
         Leaderboard
       </h3>
 
       {/* User card */}
       {renderUserCard()}
 
-      {/* Table */}
-      <div
-        style={{
-          overflowX: "auto",
-          WebkitOverflowScrolling: "touch",
-          width: "100%",
-        }}
-      >
-        <table
-          style={{
-            width: "100%",
-            minWidth: isMobile ? 300 : 320,
-            borderCollapse: "separate",
-            borderSpacing: "0 8px",
-            background: "none",
-          }}
-        >
-          <thead>{renderHeader()}</thead>
-          <tbody>{tableRows}</tbody>
-        </table>
+      {/* Top 5 Section */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{
+          fontSize: isMobile ? 12 : 13,
+          color: "rgba(255,255,255,0.5)",
+          textTransform: "uppercase",
+          letterSpacing: "1.5px",
+          marginBottom: 12,
+          paddingLeft: 4,
+        }}>
+          Top Stakers
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {top5.map((s, i) => renderRankCard(s, i))}
+        </div>
       </div>
+
+      {/* User's surrounding rows */}
+      {filteredUserRows.length > 0 && (
+        <div>
+          <div style={{
+            fontSize: isMobile ? 12 : 13,
+            color: "rgba(255,255,255,0.5)",
+            textTransform: "uppercase",
+            letterSpacing: "1.5px",
+            marginBottom: 12,
+            paddingLeft: 4,
+            marginTop: 16,
+          }}>
+            Your Position
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {filteredUserRows.map((s) => renderRankCard(s, -1))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
